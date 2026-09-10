@@ -163,6 +163,29 @@
   #boot { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
     z-index:20; color:#4a4a4a; letter-spacing:.2em; text-transform:uppercase; }
 
+  /* Credit and disclaimer, in the app itself — not only in the repo. */
+  #about { position:absolute; inset:0; z-index:40; display:none;
+    background:rgba(0,0,0,.96); overflow-y:auto; padding:44px 20px 60px; }
+  #about .box { max-width:620px; margin:0 auto; color:#8a8a8a; font-size:12px;
+    line-height:1.7; letter-spacing:.02em; text-transform:none; }
+  #about h2 { font-family:"Dotwork", monospace; font-size:22px; color:var(--lit);
+    letter-spacing:.12em; margin:0 0 16px; font-weight:400; }
+  #about h3 { font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+    color:#6a6a6a; margin:24px 0 6px; font-weight:400; }
+  #about p { margin:0 0 11px; }
+  #about .lead { color:#d8d8d8; }
+  #about a { color:#ffeda0; text-decoration:none; border-bottom:1px solid #4a4118; }
+  #about a:hover { border-bottom-color:#ffeda0; }
+  #about ul { margin:0 0 10px; padding-left:18px; }
+  #about li { margin:3px 0; }
+  #about-close { position:fixed; top:14px; right:16px; z-index:41; cursor:pointer;
+    background:#000; color:#8a8a8a; border:1px solid #2a2a2a; padding:7px 13px;
+    font:inherit; letter-spacing:.1em; text-transform:uppercase; }
+  #about-close:hover { border-color:var(--lit); color:var(--lit); }
+  #b-about { background:none; border:0; color:#7a7a7a; font:inherit; cursor:pointer;
+    padding:0; text-decoration:underline; letter-spacing:.04em; }
+  #b-about:hover { color:var(--lit); }
+
   #attr { position:absolute; bottom:8px; left:12px; z-index:10; font-size:10px;
     color:#5a5a5a; letter-spacing:.04em; }
   #attr a { color:#7a7a7a; }
@@ -257,7 +280,81 @@
 <div id="boot">LOADING TILES…</div>
 <div id="err" class="panel"><h3 id="err-t">Error</h3><div id="err-b"></div></div>
 
-<div id="attr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors · tiles by OpenFreeMap</div>
+<div id="attr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors ·
+  tiles by <a href="https://openfreemap.org/" target="_blank" rel="noopener">OpenFreeMap</a> ·
+  <button id="b-about" type="button">credits &amp; disclaimer</button></div>
+
+<div id="about">
+  <button id="about-close" type="button">CLOSE</button>
+  <div class="box">
+    <h2>DOTWORLD</h2>
+
+    <p class="lead">A fun personal experiment, built in a conversation with
+    <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude</a>.
+    Nothing here is my achievement alone.</p>
+
+    <p class="lead">This is <strong>not affiliated with, endorsed by, or connected
+    to</strong> OpenStreetMap, the OpenStreetMap Foundation, OpenFreeMap, MapLibre,
+    the World Bank, the Wikimedia Foundation, ColorBrewer or Nothing. No claim is
+    made over any of their work.</p>
+
+    <p class="lead">This project exists <strong>only because those projects gave
+    their work away</strong>. It points at them — it does not compete with them,
+    replace them, or take anything from them. The map data, the tiles and most of
+    the code underneath belong to the people below. <strong>If you like what you
+    see, the credit is theirs.</strong></p>
+
+    <h3>Map data</h3>
+    <p>© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>
+    contributors, under the Open Database Licence (ODbL) 1.0 — every road,
+    coastline and building here is the work of volunteer mappers.</p>
+
+    <h3>Tiles &amp; rendering</h3>
+    <ul>
+      <li><a href="https://openfreemap.org/" target="_blank" rel="noopener">OpenFreeMap</a>
+        — free planet-wide vector tiles, no API key, created and paid for by Zsolt Ero</li>
+      <li><a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre GL JS</a>
+        (BSD-3-Clause) — does all the hard work: tiles, projection, globe, WebGL.
+        The dot lattice is a thin pass over their output</li>
+      <li><a href="https://nominatim.org/" target="_blank" rel="noopener">Nominatim</a>
+        (OpenStreetMap Foundation) — place search and country lookup</li>
+    </ul>
+
+    <h3>Data</h3>
+    <ul>
+      <li><a href="https://data.worldbank.org/" target="_blank" rel="noopener">World Bank Open Data</a>
+        (CC BY 4.0) — world population, birth and death rates, urban share, land area</li>
+      <li><a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a>
+        (CC0) — French commune populations, the 195 capitals, Montpellier monuments</li>
+      <li>Monument ranking is by Wikipedia language coverage — really the work of
+        Wikipedia's editors</li>
+    </ul>
+
+    <h3>Colour &amp; type</h3>
+    <ul>
+      <li><a href="https://colorbrewer2.org/" target="_blank" rel="noopener">ColorBrewer</a>
+        — Cynthia Brewer &amp; Mark Harrower, Penn State. The population ramp is
+        their YlOrRd, reversed so brightness rises with population on black</li>
+      <li>Dotwork, Space Mono, Space Grotesk — SIL Open Font License 1.1</li>
+      <li>The dot-matrix look is inspired by Nothing's visual language. Their Ndot
+        typeface is licensed for Nothing brand materials only and is deliberately
+        <em>not</em> used or shipped here</li>
+    </ul>
+
+    <h3>Please support them</h3>
+    <p>All of this is given away for free by people who pay real costs to do it.
+    If this is worth anything to you, send it upstream:</p>
+    <ul>
+      <li><a href="https://supporting.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap Foundation</a></li>
+      <li><a href="https://openfreemap.org/" target="_blank" rel="noopener">OpenFreeMap</a></li>
+      <li><a href="https://opencollective.com/maplibre" target="_blank" rel="noopener">MapLibre</a></li>
+      <li><a href="https://donate.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Foundation</a></li>
+    </ul>
+
+    <p style="color:#5a5a5a;margin-top:22px">Original code here is MIT licensed;
+    that covers the code only and relicenses none of the above.</p>
+  </div>
+</div>
 <div id="hint">drag to pan · scroll to zoom · right-drag to turn &amp; tilt</div>
 
 <link rel="stylesheet" href="./vendor/maplibre-gl.css">
@@ -951,6 +1048,16 @@ bSun.addEventListener('click', () => {
   applySun();
 });
 map.once('load', applySun);
+
+// Credits & disclaimer overlay.
+const about = document.getElementById('about');
+document.getElementById('b-about').addEventListener('click',
+  () => { about.style.display = 'block'; });
+document.getElementById('about-close').addEventListener('click',
+  () => { about.style.display = 'none'; });
+addEventListener('keydown', e => {
+  if (e.key === 'Escape' && about.style.display === 'block') about.style.display = 'none';
+});
 
 // Slide every panel off the map and back, one click each way.
 const uiToggle = document.getElementById('ui-toggle');

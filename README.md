@@ -1,5 +1,22 @@
 # DotWorld
 
+**A fun personal experiment, built in a conversation with
+[Claude](https://claude.com/claude-code). Nothing here is my achievement alone.**
+
+Not affiliated with, endorsed by, or connected to OpenStreetMap, the OpenStreetMap
+Foundation, OpenFreeMap, MapLibre, the World Bank, the Wikimedia Foundation,
+ColorBrewer or Nothing. No claim is made over any of their work.
+
+This project exists **only because those projects gave their work away**. It points
+at them — it does not compete with them, replace them, or take anything from them.
+The map data, the tiles and most of the code underneath belong to the people
+credited in **[CREDITS.md](CREDITS.md)**. If you like what you see, the credit is
+theirs — and [please support them](CREDITS.md#please-support-the-upstream-projects).
+
+Live: <https://fablab503-collab.github.io/openstreetmap-dot/>
+
+---
+
 A world map rendered entirely as dots, on a globe.
 
 A vector basemap is drawn offscreen, then resampled onto a lattice where each
