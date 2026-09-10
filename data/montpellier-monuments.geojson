@@ -1,0 +1,165 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     3.88019,
+     43.61174
+    ]
+   },
+   "properties": {
+    "name": "musée Fabre",
+    "cat": "museum",
+    "rank": 1,
+    "wikis": 25
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     3.87399,
+     43.61331
+    ]
+   },
+   "properties": {
+    "name": "Cathédrale Saint-Pierre",
+    "cat": "religious",
+    "rank": 2,
+    "wikis": 17
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     3.87241,
+     43.61113
+    ]
+   },
+   "properties": {
+    "name": "Porte du Peyrou - Arc de Triomphe",
+    "cat": "fortification",
+    "rank": 3,
+    "wikis": 15
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     3.8799,
+     43.60866
+    ]
+   },
+   "properties": {
+    "name": "Place de la Comédie",
+    "cat": "square",
+    "rank": 4,
+    "wikis": 7
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     3.87734,
+     43.60645
+    ]
+   },
+   "properties": {
+    "name": "Tour de la Babote",
+    "cat": "fortification",
+    "rank": 5,
+    "wikis": 7
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     3.87869,
+     43.6078
+    ]
+   },
+   "properties": {
+    "name": "Opéra Comédie",
+    "cat": "theatre",
+    "rank": 6,
+    "wikis": 7
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     3.87957,
+     43.61204
+    ]
+   },
+   "properties": {
+    "name": "basilique Notre-Dame des Tables",
+    "cat": "religious",
+    "rank": 7,
+    "wikis": 5
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     3.91928,
+     43.61014
+    ]
+   },
+   "properties": {
+    "name": "Château de Flaugergues",
+    "cat": "fortification",
+    "rank": 8,
+    "wikis": 5
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     3.88673,
+     43.61169
+    ]
+   },
+   "properties": {
+    "name": "Lycée général et technologique Joffre",
+    "cat": "fortification",
+    "rank": 9,
+    "wikis": 5
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     3.87012,
+     43.6113
+    ]
+   },
+   "properties": {
+    "name": "promenade du Peyrou",
+    "cat": "square",
+    "rank": 10,
+    "wikis": 4
+   }
+  }
+ ]
+}

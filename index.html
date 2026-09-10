@@ -1,12 +1,29 @@
 <meta charset="utf-8">
-<title>OpenStreetMap Dot</title>
+<title>DotWorld</title>
 <meta name="color-scheme" content="dark">
 <style>
+  /* Dotwork is the shippable dot face (OFL) with Ndot 57's metrics; Ndot
+     itself is licensed to Nothing brand materials only and cannot be served
+     from a public repo. Space Mono/Grotesk are OFL too. */
+  @font-face { font-family:"Dotwork"; font-weight:400; font-display:swap;
+    src:url("fonts/Dotwork-Regular.otf") format("opentype"); }
+  @font-face { font-family:"Space Mono"; font-weight:400; font-display:swap;
+    src:url("fonts/SpaceMono-Regular.otf") format("opentype"); }
+  @font-face { font-family:"Space Grotesk"; font-weight:400; font-display:swap;
+    src:url("fonts/SpaceGrotesk-Regular.otf") format("opentype"); }
+
   :root { --lit: #ffffff; }
   * { box-sizing: border-box; }
   html, body { margin:0; height:100%; background:#000; overflow:hidden;
-    font: 11px/1.5 "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font: 11px/1.5 "Space Mono", ui-monospace, Menlo, Consolas, monospace;
     color:#8a8a8a; -webkit-font-smoothing:antialiased; }
+
+  /* Dots are display-only — they visibly merge below ~24px, so the wordmark
+     gets the dot face and every small readout stays in Space Mono. */
+  #brand { font-family:"Dotwork", monospace; font-size:23px; letter-spacing:.13em;
+    color:var(--lit); line-height:1; user-select:none; padding:2px 0 2px 2px; }
+  #brand .r { font-family:"Space Mono", monospace; font-size:10px;
+    letter-spacing:.14em; color:#6a6a6a; vertical-align:top; margin-left:6px; }
 
   /* MapLibre renders underneath; it is never seen directly. The dot canvas
      on top is fully opaque and is the only thing the user looks at. */
@@ -15,17 +32,117 @@
           cursor:grab; }
   #dots:active { cursor:grabbing; }
 
-  .panel { position:absolute; z-index:10; background:rgba(0,0,0,.82);
+  /* One panel width for everything, and two columns that lay their panels out
+     in flow — so nothing can overlap or run off the page however the content
+     grows, and both slide away together. */
+  :root { --panel: 240px; }
+  .panel { position:relative; z-index:10; width:100%;
+    background:rgba(0,0,0,.86);
     border:1px solid #1e1e1e; padding:10px 12px; letter-spacing:.06em;
     text-transform:uppercase; backdrop-filter:blur(2px); }
 
-  #hud { top:12px; left:12px; min-width:190px; }
+  .col { position:absolute; top:12px; z-index:12; width:var(--panel);
+    display:flex; flex-direction:column; gap:10px; align-items:stretch;
+    max-height:calc(100vh - 24px);
+    transition:transform .38s cubic-bezier(.4,0,.2,1), opacity .38s ease; }
+  #ui-left  { left:12px; }
+  #ui-right { right:12px; }
+
+  body.ui-hidden #ui-left  { transform:translateX(calc(-100% - 24px)); opacity:0;
+    pointer-events:none; }
+  body.ui-hidden #ui-right { transform:translateX(calc(100% + 24px)); opacity:0;
+    pointer-events:none; }
+  body.ui-hidden #search   { transform:translate(-50%, -72px); opacity:0;
+    pointer-events:none; }
+
+  #ui-toggle { position:absolute; bottom:30px; right:12px; z-index:14;
+    padding:8px 14px; cursor:pointer; background:rgba(0,0,0,.86);
+    color:#8a8a8a; border:1px solid #1e1e1e; font:inherit;
+    letter-spacing:.1em; text-transform:uppercase; }
+  #ui-toggle:hover { border-color:var(--lit); color:var(--lit); }
+
+  #hud { flex:0 0 auto; }
   #hud b { color:#e8e8e8; font-weight:500; float:right; letter-spacing:0; }
   #hud .row { display:block; }
   #hud .sep { height:1px; background:#1e1e1e; margin:8px -12px; }
   #hud .oled { color:#7ec8a9; }
 
-  #ctl { top:12px; right:12px; width:190px; }
+  #stats { flex:0 1 auto; overflow-y:auto; min-height:0; }
+  #stats .row { display:block; }
+  #stats b { color:#e8e8e8; font-weight:400; float:right; letter-spacing:0; }
+  #stats .sep { height:1px; background:#1e1e1e; margin:8px -12px; }
+  #stats .pop { display:block; margin:6px 0 3px; font-size:17px; line-height:1.1;
+    color:var(--lit); letter-spacing:.01em; font-variant-numeric:tabular-nums; }
+  #stats .note { display:block; margin-top:9px; font-size:9px; line-height:1.45;
+    color:#4a4a4a; letter-spacing:.03em; text-transform:none; }
+  /* Legend is not optional: two encodings on screen, so identity is never
+     carried by colour alone. */
+  #legend { flex:0 0 auto; }
+  #legend .ttl { color:#6a6a6a; display:block; margin-bottom:5px; }
+  #ramp { height:9px; margin:2px 0 3px;
+    background:linear-gradient(90deg,#800026,#bd0026,#e31a1c,#fc4e2a,
+                               #fd8d3c,#feb24c,#fed976,#ffeda0); }
+  #legend .ends { display:flex; justify-content:space-between; color:#6a6a6a;
+    font-size:9px; letter-spacing:.03em; }
+  #legend .src { color:#4a4a4a; font-size:9px; letter-spacing:.03em;
+    text-transform:none; display:block; margin-top:4px; }
+  #legend .cats { margin-top:9px; display:grid; gap:3px; }
+  #legend .cat { display:flex; align-items:center; gap:7px; font-size:10px;
+    color:#8a8a8a; letter-spacing:.04em; }
+  #legend .cat i { width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
+
+  #live-dot { display:inline-block; width:7px; height:7px; border-radius:50%;
+    background:#35e07f; margin-right:7px; vertical-align:middle;
+    animation:pulse 2.4s ease-in-out infinite; }
+  #live-dot.stale { background:#ffb000; animation:none; }
+  @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.2 } }
+
+  #ctl { flex:0 1 auto; overflow-y:auto; min-height:0; }
+  #ctl::-webkit-scrollbar { width:6px; }
+  #ctl::-webkit-scrollbar-thumb { background:#2a2a2a; }
+
+  #b-set { flex:0 0 auto; width:100%;
+    padding:9px; cursor:pointer; background:rgba(0,0,0,.86); color:#8a8a8a;
+    border:1px solid #1e1e1e; font:inherit; letter-spacing:.1em;
+    text-transform:uppercase; }
+  #b-set:hover { border-color:#4a4a4a; color:#e8e8e8; }
+  #b-set[aria-pressed=true] { border-color:var(--lit); color:var(--lit); }
+
+  /* Centred on the top row, between the wordmark and the settings button —
+     anywhere on the left collides with the readouts. */
+  #search { position:absolute; top:12px; left:50%; transform:translateX(-50%);
+    z-index:12; width:min(380px, calc(100vw - 500px)); }
+  #q { width:100%; padding:9px 12px; background:rgba(0,0,0,.94); color:#e8e8e8;
+    text-align:center;
+    border:1px solid #1e1e1e; font:inherit; letter-spacing:.1em;
+    text-transform:uppercase; outline:none; }
+  #q:focus { border-color:var(--lit); }
+  #q::placeholder { color:#4a4a4a; }
+  #results { margin-top:4px; background:rgba(0,0,0,.94); border:1px solid #1e1e1e;
+    max-height:210px; overflow-y:auto; display:none; text-align:left; }
+
+  /* Too narrow to sit between the wordmark and settings: drop it to its own
+     row and push the readouts below it, rather than letting them overlap. */
+  @media (max-width: 900px) {
+    #search { top:52px; left:12px; right:12px; transform:none;
+      width:auto; max-width:none; }
+    #hud { top:96px; }
+  }
+  #results div { padding:7px 10px; cursor:pointer; color:#8a8a8a;
+    border-bottom:1px solid #141414; font-size:10px; letter-spacing:.03em;
+    text-transform:none; }
+  #results div:hover { background:#101010; color:var(--lit); }
+  #results .none { cursor:default; color:#5a5a5a; }
+
+  /* 16 dot colours. Swatch shows the actual lit colour against the black it
+     will sit on, which is the only fair preview. */
+  #pal { display:grid; grid-template-columns:repeat(8, 1fr); gap:3px;
+    margin-top:5px; }
+  #pal button { width:100%; aspect-ratio:1; padding:0; border:1px solid #222;
+    background:#000; cursor:pointer; position:relative; }
+  #pal button i { display:block; position:absolute; inset:22%; border-radius:50%; }
+  #pal button[aria-pressed=true] { border-color:var(--lit); }
+  #swatch-name { color:#6a6a6a; margin-top:5px; display:block; font-size:10px; }
   #ctl label { display:block; margin:9px 0 3px; color:#6a6a6a; }
   #ctl input[type=range] { width:100%; accent-color:#8a8a8a; height:14px; }
   #ctl button { width:100%; margin-top:9px; padding:7px; cursor:pointer;
@@ -56,6 +173,15 @@
 <div id="map"></div>
 <canvas id="dots"></canvas>
 
+<div id="search">
+  <input id="q" type="search" placeholder="SEARCH A PLACE" autocomplete="off"
+         aria-label="Search for a place">
+  <div id="results"></div>
+</div>
+
+<div id="ui-left" class="col">
+  <div id="brand">DOTWORLD<span class="r">(R)</span></div>
+
 <div id="hud" class="panel">
   <span class="row">ZOOM <b id="h-zoom">—</b></span>
   <span class="row">DOT PITCH <b id="h-pitch">—</b></span>
@@ -65,22 +191,74 @@
   <span class="row oled">PIXELS DARK <b id="h-dark" class="oled">—</b></span>
 </div>
 
-<div id="ctl" class="panel">
-  <label>DOT SCALE <span id="l-scale">1.00</span></label>
-  <input id="s-scale" type="range" min="0.5" max="2" step="0.05" value="1">
-  <label>GAIN <span id="l-gain">1.00</span></label>
-  <input id="s-gain" type="range" min="0.4" max="2.2" step="0.05" value="1">
-  <label>CUTOFF <span id="l-cut">0.06</span></label>
-  <input id="s-cut" type="range" min="0" max="0.4" step="0.01" value="0.06">
-  <button id="b-3d" aria-pressed="false">3D DOT VIEW</button>
-  <button id="b-tint" aria-pressed="false">AMBER</button>
+<div id="stats" class="panel">
+  <span class="row"><span id="live-dot"></span>LIVE <b id="s-src">—</b></span>
+  <span class="pop" id="s-pop">—</span>
+  <span class="row">PEOPLE ON EARTH <b id="s-net">—</b></span>
+  <span class="row">BORN TODAY <b id="s-born">—</b></span>
+  <span class="row">DIED TODAY <b id="s-died">—</b></span>
+  <div class="sep"></div>
+  <span class="row">COUNTRIES <b id="s-cty">195</b></span>
+  <span class="row">URBAN <b id="s-urb">—</b></span>
+  <span class="row">LAND AREA <b id="s-land">—</b></span>
+  <span class="note" id="s-note">Projected from a periodic estimate. Nobody counts
+    people in real time.</span>
 </div>
+
+<div id="legend" class="panel">
+  <span class="ttl">POPULATION — FRANCE</span>
+  <div id="ramp"></div>
+  <div class="ends"><span id="l-min">15 K</span><span>2.1 M</span></div>
+  <span class="src">YlOrRd (ColorBrewer), reversed for a dark ground</span>
+  <div class="cats">
+    <span class="ttl" style="margin:6px 0 1px">MONUMENTS — MONTPELLIER</span>
+    <span class="cat"><i style="background:#d95926"></i>MUSEUM</span>
+    <span class="cat"><i style="background:#199e70"></i>FORTIFICATION</span>
+    <span class="cat"><i style="background:#c98500"></i>RELIGIOUS</span>
+    <span class="cat"><i style="background:#9085e9"></i>THEATRE</span>
+    <span class="cat"><i style="background:#d55181"></i>SQUARE</span>
+  </div>
+</div>
+</div>
+
+<div id="ui-right" class="col">
+<button id="b-set" aria-pressed="true">SETTINGS</button>
+<div id="ctl" class="panel">
+  <label>DOT SCALE <span id="l-scale">0.65</span></label>
+  <input id="s-scale" type="range" min="0.4" max="2" step="0.05" value="0.65">
+  <label>GAIN <span id="l-gain">2.05</span></label>
+  <input id="s-gain" type="range" min="0.4" max="2.2" step="0.05" value="2.05">
+  <label>CUTOFF <span id="l-cut">0.03</span></label>
+  <input id="s-cut" type="range" min="0" max="0.4" step="0.01" value="0.03">
+  <label>TILT <span id="l-tilt">0</span>°</label>
+  <input id="s-tilt" type="range" min="0" max="85" step="1" value="0">
+  <label>BEARING <span id="l-bear">0</span>°</label>
+  <input id="s-bear" type="range" min="0" max="359" step="1" value="0">
+  <label>SUN <span id="l-sun">210</span>°</label>
+  <input id="s-sun" type="range" min="0" max="359" step="1" value="210">
+  <label>DOT COLOUR <span id="swatch-name">WHITE</span></label>
+  <div id="pal"></div>
+  <label>MIN POPULATION <span id="l-minpop">15 K</span></label>
+  <input id="s-minpop" type="range" min="0" max="100" step="1" value="0">
+  <button id="b-caps" aria-pressed="true">CAPITAL NAMES</button>
+  <button id="b-data" aria-pressed="true">DATA COLOUR</button>
+  <button id="b-locate">ILLUMINATE MY COUNTRY</button>
+  <button id="b-globe" aria-pressed="true">WORLD: ROUND</button>
+  <button id="b-world" aria-pressed="false">WHOLE EARTH</button>
+  <button id="b-3d" aria-pressed="false">3D DOT VIEW</button>
+  <button id="b-orbit" aria-pressed="false">ORBIT</button>
+  <button id="b-north" aria-pressed="false">RESET NORTH</button>
+  <button id="b-sun" aria-pressed="true">SUNLIGHT</button>
+</div>
+</div>
+
+<button id="ui-toggle">HIDE PANELS</button>
 
 <div id="boot">LOADING TILES…</div>
 <div id="err" class="panel"><h3 id="err-t">Error</h3><div id="err-b"></div></div>
 
 <div id="attr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors · tiles by OpenFreeMap</div>
-<div id="hint">drag to pan · scroll to zoom</div>
+<div id="hint">drag to pan · scroll to zoom · right-drag to turn &amp; tilt</div>
 
 <link rel="stylesheet" href="./vendor/maplibre-gl.css">
 <script type="module">
@@ -91,8 +269,9 @@ import * as maplibregl from './vendor/maplibre-gl.mjs';
 
 const OFM = 'https://tiles.openfreemap.org/planet';
 
-// Montpellier, Occitanie — used only when the URL carries no view.
-const DEFAULT_VIEW = { center: [3.8772, 43.6119], zoom: 12.4 };
+// Metropolitan France, fitted to the viewport when the URL carries no view.
+// Bounds rather than a fixed zoom, so it frames correctly on any screen.
+const FRANCE_BOUNDS = [[-5.15, 41.33], [9.56, 51.09]];
 
 /* Views are addressable with openstreetmap.org's own hash format,
    #map=zoom/lat/lon, so a link copied from openstreetmap.org opens the same
@@ -101,7 +280,11 @@ function viewFromHash() {
   const m = /#map=([\d.]+)\/(-?[\d.]+)\/(-?[\d.]+)/.exec(location.hash);
   return m ? { zoom: +m[1], center: [+m[3], +m[2]] } : null;
 }
-const VIEW = viewFromHash() || DEFAULT_VIEW;
+const HASH_VIEW = viewFromHash();
+
+// Declared up here because the moveend handler below reads it, and that can
+// fire during the initial fit — before the orbit block further down runs.
+let orbitRAF = null;
 
 /* Nothing here fails loudly on its own: the dot canvas paints opaque black
    over the map every frame, so any failure underneath just looks like an
@@ -138,12 +321,31 @@ if (location.protocol === 'file:') {
    an OLED wants — so the palette is built dark-first on purpose. */
 const style = {
   version: 8,
-  sources: { ofm: { type: 'vector', url: OFM } },
+  // A sphere, not a plane. MapLibre eases globe into mercator as you zoom in,
+  // so street level still behaves like a flat map.
+  projection: { type: 'globe' },
+  sources: {
+    ofm: { type: 'vector', url: OFM },
+    frpop:  { type: 'geojson', data: 'data/fr-population.geojson' },
+    monuments: { type: 'geojson', data: 'data/montpellier-monuments.geojson' }
+  },
   layers: [
-    { id:'bg', type:'background', paint:{ 'background-color':'#000000' } },
+    /* At country scale the silhouette has to come from somewhere, so land is
+       lit faintly and water is cut to true black — the coastline then reads
+       as the edge of the dot field. By street zoom the roads carry legibility
+       on their own, so the ground goes black and stops drawing power. */
+    /* Bright enough that a land cell clears the halftone's minimum radius —
+       just above the cutoff yields a sub-pixel dot that gets culled, and the
+       silhouette silently disappears. */
+    /* Never a true void. Pure black ground and sea meant that over water, or
+       over open country at high zoom, the screen went completely empty and
+       read as a broken app rather than as empty ocean. Both keep a faint
+       floor, which the CUTOFF slider can still take back to nothing. */
+    { id:'bg', type:'background', paint:{ 'background-color':
+      ['interpolate',['linear'],['zoom'], 4,'#242424', 8,'#181818', 14,'#151515'] } },
 
     { id:'water', type:'fill', source:'ofm', 'source-layer':'water',
-      paint:{ 'fill-color':'#101010' } },
+      paint:{ 'fill-color':'#0f0f0f' } },
     { id:'waterway', type:'line', source:'ofm', 'source-layer':'waterway',
       paint:{ 'line-color':'#2c2c2c', 'line-width':1 } },
 
@@ -154,10 +356,16 @@ const style = {
     { id:'building', type:'fill', source:'ofm', 'source-layer':'building',
       minzoom:13, paint:{ 'fill-color':'#333333' } },
 
+    /* Past about z19 the fill is the only thing left in frame and the view
+       flattens into one grey field. Edges keep it readable that far in. */
+    { id:'building-line', type:'line', source:'ofm', 'source-layer':'building',
+      minzoom:15, paint:{ 'line-color':'#8a8a8a',
+        'line-width':['interpolate',['linear'],['zoom'],15,0.4,20,1.4] } },
+
     /* Roads carry most of the legibility, so they get the brightest values.
        Class drives brightness, which becomes dot size after halftoning. */
     { id:'road-minor', type:'line', source:'ofm', 'source-layer':'transportation',
-      minzoom:12, filter:['in','class','minor','service','track'],
+      minzoom:12, filter:['in','class','minor','service','track','path','footway'],
       paint:{ 'line-color':'#5a5a5a',
         'line-width':['interpolate',['linear'],['zoom'],12,0.5,18,3] } },
     { id:'road-sec', type:'line', source:'ofm', 'source-layer':'transportation',
@@ -172,6 +380,45 @@ const style = {
     { id:'boundary', type:'line', source:'ofm', 'source-layer':'boundary',
       filter:['<=','admin_level',4],
       paint:{ 'line-color':'#4a4a4a', 'line-width':0.8, 'line-dasharray':[3,3] } },
+
+    /* Population: sequential, ONE hue light-to-dark, because the quantity is
+       magnitude. Real figures (Wikidata P1082), not the tiles — the vector
+       schema carries no population at all. Area encodes it too, so the
+       reading never rests on colour alone. */
+    { id:'population', type:'circle', source:'frpop', maxzoom:11.5,
+      paint:{
+        'circle-radius':['interpolate',['linear'],['zoom'],
+          4,['interpolate',['linear'],['get','pop'], 15000,1.1, 300000,4.5, 2100000,9],
+          9,['interpolate',['linear'],['get','pop'], 15000,3, 300000,13, 2100000,26]],
+        /* YlOrRd — the standard sequential ramp for population, as used by
+           ColorBrewer and Leaflet's own choropleth example. REVERSED: as
+           published it runs light-to-dark, which is right on white paper
+           (more ink = more) but backwards on black, where the biggest cities
+           would be the dimmest and sink into the ground. Reversed, luminance
+           rises monotonically with population. */
+        'circle-color':['interpolate',['linear'],['get','pop'],
+          15000,'#800026',  25000,'#bd0026',  40000,'#e31a1c',
+          70000,'#fc4e2a', 120000,'#fd8d3c', 250000,'#feb24c',
+          600000,'#fed976', 2100000,'#ffeda0'],
+        'circle-opacity':0.95 } },
+
+    /* Your own country, lit from your position. adm0_l/adm0_r are the country
+       codes either side of a border line. */
+    { id:'country-glow', type:'line', source:'ofm', 'source-layer':'boundary',
+      filter:['==',['get','admin_level'],2], layout:{ visibility:'none' },
+      paint:{ 'line-color':'#ffeda0',
+        'line-width':['interpolate',['linear'],['zoom'],2,1.2,6,3,10,5],
+        'line-blur':0.4 } },
+
+    /* Monuments: categorical, fixed hue per category, never cycled. Palette
+       validated for colour-vision deficiency rather than chosen by eye. */
+    { id:'monuments', type:'circle', source:'monuments', minzoom:10.5,
+      paint:{
+        'circle-radius':['interpolate',['linear'],['zoom'], 10.5,3, 14,7, 17,15, 20,32],
+        'circle-color':['match',['get','cat'],
+          'museum','#d95926', 'fortification','#199e70', 'religious','#c98500',
+          'theatre','#9085e9', 'square','#d55181', '#d95926'],
+        'circle-opacity':0.96 } },
 
     /* Only used in 3D dot view. Height becomes dot brightness, so taller
        buildings read as denser/larger dots and the skyline shows up as relief. */
@@ -191,9 +438,12 @@ try {
   map = new maplibregl.Map({
     container: 'map',
     style,
-    center: VIEW.center,
-    zoom: VIEW.zoom,
+    // A hash view wins; otherwise frame the whole country.
+    ...(HASH_VIEW
+      ? { center: HASH_VIEW.center, zoom: HASH_VIEW.zoom }
+      : { bounds: FRANCE_BOUNDS, fitBoundsOptions: { padding: 48 } }),
     attributionControl: false,
+    maxPitch: 85,          // near-horizon tilt, for the Google-Earth-ish look
     // In MapLibre v6 these live under canvasContextAttributes; the old
     // top-level options are ignored. Without preserveDrawingBuffer the
     // drawing buffer is wiped after compositing and the halftone pass
@@ -212,9 +462,18 @@ window.__map = map;   // convenience: drive it from the console
 
 // Keep the address bar in step, so the current view is always copyable.
 map.on('moveend', () => {
+  if (orbitRAF) return;   // an orbit ends a move every frame; don't spam history
   const c = map.getCenter();
   history.replaceState(null, '',
     `#map=${map.getZoom().toFixed(2)}/${c.lat.toFixed(5)}/${c.lng.toFixed(5)}`);
+});
+
+/* And go the other way: a hash pasted into the address bar should move the
+   map without a reload. replaceState above does not fire hashchange, so this
+   only runs on a real edit — there is no feedback loop with moveend. */
+addEventListener('hashchange', () => {
+  const v = viewFromHash();
+  if (v) map.jumpTo({ center: v.center, zoom: v.zoom });
 });
 
 map.on('error', e => {
@@ -236,7 +495,15 @@ const small = document.createElement('canvas');
 const sctx = small.getContext('2d', { willReadFrequently: true });
 
 let DPR = Math.min(window.devicePixelRatio || 1, 2);
-let scale = 1, gain = 1, cutoff = 0.06, tint = false;
+// Defaults calibrated by eye at street zoom in 3D — the look worth keeping.
+let scale = 0.65, gain = 2.05, cutoff = 0.03;
+let dotColor = '#ffffff';
+let dataColour = true;   // keep data hues; false neutralises everything to one colour
+/* Declared here, not beside their loader below: the render loop starts before
+   that code runs, and a `let` read from inside halftone() would hit the
+   temporal dead zone and kill the first frame. */
+let showCapitals = true;
+let CAPITALS = [];
 let dirty = true;
 
 /* Dot pitch is a function of zoom, and it is the whole LOD story:
@@ -249,6 +516,7 @@ function pitchFor(zoom) { return clamp(18 - (zoom - 3) * 1.0, 3.5, 18) * scale; 
 /* Measure the canvas itself rather than the window: a hidden or
    zero-height container would otherwise leave a 0x0 buffer that silently
    renders nothing, and a one-shot resize() never recovers from it. */
+let framed = false;
 function resize() {
   DPR = Math.min(window.devicePixelRatio || 1, 2);
   const w = dots.clientWidth  || document.documentElement.clientWidth  || 0;
@@ -257,6 +525,14 @@ function resize() {
   const nh = Math.max(1, Math.floor(h * DPR));
   if (nw !== dots.width || nh !== dots.height) {
     dots.width = nw; dots.height = nh;
+  }
+  /* A map built inside a zero-size container framed itself against nothing,
+     so re-fit once the container first has real dimensions — otherwise a map
+     that starts hidden (collapsed panel, inactive tab) keeps that dead view. */
+  if (!framed && w > 0 && h > 0 && map) {
+    framed = true;
+    map.resize();
+    if (!HASH_VIEW) map.fitBounds(FRANCE_BOUNDS, { padding: 48, duration: 0 });
   }
   dirty = true;
 }
@@ -284,29 +560,64 @@ function halftone() {
 
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, dots.width, dots.height);
-  ctx.fillStyle = tint ? '#ffb000' : '#ffffff';
-
   const rMax = step * 0.5;
   let lit = 0, area = 0;
 
+  /* Two passes. The basemap is authored in greys, and the data layers are the
+     only saturated things on screen — so chroma is what separates "data" from
+     "context". Grey cells become the chosen dot colour (neutralised); coloured
+     cells keep their own hue, which is what makes a population ramp or a
+     monument category survive the lattice at all. */
+  const tinted = new Map();
+  ctx.fillStyle = dotColor;
+  // With data on screen the basemap is context, not content: hold it back so
+  // the coloured dots read. Hiding the colour is not enough on its own — an
+  // evenly lit lattice drowns a few hundred data points.
+  ctx.globalAlpha = dataColour ? 0.38 : 1;
   ctx.beginPath();
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
       const i = (y * cols + x) * 4;
+      const R = px[i], G = px[i+1], B = px[i+2];
       // Rec.601 luma — matches perceived brightness of the styled features.
-      const L = (px[i] * 0.299 + px[i+1] * 0.587 + px[i+2] * 0.114) / 255;
+      const L = (R * 0.299 + G * 0.587 + B * 0.114) / 255;
       if (L <= cutoff) continue;            // stays black => unlit => no power
       const t = Math.pow((L - cutoff) / (1 - cutoff), 1 / gain);
-      const r = t * rMax;
+      let r = t * rMax;
       if (r < 0.35) continue;
       const cx = x * step + step / 2;
       const cy = y * step + step / 2;
-      ctx.moveTo(cx + r, cy);
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+
+      const mx = Math.max(R, G, B), mn = Math.min(R, G, B);
+      if (dataColour && mx > 0 && (mx - mn) / mx > 0.28) {
+        // Normalise to full brightness, or a small dot reads as muddy grey.
+        const k = 255 / mx;
+        const key = ((R * k) | 0) + ',' + ((G * k) | 0) + ',' + ((B * k) | 0);
+        r = Math.max(r, 0.9);               // data must not vanish into the lattice
+        let a = tinted.get(key);
+        if (!a) tinted.set(key, a = []);
+        a.push(cx, cy, r);
+      } else {
+        ctx.moveTo(cx + r, cy);
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      }
       lit++; area += Math.PI * r * r;
     }
   }
   ctx.fill();
+  ctx.globalAlpha = 1;
+
+  for (const [key, a] of tinted) {
+    ctx.fillStyle = 'rgb(' + key + ')';
+    ctx.beginPath();
+    for (let i = 0; i < a.length; i += 3) {
+      ctx.moveTo(a[i] + a[i + 2], a[i + 1]);
+      ctx.arc(a[i], a[i + 1], a[i + 2], 0, Math.PI * 2);
+    }
+    ctx.fill();
+  }
+
+  if (showCapitals) drawCapitals();
 
   const coverage = area / (dots.width * dots.height);
   hud(zoom, pitch, lit, cols * rows, coverage);
@@ -351,14 +662,455 @@ b3d.addEventListener('click', () => {
   b3d.setAttribute('aria-pressed', on);
   map.setLayoutProperty('building-3d', 'visibility', on ? 'visible' : 'none');
   map.setLayoutProperty('building',    'visibility', on ? 'none' : 'visible');
-  map.easeTo({ pitch: on ? 58 : 0, bearing: on ? -22 : 0, duration: 900 });
+  if (!on) stopOrbit();
+  map.easeTo({ pitch: on ? 60 : 0, bearing: on ? -22 : 0, duration: 900 });
 });
 
-const bt = document.getElementById('b-tint');
-bt.addEventListener('click', () => {
-  tint = !tint;
-  bt.setAttribute('aria-pressed', tint);
-  bt.textContent = tint ? 'WHITE' : 'AMBER';
+/* Turning the camera round the scene, Google-Earth style. Bearing is stepped
+   per frame rather than eased, so it never fights a user drag: grabbing the
+   map mid-orbit just takes over. */
+const bOrbit = document.getElementById('b-orbit');
+function stopOrbit() {
+  if (orbitRAF) cancelAnimationFrame(orbitRAF);
+  orbitRAF = null;
+  bOrbit.setAttribute('aria-pressed', 'false');
+}
+function startOrbit() {
+  if (orbitRAF) return;
+  bOrbit.setAttribute('aria-pressed', 'true');
+  // 0.12 deg/frame ~= a full turn per minute at 60fps: slow enough to read.
+  const step = () => {
+    map.setBearing((map.getBearing() + 0.12) % 360);
+    orbitRAF = requestAnimationFrame(step);
+  };
+  orbitRAF = requestAnimationFrame(step);
+}
+bOrbit.addEventListener('click', () => {
+  if (orbitRAF) { stopOrbit(); return; }
+  // Orbiting a flat plan reads as nothing moving, so make sure we are tilted
+  // first — and wait for that camera move to finish, or the ease and the
+  // per-frame setBearing fight each other.
+  if (b3d.getAttribute('aria-pressed') !== 'true') {
+    b3d.click();
+    map.once('moveend', startOrbit);
+  } else if (map.getPitch() < 15) {
+    map.easeTo({ pitch: 60, duration: 600 });
+    map.once('moveend', startOrbit);
+  } else {
+    startOrbit();
+  }
+});
+
+/* A user drag should take over from the orbit. Only a real gesture carries
+   originalEvent — without that check our own easeTo fires rotatestart and
+   cancels the orbit we just started. */
+const stopOnGesture = e => { if (e && e.originalEvent) stopOrbit(); };
+map.on('dragstart', stopOnGesture);
+map.on('rotatestart', stopOnGesture);
+
+const sTilt = document.getElementById('s-tilt');
+sTilt.addEventListener('input', () => {
+  const v = +sTilt.value;
+  document.getElementById('l-tilt').textContent = v;
+  map.setPitch(v);
+});
+const sBear = document.getElementById('s-bear');
+sBear.addEventListener('input', () => {
+  stopOrbit();
+  const v = +sBear.value;
+  document.getElementById('l-bear').textContent = v;
+  map.setBearing(v);
+});
+
+// Keep the sliders honest when the camera moves by drag, orbit or 3D toggle.
+map.on('move', () => {
+  const p = Math.round(map.getPitch());
+  const b = Math.round((map.getBearing() + 360) % 360);
+  sTilt.value = p; document.getElementById('l-tilt').textContent = p;
+  sBear.value = b; document.getElementById('l-bear').textContent = b;
+});
+
+document.getElementById('b-north').addEventListener('click', () => {
+  stopOrbit();
+  map.easeTo({ bearing: 0, duration: 700 });
+});
+
+/* Capital names — all 195 (193 UN members + Vatican and Palestine).
+   Text cannot go THROUGH the lattice: at any usable dot pitch letterforms
+   turn to mush. So the names are drawn on top of the finished dot field.
+   The dots stay the map; the type stays type. (showCapitals / CAPITALS are
+   declared near the top — see the note there.) */
+fetch('data/world-capitals.geojson').then(r => r.json()).then(j => {
+  CAPITALS = j.features.map(f => ({
+    name: f.properties.name, country: f.properties.country,
+    pop: f.properties.pop, seats: f.properties.seats,
+    lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] }));
+  CAPITALS.sort((a, b) => b.pop - a.pop);   // when space is tight, biggest wins
+  dirty = true;
+}).catch(() => {});
+
+const RAD = Math.PI / 180;
+function angularDist(aLat, aLon, bLat, bLon) {
+  const s = Math.sin, c = Math.cos;
+  return Math.acos(Math.min(1, s(aLat*RAD)*s(bLat*RAD)
+    + c(aLat*RAD)*c(bLat*RAD)*c((aLon - bLon)*RAD))) / RAD;
+}
+
+function drawCapitals() {
+  if (!CAPITALS.length) return;
+  const W = dots.width, H = dots.height;
+  const fs = Math.max(9, Math.round(9.5 * DPR));
+  ctx.font = fs + 'px "Space Mono", ui-monospace, monospace';
+  ctx.textBaseline = 'middle';
+  const onGlobe = map.getProjection && map.getProjection().type === 'globe';
+  const ctr = map.getCenter();
+  const placed = [];
+  let shown = 0;
+
+  for (const cap of CAPITALS) {
+    if (shown >= 55) break;                  // past this it is noise, not data
+    // On a sphere, project() still returns a point for the far side; cull it.
+    if (onGlobe && angularDist(ctr.lat, ctr.lng, cap.lat, cap.lon) > 82) continue;
+    let p;
+    try { p = map.project([cap.lon, cap.lat]); } catch (e) { continue; }
+    const x = p.x * DPR, y = p.y * DPR;
+    if (!(x > 0 && y > 0 && x < W && y < H)) continue;
+
+    const label = cap.name.toUpperCase();
+    const w = ctx.measureText(label).width;
+    const pad = 7 * DPR;
+    const box = [x + pad - 2, y - fs * 0.8, x + pad + w + 2, y + fs * 0.8];
+    // Greedy de-clutter: skip anything that would collide with a placed label.
+    if (placed.some(b => box[0] < b[2] && b[0] < box[2] &&
+                         box[1] < b[3] && b[1] < box[3])) continue;
+    placed.push(box);
+    shown++;
+
+    ctx.beginPath();
+    ctx.arc(x, y, 2.4 * DPR, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffeda0';               // top of the population ramp
+    ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.85)';       // keep type legible over dots
+    ctx.fillRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(label, x + pad, y);
+  }
+}
+
+const bCaps = document.getElementById('b-caps');
+bCaps.addEventListener('click', () => {
+  showCapitals = bCaps.getAttribute('aria-pressed') !== 'true';
+  bCaps.setAttribute('aria-pressed', showCapitals);
   dirty = true;
 });
+
+/* Population threshold. Logarithmic, because the distribution is: 15k to 2.1M
+   is two orders of magnitude and a linear slider would spend 95% of its travel
+   between the biggest two cities. */
+const sPop = document.getElementById('s-minpop');
+const POP_MIN = 15000, POP_MAX = 2103778;
+function popThreshold() {
+  const f = +sPop.value / 100;
+  return Math.round(POP_MIN * Math.pow(POP_MAX / POP_MIN, f));
+}
+const fmtPop = n => n >= 1e6 ? (n / 1e6).toFixed(2) + ' M'
+                  : n >= 1e3 ? Math.round(n / 1e3) + ' K' : String(n);
+function applyPopFilter() {
+  const min = popThreshold();
+  document.getElementById('l-minpop').textContent = fmtPop(min);
+  const el = document.getElementById('l-min');
+  if (el) el.textContent = fmtPop(min);
+  if (map.getLayer && map.getLayer('population'))
+    map.setFilter('population', ['>=', ['get', 'pop'], min]);
+  dirty = true;
+}
+sPop.addEventListener('input', applyPopFilter);
+map.once('load', applyPopFilter);
+
+/* Illuminate the country you are actually in.
+   Geolocation is personal data, so: it is never requested on load (only on
+   this button), the coordinates are rounded to ~1 km before being sent to the
+   geocoder, and the map flies to the country rather than to you — so your
+   position never lands in the shareable URL hash. */
+const bLocate = document.getElementById('b-locate');
+bLocate.addEventListener('click', () => {
+  if (!navigator.geolocation) { bLocate.textContent = 'NO GEOLOCATION'; return; }
+  bLocate.textContent = 'LOCATING…';
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const lat = +pos.coords.latitude.toFixed(2);
+    const lon = +pos.coords.longitude.toFixed(2);
+    try {
+      const r = await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2'
+                          + `&zoom=3&lat=${lat}&lon=${lon}`);
+      const j = await r.json();
+      const cc = (j.address && j.address.country_code || '').toUpperCase();
+      const name = (j.address && j.address.country) || cc || 'UNKNOWN';
+      if (!cc) throw new Error('no country');
+      map.setFilter('country-glow',
+        ['all', ['==', ['get','admin_level'], 2],
+          ['any', ['==', ['get','adm0_l'], cc], ['==', ['get','adm0_r'], cc]]]);
+      map.setLayoutProperty('country-glow', 'visibility', 'visible');
+      bLocate.textContent = name.toUpperCase();
+      bLocate.setAttribute('aria-pressed', 'true');
+      // Frame the country, not the person.
+      if (j.boundingbox) {
+        const [s, n, w, e] = j.boundingbox.map(Number);
+        map.fitBounds([[w, s], [e, n]], { padding: 60, duration: 1800, maxZoom: 7 });
+      }
+      dirty = true;
+    } catch (e) {
+      bLocate.textContent = 'COUNTRY LOOKUP FAILED';
+    }
+  }, err => {
+    bLocate.textContent = err.code === 1 ? 'PERMISSION DENIED' : 'LOCATION UNAVAILABLE';
+  }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 600000 });
+});
+
+/* One switch for the whole data layer: hides the coloured circles AND stops
+   the halftone keeping hues, so the map falls back to a single-colour field. */
+const bData = document.getElementById('b-data');
+const legend = document.getElementById('legend');
+bData.addEventListener('click', () => {
+  const on = bData.getAttribute('aria-pressed') !== 'true';
+  bData.setAttribute('aria-pressed', on);
+  dataColour = on;
+  ['population', 'monuments'].forEach(id =>
+    map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none'));
+  legend.hidden = !on;
+  dirty = true;
+});
+
+const bGlobe = document.getElementById('b-globe');
+bGlobe.addEventListener('click', () => {
+  const on = bGlobe.getAttribute('aria-pressed') !== 'true';
+  bGlobe.setAttribute('aria-pressed', on);
+  bGlobe.textContent = on ? 'WORLD: ROUND' : 'WORLD: PLATE';
+  map.setProjection({ type: on ? 'globe' : 'mercator' });
+  dirty = true;
+});
+
+// Pull back far enough to see the sphere whole, the way an Earth view opens.
+document.getElementById('b-world').addEventListener('click', () => {
+  stopOrbit();
+  if (bGlobe.getAttribute('aria-pressed') !== 'true') bGlobe.click();
+  map.easeTo({ center: [8, 26], zoom: 1.4, pitch: 0, bearing: 0, duration: 1600 });
+});
+
+/* Sixteen dot colours. Ordered warm to cool because that is also roughly
+   cheapest to most expensive on an OLED: amber and red leave the blue
+   subpixel dark, white drives all three. */
+const PALETTE = [
+  ['WHITE',     '#ffffff'], ['BONE',    '#f0e6d2'], ['GOLD',    '#ffd400'],
+  ['AMBER',     '#ffb000'], ['ORANGE',  '#ff7a1a'], ['RED',     '#ff3b30'],
+  ['ROSE',      '#ff4d8d'], ['MAGENTA', '#ff3ad2'], ['VIOLET',  '#a86bff'],
+  ['INDIGO',    '#6b7bff'], ['BLUE',    '#2f9bff'], ['SKY',     '#35c8ff'],
+  ['CYAN',      '#22e0d6'], ['MINT',    '#2ee6a8'], ['GREEN',   '#38e04b'],
+  ['LIME',      '#b4f13a']
+];
+const pal = document.getElementById('pal');
+const swatchName = document.getElementById('swatch-name');
+PALETTE.forEach(([name, hex], i) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.title = name;
+  b.setAttribute('aria-label', name);
+  b.setAttribute('aria-pressed', i === 0);
+  b.innerHTML = '<i style="background:' + hex + '"></i>';
+  b.addEventListener('click', () => {
+    dotColor = hex;
+    swatchName.textContent = name;
+    [...pal.children].forEach(c => c.setAttribute('aria-pressed', c === b));
+    document.documentElement.style.setProperty('--lit', hex);
+    dirty = true;
+  });
+  pal.appendChild(b);
+});
+
+/* Sunlight. Direction drives fill-extrusion shading, so a lit face of a
+   building becomes larger dots and a shaded face smaller ones — the relief
+   comes through the lattice rather than being painted over it. */
+const bSun = document.getElementById('b-sun');
+const sSun = document.getElementById('s-sun');
+function applySun() {
+  const on = bSun.getAttribute('aria-pressed') === 'true';
+  const az = +sSun.value;
+  map.setLight({
+    anchor: 'map',
+    position: [1.4, az, on ? 38 : 90],   // polar 90 = straight down = flat
+    color: '#ffffff',
+    intensity: on ? 0.6 : 0.15
+  });
+  dirty = true;
+}
+sSun.addEventListener('input', () => {
+  document.getElementById('l-sun').textContent = sSun.value;
+  applySun();
+});
+bSun.addEventListener('click', () => {
+  bSun.setAttribute('aria-pressed', bSun.getAttribute('aria-pressed') !== 'true');
+  applySun();
+});
+map.once('load', applySun);
+
+// Slide every panel off the map and back, one click each way.
+const uiToggle = document.getElementById('ui-toggle');
+uiToggle.addEventListener('click', () => {
+  const hidden = document.body.classList.toggle('ui-hidden');
+  uiToggle.textContent = hidden ? 'SHOW PANELS' : 'HIDE PANELS';
+});
+
+// Settings panel: a lot of controls, and the map is the point.
+const bSet = document.getElementById('b-set');
+const ctl = document.getElementById('ctl');
+bSet.addEventListener('click', () => {
+  const on = bSet.getAttribute('aria-pressed') !== 'true';
+  bSet.setAttribute('aria-pressed', on);
+  ctl.hidden = !on;
+});
+
+/* World statistics.
+   The counter is a PROJECTION, not a measurement: population is estimated
+   periodically, then carried forward at the observed net rate. Every "live
+   population" clock works this way, so the panel says so rather than
+   implying someone is counting. Figures are World Bank world aggregates,
+   refetched at load; these constants are the fallback when that fails. */
+const WORLD = {
+  pop: 8215424893,  popYear: 2025,               // SP.POP.TOTL
+  birth: 16.2730070969907,                        // SP.DYN.CBRT.IN, per 1000/yr
+  death: 7.55065418868632,                        // SP.DYN.CDRT.IN, per 1000/yr
+  ratesYear: 2024,
+  urban: 57.8251158115221,                        // SP.URB.TOTL.IN.ZS, %
+  land: 129763685.55,                             // AG.LND.TOTL.K2, km²
+  countries: 195,                                 // 193 UN members + 2 observers
+  live: false
+};
+const YEAR_MS = 365.2425 * 86400 * 1000;
+
+async function wbIndicator(id) {
+  const r = await fetch('https://api.worldbank.org/v2/country/WLD/indicator/'
+                      + id + '?format=json&mrv=1');
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  const row = j && j[1] && j[1][0];
+  if (!row || row.value == null) throw new Error('no value for ' + id);
+  return { value: row.value, year: +row.date };
+}
+
+async function loadWorldStats() {
+  try {
+    const [p, b, d, u, l] = await Promise.all([
+      wbIndicator('SP.POP.TOTL'), wbIndicator('SP.DYN.CBRT.IN'),
+      wbIndicator('SP.DYN.CDRT.IN'), wbIndicator('SP.URB.TOTL.IN.ZS'),
+      wbIndicator('AG.LND.TOTL.K2')
+    ]);
+    WORLD.pop = p.value; WORLD.popYear = p.year;
+    WORLD.birth = b.value; WORLD.death = d.value; WORLD.ratesYear = b.year;
+    WORLD.urban = u.value; WORLD.land = l.value;
+    WORLD.live = true;
+  } catch (e) {
+    WORLD.live = false;   // keep the baked-in baseline, and say so
+  }
+  const dot = document.getElementById('live-dot');
+  dot.classList.toggle('stale', !WORLD.live);
+  document.getElementById('s-src').textContent =
+    WORLD.live ? 'WORLD BANK ' + WORLD.popYear : 'CACHED ' + WORLD.popYear;
+  document.getElementById('s-urb').textContent = WORLD.urban.toFixed(1) + '%';
+  document.getElementById('s-land').textContent =
+    Math.round(WORLD.land).toLocaleString('en-GB') + ' KM²';
+  document.getElementById('s-cty').textContent = WORLD.countries;
+  document.getElementById('s-note').textContent =
+    'Projected from the ' + WORLD.popYear + ' estimate at the ' + WORLD.ratesYear
+    + ' net rate. Nobody counts people in real time.';
+}
+
+// World Bank annual figures are mid-year estimates, so anchor to 1 July.
+function projectedPop(now) {
+  const base = Date.UTC(WORLD.popYear, 6, 1);
+  const years = (now - base) / YEAR_MS;
+  return WORLD.pop * Math.pow(1 + (WORLD.birth - WORLD.death) / 1000, years);
+}
+
+function tickStats() {
+  const now = Date.now();
+  const pop = projectedPop(now);
+  const bornPerSec = pop * (WORLD.birth / 1000) / (YEAR_MS / 1000);
+  const diedPerSec = pop * (WORLD.death / 1000) / (YEAR_MS / 1000);
+  const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+  const secsToday = (now - midnight.getTime()) / 1000;
+
+  document.getElementById('s-pop').textContent =
+    Math.floor(pop).toLocaleString('en-GB');
+  document.getElementById('s-net').textContent =
+    '+' + (bornPerSec - diedPerSec).toFixed(2) + ' /SEC';
+  document.getElementById('s-born').textContent =
+    Math.floor(bornPerSec * secsToday).toLocaleString('en-GB');
+  document.getElementById('s-died').textContent =
+    Math.floor(diedPerSec * secsToday).toLocaleString('en-GB');
+}
+// Text only — this never marks the dot canvas dirty, so it costs no redraw.
+loadWorldStats();
+tickStats();
+setInterval(tickStats, 250);
+
+/* Place search via Nominatim, OpenStreetMap's own geocoder. Their usage
+   policy caps this at one request a second, so the field is debounced rather
+   than firing per keystroke. */
+const q = document.getElementById('q');
+const results = document.getElementById('results');
+let searchTimer = null, lastQuery = '';
+
+function showResults(items) {
+  results.innerHTML = '';
+  if (!items.length) {
+    const d = document.createElement('div');
+    d.className = 'none';
+    d.textContent = 'No match';
+    results.appendChild(d);
+  } else {
+    items.forEach(it => {
+      const d = document.createElement('div');
+      d.textContent = it.display_name;
+      d.addEventListener('click', () => {
+        results.style.display = 'none';
+        q.value = '';
+        stopOrbit();
+        // A bounding box frames a country properly; a point needs a zoom.
+        if (it.boundingbox) {
+          const [s, n, w, e] = it.boundingbox.map(Number);
+          map.fitBounds([[w, s], [e, n]], { padding: 60, duration: 1800, maxZoom: 16 });
+        } else {
+          map.flyTo({ center: [+it.lon, +it.lat], zoom: 13, duration: 1800 });
+        }
+      });
+      results.appendChild(d);
+    });
+  }
+  results.style.display = 'block';
+}
+
+async function runSearch(text) {
+  if (!text || text === lastQuery) return;
+  lastQuery = text;
+  try {
+    const u = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&q='
+            + encodeURIComponent(text);
+    const r = await fetch(u, { headers: { 'Accept': 'application/json' } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    showResults(await r.json());
+  } catch (e) {
+    showResults([]);
+  }
+}
+q.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  const text = q.value.trim();
+  if (text.length < 3) { results.style.display = 'none'; return; }
+  searchTimer = setTimeout(() => runSearch(text), 450);
+});
+q.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { clearTimeout(searchTimer); runSearch(q.value.trim()); }
+  if (e.key === 'Escape') { results.style.display = 'none'; q.blur(); }
+});
+// Typing in the field must not reach the map's keyboard shortcuts.
+q.addEventListener('keydown', e => e.stopPropagation());
 </script>
