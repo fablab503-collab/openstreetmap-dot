@@ -4,7 +4,7 @@
 (Anthropic's Claude Code). Nothing here is my achievement alone.**
 
 It is **not affiliated with, endorsed by, or connected to** OpenStreetMap, the
-OpenStreetMap Foundation, OpenFreeMap, MapLibre, the World Bank, the Wikimedia
+OpenStreetMap Foundation, OpenFreeMap, OpenMapTiles, MapLibre, the World Bank, the Wikimedia
 Foundation, ColorBrewer, or Nothing. No claim is made over any of their work.
 
 This project exists **only because those projects gave their work away**. It is
@@ -31,7 +31,13 @@ because the opaque dot canvas covers MapLibre's own attribution control.
 
 **[OpenFreeMap](https://openfreemap.org/)** — free, open vector tiles served
 without an API key or sign-up, created and paid for by **Zsolt Ero**. Tiles
-follow the **[OpenMapTiles](https://openmaptiles.org/) schema**.
+follow the **[OpenMapTiles](https://openmaptiles.org/) schema**, which requires its own
+visible, linked credit.
+
+The attribution shown on the map is OpenFreeMap's own required string, taken from
+its TileJSON: *"OpenFreeMap © OpenMapTiles Data from © OpenStreetMap contributors"*.
+The first published version credited OpenStreetMap and OpenFreeMap but left out
+OpenMapTiles.
 
 Running a planet-wide tile server for free is an act of generosity. This project
 would not exist without it, and any real traffic should be met with a donation

@@ -1,0 +1,346 @@
+<meta charset="utf-8">
+<title>Dot Map — Montpellier</title>
+<meta name="color-scheme" content="dark">
+<style>
+  :root { --lit: #ffffff; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:#000; overflow:hidden;
+    font: 11px/1.5 "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    color:#8a8a8a; -webkit-font-smoothing:antialiased; }
+
+  /* MapLibre renders underneath; it is never seen directly. The dot canvas
+     on top is fully opaque and is the only thing the user looks at. */
+  #map { position:absolute; inset:0; }
+  #dots { position:absolute; inset:0; width:100%; height:100%; display:block;
+          cursor:grab; }
+  #dots:active { cursor:grabbing; }
+
+  .panel { position:absolute; z-index:10; background:rgba(0,0,0,.82);
+    border:1px solid #1e1e1e; padding:10px 12px; letter-spacing:.06em;
+    text-transform:uppercase; backdrop-filter:blur(2px); }
+
+  #hud { top:12px; left:12px; min-width:190px; }
+  #hud b { color:#e8e8e8; font-weight:500; float:right; letter-spacing:0; }
+  #hud .row { display:block; }
+  #hud .sep { height:1px; background:#1e1e1e; margin:8px -12px; }
+  #hud .oled { color:#7ec8a9; }
+
+  #ctl { top:12px; right:12px; width:190px; }
+  #ctl label { display:block; margin:9px 0 3px; color:#6a6a6a; }
+  #ctl input[type=range] { width:100%; accent-color:#8a8a8a; height:14px; }
+  #ctl button { width:100%; margin-top:9px; padding:7px; cursor:pointer;
+    background:#000; color:#8a8a8a; border:1px solid #2a2a2a;
+    font:inherit; letter-spacing:.08em; text-transform:uppercase; }
+  #ctl button:hover { border-color:#4a4a4a; color:#e8e8e8; }
+  #ctl button[aria-pressed=true] { border-color:var(--lit); color:var(--lit); }
+
+  #err { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    z-index:30; max-width:520px; display:none; border-color:#5a2020;
+    color:#d8d8d8; text-transform:none; letter-spacing:0; line-height:1.6; }
+  #err h3 { margin:0 0 8px; font-size:11px; letter-spacing:.1em;
+    text-transform:uppercase; color:#ff6b6b; font-weight:500; }
+  #err code { color:#7ec8a9; }
+  #err .cmd { display:block; margin-top:10px; padding:8px; background:#0a0a0a;
+    border:1px solid #1e1e1e; color:#7ec8a9; user-select:all; }
+
+  #boot { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    z-index:20; color:#4a4a4a; letter-spacing:.2em; text-transform:uppercase; }
+
+  #attr { position:absolute; bottom:8px; left:12px; z-index:10; font-size:10px;
+    color:#5a5a5a; letter-spacing:.04em; }
+  #attr a { color:#7a7a7a; }
+  #hint { position:absolute; bottom:8px; right:12px; z-index:10; font-size:10px;
+    color:#3e3e3e; letter-spacing:.08em; text-transform:uppercase; }
+</style>
+
+<div id="map"></div>
+<canvas id="dots"></canvas>
+
+<div id="hud" class="panel">
+  <span class="row">ZOOM <b id="h-zoom">—</b></span>
+  <span class="row">DOT PITCH <b id="h-pitch">—</b></span>
+  <span class="row">DOTS LIT <b id="h-dots">—</b></span>
+  <div class="sep"></div>
+  <span class="row oled">LIT AREA <b id="h-lit" class="oled">—</b></span>
+  <span class="row oled">PIXELS DARK <b id="h-dark" class="oled">—</b></span>
+</div>
+
+<div id="ctl" class="panel">
+  <label>DOT SCALE <span id="l-scale">1.00</span></label>
+  <input id="s-scale" type="range" min="0.5" max="2" step="0.05" value="1">
+  <label>GAIN <span id="l-gain">1.00</span></label>
+  <input id="s-gain" type="range" min="0.4" max="2.2" step="0.05" value="1">
+  <label>CUTOFF <span id="l-cut">0.06</span></label>
+  <input id="s-cut" type="range" min="0" max="0.4" step="0.01" value="0.06">
+  <button id="b-3d" aria-pressed="false">3D DOT VIEW</button>
+  <button id="b-tint" aria-pressed="false">AMBER</button>
+</div>
+
+<div id="boot">LOADING TILES…</div>
+<div id="err" class="panel"><h3 id="err-t">Error</h3><div id="err-b"></div></div>
+
+<div id="attr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors · tiles by OpenFreeMap</div>
+<div id="hint">drag to pan · scroll to zoom</div>
+
+<link rel="stylesheet" href="./maplibre-gl.css">
+<script type="module">
+/* MapLibre GL JS v6 is ESM-only — it ships no UMD build and defines no
+   global, so it has to be imported as a module. The bundles are vendored
+   next to this file rather than pulled from a CDN. */
+import * as maplibregl from './maplibre-gl.mjs';
+
+const OFM = 'https://tiles.openfreemap.org/planet';
+const MONTPELLIER = [3.8772, 43.6119];
+
+/* Nothing here fails loudly on its own: the dot canvas paints opaque black
+   over the map every frame, so any failure underneath just looks like an
+   empty screen. Surface problems explicitly instead. */
+let failed = false;
+function fail(title, body) {
+  if (failed) return;   // first fault is the useful one; later ones cascade
+  failed = true;
+  document.getElementById('err-t').textContent = title;
+  document.getElementById('err-b').innerHTML = body;
+  document.getElementById('err').style.display = 'block';
+  const b = document.getElementById('boot');
+  if (b) b.style.display = 'none';
+}
+window.addEventListener('error', ev => fail('Script error', String(ev.message)));
+
+// MapLibre decodes vector tiles in Web Workers, which browsers refuse to
+// create from a file:// origin. Catch it here rather than showing black.
+if (location.protocol === 'file:') {
+  fail('Must be served over HTTP',
+    'This page was opened from the filesystem (<code>file://</code>). ' +
+    'MapLibre decodes tiles in Web Workers, and browsers block workers on a ' +
+    'file:// origin, so no map is ever drawn.<br>Serve the folder instead — ' +
+    'run this in Terminal from <code>dotmap/prototype</code>, then open ' +
+    '<code>http://localhost:8731</code>:' +
+    '<span class="cmd">python3 -m http.server 8731</span>');
+}
+
+
+/* Light-on-black basemap.
+   Every colour here is a luminance budget: whatever is bright becomes a big
+   lit dot, whatever is near-black stays an unlit (zero-power) pixel. A normal
+   light basemap would halftone into a mostly-lit screen — the opposite of what
+   an OLED wants — so the palette is built dark-first on purpose. */
+const style = {
+  version: 8,
+  sources: { ofm: { type: 'vector', url: OFM } },
+  layers: [
+    { id:'bg', type:'background', paint:{ 'background-color':'#000000' } },
+
+    { id:'water', type:'fill', source:'ofm', 'source-layer':'water',
+      paint:{ 'fill-color':'#101010' } },
+    { id:'waterway', type:'line', source:'ofm', 'source-layer':'waterway',
+      paint:{ 'line-color':'#2c2c2c', 'line-width':1 } },
+
+    { id:'green', type:'fill', source:'ofm', 'source-layer':'landcover',
+      filter:['in','class','wood','grass','park'],
+      paint:{ 'fill-color':'#0d0d0d' } },
+
+    { id:'building', type:'fill', source:'ofm', 'source-layer':'building',
+      minzoom:13, paint:{ 'fill-color':'#333333' } },
+
+    /* Roads carry most of the legibility, so they get the brightest values.
+       Class drives brightness, which becomes dot size after halftoning. */
+    { id:'road-minor', type:'line', source:'ofm', 'source-layer':'transportation',
+      minzoom:12, filter:['in','class','minor','service','track'],
+      paint:{ 'line-color':'#5a5a5a',
+        'line-width':['interpolate',['linear'],['zoom'],12,0.5,18,3] } },
+    { id:'road-sec', type:'line', source:'ofm', 'source-layer':'transportation',
+      filter:['in','class','secondary','tertiary'],
+      paint:{ 'line-color':'#9a9a9a',
+        'line-width':['interpolate',['linear'],['zoom'],8,0.6,18,5] } },
+    { id:'road-main', type:'line', source:'ofm', 'source-layer':'transportation',
+      filter:['in','class','motorway','trunk','primary'],
+      paint:{ 'line-color':'#ffffff',
+        'line-width':['interpolate',['linear'],['zoom'],5,0.7,18,7] } },
+
+    { id:'boundary', type:'line', source:'ofm', 'source-layer':'boundary',
+      filter:['<=','admin_level',4],
+      paint:{ 'line-color':'#4a4a4a', 'line-width':0.8, 'line-dasharray':[3,3] } },
+
+    /* Only used in 3D dot view. Height becomes dot brightness, so taller
+       buildings read as denser/larger dots and the skyline shows up as relief. */
+    { id:'building-3d', type:'fill-extrusion', source:'ofm',
+      'source-layer':'building', minzoom:13, layout:{ visibility:'none' },
+      paint:{
+        'fill-extrusion-color':['interpolate',['linear'],
+          ['coalesce',['get','render_height'],5], 0,'#242424', 60,'#f0f0f0'],
+        'fill-extrusion-height':['coalesce',['get','render_height'],5],
+        'fill-extrusion-base':['coalesce',['get','render_min_height'],0],
+        'fill-extrusion-opacity':1 } }
+  ]
+};
+
+let map;
+try {
+  map = new maplibregl.Map({
+    container: 'map',
+    style,
+    center: MONTPELLIER,
+    zoom: 12.4,
+    attributionControl: false,
+    // In MapLibre v6 these live under canvasContextAttributes; the old
+    // top-level options are ignored. Without preserveDrawingBuffer the
+    // drawing buffer is wiped after compositing and the halftone pass
+    // reads an all-black frame.
+    canvasContextAttributes: {
+      preserveDrawingBuffer: true,
+      antialias: false            // the dot lattice resamples anyway
+    }
+  });
+} catch (e) {
+  fail('Map failed to start', String(e && e.message || e));
+  throw e;
+}
+
+window.__map = map;   // prototype convenience: drive it from the console
+
+map.on('error', e => {
+  const m = String(e && e.error && e.error.message || e);
+  // A missing individual tile at the edge of coverage is not fatal, but a
+  // blanket fetch-error filter would also hide a dead tile source — which is
+  // exactly the failure that leaves the screen black. Only ignore tile 404s.
+  if (/404/.test(m) && /\.pbf/.test(m)) return;
+  fail('Map error', m);
+});
+map.once('idle', () => {
+  const b = document.getElementById('boot');
+  if (b) b.style.display = 'none';
+});
+
+const dots = document.getElementById('dots');
+const ctx  = dots.getContext('2d', { alpha: false });
+const small = document.createElement('canvas');
+const sctx = small.getContext('2d', { willReadFrequently: true });
+
+let DPR = Math.min(window.devicePixelRatio || 1, 2);
+let scale = 1, gain = 1, cutoff = 0.06, tint = false;
+let dirty = true;
+
+/* Dot pitch is a function of zoom, and it is the whole LOD story:
+   wide view -> coarse lattice, few big dots. Zoom in -> tighter lattice,
+   smaller dots, more detail resolves. The lattice also caps how much can ever
+   be drawn: viewport / pitch, regardless of how much map sits underneath. */
+const clamp = (v,a,b) => Math.min(b, Math.max(a,v));
+function pitchFor(zoom) { return clamp(18 - (zoom - 3) * 1.0, 3.5, 18) * scale; }
+
+/* Measure the canvas itself rather than the window: a hidden or
+   zero-height container would otherwise leave a 0x0 buffer that silently
+   renders nothing, and a one-shot resize() never recovers from it. */
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const w = dots.clientWidth  || document.documentElement.clientWidth  || 0;
+  const h = dots.clientHeight || document.documentElement.clientHeight || 0;
+  const nw = Math.max(1, Math.floor(w * DPR));
+  const nh = Math.max(1, Math.floor(h * DPR));
+  if (nw !== dots.width || nh !== dots.height) {
+    dots.width = nw; dots.height = nh;
+  }
+  dirty = true;
+}
+addEventListener('resize', resize);
+new ResizeObserver(resize).observe(document.documentElement);
+resize();
+
+function halftone() {
+  const src = map.getCanvas();
+  if (!src.width || !src.height) return;
+  if (dots.width < 2 || dots.height < 2) return;   // container not laid out yet
+
+  const zoom  = map.getZoom();
+  const pitch = pitchFor(zoom);            // CSS px between dot centres
+  const step  = pitch * DPR;               // device px
+  const cols  = Math.max(1, Math.ceil(dots.width  / step));
+  const rows  = Math.max(1, Math.ceil(dots.height / step));
+
+  // Downsample the full frame to one pixel per lattice cell. The browser's
+  // box filter does the averaging, so each cell is the mean luminance of the
+  // map under it — this is the compression step.
+  small.width = cols; small.height = rows;
+  sctx.drawImage(src, 0, 0, cols, rows);
+  const px = sctx.getImageData(0, 0, cols, rows).data;
+
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, dots.width, dots.height);
+  ctx.fillStyle = tint ? '#ffb000' : '#ffffff';
+
+  const rMax = step * 0.5;
+  let lit = 0, area = 0;
+
+  ctx.beginPath();
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const i = (y * cols + x) * 4;
+      // Rec.601 luma — matches perceived brightness of the styled features.
+      const L = (px[i] * 0.299 + px[i+1] * 0.587 + px[i+2] * 0.114) / 255;
+      if (L <= cutoff) continue;            // stays black => unlit => no power
+      const t = Math.pow((L - cutoff) / (1 - cutoff), 1 / gain);
+      const r = t * rMax;
+      if (r < 0.35) continue;
+      const cx = x * step + step / 2;
+      const cy = y * step + step / 2;
+      ctx.moveTo(cx + r, cy);
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      lit++; area += Math.PI * r * r;
+    }
+  }
+  ctx.fill();
+
+  const coverage = area / (dots.width * dots.height);
+  hud(zoom, pitch, lit, cols * rows, coverage);
+}
+
+function hud(zoom, pitch, lit, cells, coverage) {
+  set('h-zoom',  zoom.toFixed(2));
+  set('h-pitch', pitch.toFixed(1) + ' PX');
+  set('h-dots',  lit.toLocaleString() + ' / ' + cells.toLocaleString());
+  set('h-lit',   (coverage * 100).toFixed(1) + '%');
+  set('h-dark',  ((1 - coverage) * 100).toFixed(1) + '%');
+}
+const set = (id, v) => { document.getElementById(id).textContent = v; };
+
+// Redraw only when MapLibre actually produced a new frame, so a stationary
+// map costs nothing — which is also the point of the tile-streaming design.
+map.on('render', () => { dirty = true; });
+(function loop() {
+  if (dirty) { dirty = false; halftone(); }
+  requestAnimationFrame(loop);
+})();
+
+// Forward interaction to the map, since the dot canvas sits on top of it.
+dots.style.pointerEvents = 'none';
+document.getElementById('map').style.pointerEvents = 'auto';
+
+const bind = (id, label, fn) => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    fn(parseFloat(el.value));
+    document.getElementById(label).textContent = parseFloat(el.value).toFixed(2);
+    dirty = true;
+  });
+};
+bind('s-scale', 'l-scale', v => scale = v);
+bind('s-gain',  'l-gain',  v => gain = v);
+bind('s-cut',   'l-cut',   v => cutoff = v);
+
+const b3d = document.getElementById('b-3d');
+b3d.addEventListener('click', () => {
+  const on = b3d.getAttribute('aria-pressed') !== 'true';
+  b3d.setAttribute('aria-pressed', on);
+  map.setLayoutProperty('building-3d', 'visibility', on ? 'visible' : 'none');
+  map.setLayoutProperty('building',    'visibility', on ? 'none' : 'visible');
+  map.easeTo({ pitch: on ? 58 : 0, bearing: on ? -22 : 0, duration: 900 });
+});
+
+const bt = document.getElementById('b-tint');
+bt.addEventListener('click', () => {
+  tint = !tint;
+  bt.setAttribute('aria-pressed', tint);
+  bt.textContent = tint ? 'WHITE' : 'AMBER';
+  dirty = true;
+});
+</script>

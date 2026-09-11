@@ -1,2 +1,6 @@
 .DS_Store
 .playwright-mcp/
+
+# Local only — never pushed to the public repo
+memory/
+.claude/

@@ -5,6 +5,64 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-11 — A new home, a skill, and corrections to what the site claimed
+
+### Fixed
+
+- **The capitals list included Taiwan and left out Vatican City.** The Wikidata
+  query matched any "member of the United Nations" statement, including historical
+  ones, so it picked up Taiwan — whose UN seat passed to the People's Republic of
+  China in 1971 — and it missed Vatican City. The total still came to 195, which is
+  why the count never revealed it. The query now requires a membership statement
+  with no end date *and* a current, undissolved sovereign state, and the result was
+  checked against Wikidata's current membership: the 193 members plus the two
+  observer states, Vatican City and Palestine.
+- **Seven states have more than one seat, not nine.** Jordan and Syria each return
+  the same capital twice as separate Wikidata items; that is not a second seat.
+  `seats` now counts distinct capitals.
+- **The map's credit left out OpenMapTiles.** The on-map attribution now uses
+  OpenFreeMap's own required wording, read from its TileJSON: "OpenFreeMap
+  © OpenMapTiles Data from © OpenStreetMap contributors". OpenMapTiles is also
+  credited in the in-app panel, CREDITS.md and the README.
+- **MapLibre's full BSD-3-Clause licence now ships with the vendored bundles**
+  (`vendor/LICENSE-maplibre-gl.txt`). The bundles carried only a one-line header
+  and a link.
+
+### Added
+
+- **`skills/dotworld/`** — a Claude Code skill capturing how DotWorld was built: the
+  two ways to get a MapLibre frame into a dot pass and what each costs, the shader,
+  the measured numbers and the traps that produced wrong ones, the data queries, the
+  colour rules, and publishing and credits. Install with `sh install.sh`.
+  It was tested before it shipped: an agent given a DotWorld task without it got the
+  basics right but repeated the black-background bug, quoted frame times it had not
+  measured, and missed the crash, lifecycle and licensing traps. The skill was
+  written around those gaps, then the task was run again by a fresh agent with it.
+- **`skills/dotworld/scripts/`**, run against the live sources on 2026-09-11:
+  - `fetch_capitals.py` rebuilt the corrected capitals file.
+  - `fetch_fr_population.py` returned 645 communes: the shipped 644 plus Quimper,
+    which the earlier run did not return (not investigated). No population changed.
+  - `rank_monuments.py` ranks a city's monuments; see *Not changed* below.
+  All three retry. The France query asks for CSV, because its JSON result was cut
+  off at exactly 262,144 bytes on every attempt through a proxy.
+- **`archive/`** — the first Canvas2D prototype, its screenshots, and the first skill.
+
+### Changed
+
+- The working copy moved to a new home with its full history. The GitHub
+  repository and the live URL are unchanged.
+
+### Not changed, on purpose
+
+- **Montpellier's monuments.** Ranked with one consistent measure — Wikipedia
+  language editions for every candidate, inside the city's own boundary — the top 10
+  swaps the promenade du Peyrou (4) for the Mosquée Avicenne (6). The shipped list
+  counted all sitelinks for OpenStreetMap-sourced items but Wikipedia-only links for
+  Wikidata items. Which list to show is an editorial choice, so the site keeps its
+  current list until that is decided.
+
+---
+
 ## 2026-09-11 — The lattice moves to the GPU; capitals get populations
 
 ### Improved

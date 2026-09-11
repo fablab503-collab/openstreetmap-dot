@@ -4,7 +4,7 @@
 [Claude](https://claude.com/claude-code). Nothing here is my achievement alone.**
 
 Not affiliated with, endorsed by, or connected to OpenStreetMap, the OpenStreetMap
-Foundation, OpenFreeMap, MapLibre, the World Bank, the Wikimedia Foundation,
+Foundation, OpenFreeMap, OpenMapTiles, MapLibre, the World Bank, the Wikimedia Foundation,
 ColorBrewer or Nothing. No claim is made over any of their work.
 
 This project exists **only because those projects gave their work away**. It points
@@ -182,6 +182,30 @@ ships Dotwork, which is metrically compatible and carries no such restriction.
   automatically in a hidden tab.
 - **Free community services.** Tiles, search and statistics come from free services
   with fair-use expectations.
+
+## This repository
+
+| Path | What it is |
+| --- | --- |
+| `index.html` | The whole app — style, shader, interface, data plumbing |
+| `vendor/`, `fonts/`, `data/`, `shots/` | MapLibre GL JS 6.9.0, typefaces, datasets, screenshots |
+| `skills/dotworld/` | A [Claude Code](https://claude.com/claude-code) skill capturing how DotWorld was built: architecture, shader, measured numbers and the traps behind them, data queries, colour rules, publishing and credits |
+| `skills/dotworld/scripts/` | Scripts that rebuild the datasets from Wikidata and OpenStreetMap |
+| `archive/` | The first Canvas2D prototype and the first skill, kept for the history |
+| `install.sh` | Copies `skills/*` into `~/.claude/skills` |
+| `CHANGELOG.md` | Every change, with the reasons and the measured numbers |
+
+Install or update the skill:
+
+```bash
+sh install.sh
+```
+
+Rebuild a dataset — for example the capitals:
+
+```bash
+python3 skills/dotworld/scripts/fetch_capitals.py > data/world-capitals.geojson
+```
 
 ## Credits and licensing
 
