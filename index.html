@@ -31,6 +31,9 @@
   #dots { position:absolute; inset:0; width:100%; height:100%; display:block;
           cursor:grab; }
   #dots:active { cursor:grabbing; }
+  /* Text layer: names cannot survive the lattice, so they sit on top of it. */
+  #labels { position:absolute; inset:0; width:100%; height:100%; display:block;
+    pointer-events:none; }
 
   /* One panel width for everything, and two columns that lay their panels out
      in flow — so nothing can overlap or run off the page however the content
@@ -79,7 +82,7 @@
      carried by colour alone. */
   #legend { flex:0 0 auto; }
   #legend .ttl { color:#6a6a6a; display:block; margin-bottom:5px; }
-  #ramp { height:9px; margin:2px 0 3px;
+  #ramp, .ramp { height:9px; margin:2px 0 3px;
     background:linear-gradient(90deg,#800026,#bd0026,#e31a1c,#fc4e2a,
                                #fd8d3c,#feb24c,#fed976,#ffeda0); }
   #legend .ends { display:flex; justify-content:space-between; color:#6a6a6a;
@@ -195,6 +198,7 @@
 
 <div id="map"></div>
 <canvas id="dots"></canvas>
+<canvas id="labels"></canvas>
 
 <div id="search">
   <input id="q" type="search" placeholder="SEARCH A PLACE" autocomplete="off"
@@ -209,6 +213,7 @@
   <span class="row">ZOOM <b id="h-zoom">—</b></span>
   <span class="row">DOT PITCH <b id="h-pitch">—</b></span>
   <span class="row">DOTS LIT <b id="h-dots">—</b></span>
+  <span class="row">FRAME <b id="h-frame">—</b></span>
   <div class="sep"></div>
   <span class="row oled">LIT AREA <b id="h-lit" class="oled">—</b></span>
   <span class="row oled">PIXELS DARK <b id="h-dark" class="oled">—</b></span>
@@ -233,6 +238,11 @@
   <div id="ramp"></div>
   <div class="ends"><span id="l-min">15 K</span><span>2.1 M</span></div>
   <span class="src">YlOrRd (ColorBrewer), reversed for a dark ground</span>
+  <span class="ttl" style="margin:10px 0 5px">CAPITALS — POPULATION</span>
+  <div class="ramp"></div>
+  <div class="ends"><span>1 K</span><span>22 M</span></div>
+  <span class="src">Log scale; marker size too. City vs. whole municipality
+    varies by country, so compare loosely.</span>
   <div class="cats">
     <span class="ttl" style="margin:6px 0 1px">MONUMENTS — MONTPELLIER</span>
     <span class="cat"><i style="background:#d95926"></i>MUSEUM</span>
@@ -325,7 +335,8 @@
       <li><a href="https://data.worldbank.org/" target="_blank" rel="noopener">World Bank Open Data</a>
         (CC BY 4.0) — world population, birth and death rates, urban share, land area</li>
       <li><a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a>
-        (CC0) — French commune populations, the 195 capitals, Montpellier monuments</li>
+        (CC0) — French commune populations, the 195 capitals and their populations,
+        Montpellier monuments</li>
       <li>Monument ranking is by Wikipedia language coverage — really the work of
         Wikipedia's editors</li>
     </ul>
@@ -405,7 +416,7 @@ if (location.protocol === 'file:') {
     'This page was opened from the filesystem (<code>file://</code>). ' +
     'MapLibre decodes tiles in Web Workers, and browsers block workers on a ' +
     'file:// origin, so no map is ever drawn.<br>Serve the folder instead — ' +
-    'run this in Terminal from <code>dotmap/prototype</code>, then open ' +
+    'run this in Terminal from the project folder, then open ' +
     '<code>http://localhost:8731</code>:' +
     '<span class="cmd">python3 -m http.server 8731</span>');
 }
@@ -586,10 +597,110 @@ map.once('idle', () => {
   if (b) b.style.display = 'none';
 });
 
-const dots = document.getElementById('dots');
-const ctx  = dots.getContext('2d', { alpha: false });
+/* Two canvases sit over the map. #dots is the lattice; #labels holds text,
+   which has to go ON the dot field because letterforms cannot survive it. */
+let dots = document.getElementById('dots');
+const labels = document.getElementById('labels');
+const lctx = labels.getContext('2d');
 const small = document.createElement('canvas');
 const sctx = small.getContext('2d', { willReadFrequently: true });
+
+/* The lattice runs on the GPU.
+   Measured on an M2 Pro at street zoom, ~180k dots drawn as Canvas2D arc
+   paths took ~30 ms a frame — over the 16.7 ms budget for 60 fps before
+   MapLibre had drawn anything. Stamping them into a CPU pixel buffer was
+   worse (~100 ms). As a fragment shader the same pattern costs ~1.5 ms
+   including the texture upload, and does not grow with dot count.
+   ?renderer=cpu forces the Canvas2D fallback, for comparison. */
+const VERT = `#version 300 es
+in vec2 p;
+void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
+const FRAG = `#version 300 es
+precision highp float;
+uniform sampler2D u_src;
+uniform vec2  u_res;
+uniform float u_step, u_texScale, u_cut, u_gain, u_neutralA;
+uniform vec3  u_dot;
+uniform bool  u_data;
+out vec4 o;
+void main() {
+  vec2 f   = gl_FragCoord.xy;
+  vec2 ctr = (floor(f / u_step) + 0.5) * u_step;
+  // The mip level whose texels are one cell wide holds the cell's average.
+  vec3 c  = textureLod(u_src, ctr / u_res, max(0.0, log2(u_step * u_texScale))).rgb;
+  float L = dot(c, vec3(0.299, 0.587, 0.114));
+  o = vec4(0.0, 0.0, 0.0, 1.0);
+  if (L <= u_cut) return;
+  float r = pow((L - u_cut) / (1.0 - u_cut), 1.0 / u_gain) * u_step * 0.5;
+  if (r < 0.35) return;
+  float mx = max(c.r, max(c.g, c.b));
+  float mn = min(c.r, min(c.g, c.b));
+  vec3 col = u_dot;
+  float alpha = u_neutralA;
+  if (u_data && mx > 0.0 && (mx - mn) / mx > 0.28) {
+    r = max(r, 0.9); col = c / mx; alpha = 1.0;
+  }
+  o = vec4(col * clamp(r - distance(f, ctr) + 0.5, 0.0, 1.0) * alpha, 1.0);
+}`;
+
+function setupGL(gl) {
+  const shader = (type, source) => {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, source);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  };
+  const prog = gl.createProgram();
+  gl.attachShader(prog, shader(gl.VERTEX_SHADER, VERT));
+  gl.attachShader(prog, shader(gl.FRAGMENT_SHADER, FRAG));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, 'p');
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);   // GL's y axis points up
+  const u = {};
+  for (const n of ['u_src', 'u_res', 'u_step', 'u_texScale', 'u_cut', 'u_gain',
+                   'u_neutralA', 'u_dot', 'u_data']) u[n] = gl.getUniformLocation(prog, n);
+  gl.uniform1i(u.u_src, 0);
+  return { u, maxTex: gl.getParameter(gl.MAX_TEXTURE_SIZE) };
+}
+
+let gl = null, glr = null;
+if (!/[?&]renderer=cpu\b/.test(location.search)) {
+  try {
+    gl = dots.getContext('webgl2', { alpha: false, antialias: false, depth: false,
+                                     stencil: false, preserveDrawingBuffer: false });
+    if (gl) glr = setupGL(gl);
+  } catch (e) {
+    // A canvas that has handed out a WebGL context can never give a 2D one,
+    // so a shader that fails to build needs a fresh element for the fallback.
+    const fresh = dots.cloneNode(false);
+    dots.replaceWith(fresh);
+    dots = fresh;
+    gl = null; glr = null;
+  }
+}
+const ctx = gl ? null : dots.getContext('2d', { alpha: false });
+window.__renderer = gl ? 'webgl2' : 'canvas2d';
+if (gl) {
+  dots.addEventListener('webglcontextlost', e => { e.preventDefault(); glr = null; });
+  dots.addEventListener('webglcontextrestored', () => { glr = setupGL(gl); dirty = true; });
+}
+
+const hexRgb = h => {
+  const n = parseInt(h.slice(1), 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+};
 
 let DPR = Math.min(window.devicePixelRatio || 1, 2);
 // Defaults calibrated by eye at street zoom in 3D — the look worth keeping.
@@ -620,8 +731,8 @@ function resize() {
   const h = dots.clientHeight || document.documentElement.clientHeight || 0;
   const nw = Math.max(1, Math.floor(w * DPR));
   const nh = Math.max(1, Math.floor(h * DPR));
-  if (nw !== dots.width || nh !== dots.height) {
-    dots.width = nw; dots.height = nh;
+  for (const c of [dots, labels]) {
+    if (nw !== c.width || nh !== c.height) { c.width = nw; c.height = nh; }
   }
   /* A map built inside a zero-size container framed itself against nothing,
      so re-fit once the container first has real dimensions — otherwise a map
@@ -637,73 +748,92 @@ addEventListener('resize', resize);
 new ResizeObserver(resize).observe(document.documentElement);
 resize();
 
-function halftone() {
-  const src = map.getCanvas();
-  if (!src.width || !src.height) return;
-  if (dots.width < 2 || dots.height < 2) return;   // container not laid out yet
+/* The per-cell rule, in one place. Rec.601 luma drives dot radius; the
+   fragment shader above mirrors this line for line.
 
-  const zoom  = map.getZoom();
-  const pitch = pitchFor(zoom);            // CSS px between dot centres
-  const step  = pitch * DPR;               // device px
-  const cols  = Math.max(1, Math.ceil(dots.width  / step));
-  const rows  = Math.max(1, Math.ceil(dots.height / step));
+   Chroma separates data from context: the basemap is authored in greys and
+   the data layers are the only saturated things on screen. Grey cells take
+   the chosen dot colour (neutralised); coloured cells keep their own hue,
+   which is what lets a population ramp or a monument category survive the
+   lattice at all. Returns a shared scratch object — no allocation per cell. */
+const CELL = { r: 0, data: false, mx: 0 };
+function cellDot(r8, g8, b8, rMax) {
+  const L = (r8 * 0.299 + g8 * 0.587 + b8 * 0.114) / 255;
+  if (L <= cutoff) return null;                 // stays black => unlit => no power
+  let r = Math.pow((L - cutoff) / (1 - cutoff), 1 / gain) * rMax;
+  if (r < 0.35) return null;
+  const mx = Math.max(r8, g8, b8), mn = Math.min(r8, g8, b8);
+  const data = dataColour && mx > 0 && (mx - mn) / mx > 0.28;
+  if (data) r = Math.max(r, 0.9);               // data must not vanish into the lattice
+  CELL.r = r; CELL.data = data; CELL.mx = mx;
+  return CELL;
+}
 
-  // Downsample the full frame to one pixel per lattice cell. The browser's
-  // box filter does the averaging, so each cell is the mean luminance of the
-  // map under it — this is the compression step.
+// Downsample the frame to one pixel per lattice cell; each is the cell's mean.
+function sampleCells(src, cols, rows) {
   small.width = cols; small.height = rows;
   sctx.drawImage(src, 0, 0, cols, rows);
-  const px = sctx.getImageData(0, 0, cols, rows).data;
+  return sctx.getImageData(0, 0, cols, rows).data;
+}
 
+function measureCells(px, cols, rows, step) {
+  const rMax = step * 0.5;
+  let lit = 0, area = 0;
+  for (let i = 0, n = cols * rows * 4; i < n; i += 4) {
+    const d = cellDot(px[i], px[i + 1], px[i + 2], rMax);
+    if (d) { lit++; area += Math.PI * d.r * d.r; }
+  }
+  return { lit, coverage: area / (dots.width * dots.height) };
+}
+
+function drawGL(src, step) {
+  const u = glr.u;
+  gl.viewport(0, 0, dots.width, dots.height);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.uniform2f(u.u_res, dots.width, dots.height);
+  gl.uniform1f(u.u_step, step);
+  gl.uniform1f(u.u_texScale, src.width / dots.width);  // MapLibre's DPR can differ from ours
+  gl.uniform1f(u.u_cut, cutoff);
+  gl.uniform1f(u.u_gain, gain);
+  // With data on screen the basemap is context, not content: hold it back so
+  // the coloured dots read. An evenly lit lattice drowns a few hundred points.
+  gl.uniform1f(u.u_neutralA, dataColour ? 0.38 : 1);
+  gl.uniform3fv(u.u_dot, hexRgb(dotColor));
+  gl.uniform1i(u.u_data, dataColour ? 1 : 0);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+
+// Canvas2D fallback — only used where WebGL2 is unavailable.
+function drawCPU(px, cols, rows, step) {
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, dots.width, dots.height);
   const rMax = step * 0.5;
-  let lit = 0, area = 0;
-
-  /* Two passes. The basemap is authored in greys, and the data layers are the
-     only saturated things on screen — so chroma is what separates "data" from
-     "context". Grey cells become the chosen dot colour (neutralised); coloured
-     cells keep their own hue, which is what makes a population ramp or a
-     monument category survive the lattice at all. */
   const tinted = new Map();
   ctx.fillStyle = dotColor;
-  // With data on screen the basemap is context, not content: hold it back so
-  // the coloured dots read. Hiding the colour is not enough on its own — an
-  // evenly lit lattice drowns a few hundred data points.
   ctx.globalAlpha = dataColour ? 0.38 : 1;
   ctx.beginPath();
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
       const i = (y * cols + x) * 4;
-      const R = px[i], G = px[i+1], B = px[i+2];
-      // Rec.601 luma — matches perceived brightness of the styled features.
-      const L = (R * 0.299 + G * 0.587 + B * 0.114) / 255;
-      if (L <= cutoff) continue;            // stays black => unlit => no power
-      const t = Math.pow((L - cutoff) / (1 - cutoff), 1 / gain);
-      let r = t * rMax;
-      if (r < 0.35) continue;
-      const cx = x * step + step / 2;
-      const cy = y * step + step / 2;
-
-      const mx = Math.max(R, G, B), mn = Math.min(R, G, B);
-      if (dataColour && mx > 0 && (mx - mn) / mx > 0.28) {
+      const d = cellDot(px[i], px[i + 1], px[i + 2], rMax);
+      if (!d) continue;
+      const cx = x * step + step / 2, cy = y * step + step / 2;
+      if (d.data) {
         // Normalise to full brightness, or a small dot reads as muddy grey.
-        const k = 255 / mx;
-        const key = ((R * k) | 0) + ',' + ((G * k) | 0) + ',' + ((B * k) | 0);
-        r = Math.max(r, 0.9);               // data must not vanish into the lattice
+        const k = 255 / d.mx;
+        const key = ((px[i] * k) | 0) + ',' + ((px[i + 1] * k) | 0) + ',' + ((px[i + 2] * k) | 0);
         let a = tinted.get(key);
         if (!a) tinted.set(key, a = []);
-        a.push(cx, cy, r);
+        a.push(cx, cy, d.r);
       } else {
-        ctx.moveTo(cx + r, cy);
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.moveTo(cx + d.r, cy);
+        ctx.arc(cx, cy, d.r, 0, Math.PI * 2);
       }
-      lit++; area += Math.PI * r * r;
     }
   }
   ctx.fill();
   ctx.globalAlpha = 1;
-
   for (const [key, a] of tinted) {
     ctx.fillStyle = 'rgb(' + key + ')';
     ctx.beginPath();
@@ -713,12 +843,99 @@ function halftone() {
     }
     ctx.fill();
   }
-
-  if (showCapitals) drawCapitals();
-
-  const coverage = area / (dots.width * dots.height);
-  hud(zoom, pitch, lit, cols * rows, coverage);
 }
+
+/* The lit-area readout needs a count, and a shader cannot hand one back
+   cheaply — it means pulling the frame back off the GPU. Measured, that
+   readback is erratic: ~1 ms on one frame, 18 ms or even ~55 ms on another,
+   depending on what the GPU is still busy with. Counting on a timer while the
+   map moved therefore meant a hitch a few times a second. So the count waits
+   until the map is at rest; while moving, only zoom, pitch and frame update. */
+let statsTimer = null;
+function countWhenStill() {
+  clearTimeout(statsTimer);
+  statsTimer = setTimeout(() => {
+    if (map.isMoving() || orbitRAF) { countWhenStill(); return; }
+    const src = map.getCanvas();
+    if (!src.width || !src.height || dots.width < 2 || dots.height < 2) return;
+    const zoom = map.getZoom(), pitch = pitchFor(zoom), step = pitch * DPR;
+    const cols = Math.max(1, Math.ceil(dots.width / step));
+    const rows = Math.max(1, Math.ceil(dots.height / step));
+    const s = measureCells(sampleCells(src, cols, rows), cols, rows, step);
+    hud(zoom, pitch, s.lit, cols * rows, s.coverage);
+  }, 250);
+}
+
+function halftone() {
+  const src = map.getCanvas();
+  if (!src.width || !src.height) return;
+  if (dots.width < 2 || dots.height < 2) return;   // container not laid out yet
+
+  const t0 = performance.now();
+  const zoom  = map.getZoom();
+  const pitch = pitchFor(zoom);            // CSS px between dot centres
+  const step  = pitch * DPR;               // device px
+  const cols  = Math.max(1, Math.ceil(dots.width  / step));
+  const rows  = Math.max(1, Math.ceil(dots.height / step));
+
+  if (gl && glr && src.width <= glr.maxTex && src.height <= glr.maxTex) {
+    drawGL(src, step);                     // no readback anywhere on this path
+    set('h-zoom', zoom.toFixed(2));
+    set('h-pitch', pitch.toFixed(1) + ' PX');
+    countWhenStill();
+  } else if (ctx) {
+    const px = sampleCells(src, cols, rows);
+    drawCPU(px, cols, rows, step);
+    const s = measureCells(px, cols, rows, step);
+    hud(zoom, pitch, s.lit, cols * rows, s.coverage);
+  } else {
+    return;                                // GL context lost, not yet restored
+  }
+
+  lctx.clearRect(0, 0, labels.width, labels.height);
+  if (showCapitals) drawCapitals();
+  recordFrame(performance.now() - t0);
+}
+
+/* Frame cost, measured rather than claimed. The HUD shows the median of the
+   last 30 redraws — main-thread time; GPU work itself is asynchronous. */
+const FRAMES = [];
+function recordFrame(ms) {
+  FRAMES.push(ms);
+  if (FRAMES.length > 30) FRAMES.shift();
+  const s = [...FRAMES].sort((a, b) => a - b);
+  set('h-frame', s[s.length >> 1].toFixed(1) + ' MS');
+  window.__frameMs = +ms.toFixed(2);
+}
+
+/* window.__bench(n): run the redraw n times synchronously, forcing the GPU to
+   finish each frame, and report where the time goes. Unlike sampling real
+   frames this works in a hidden tab too. Compare against ?renderer=cpu. */
+window.__bench = (n = 20) => {
+  const src = map.getCanvas();
+  const zoom = map.getZoom(), step = pitchFor(zoom) * DPR;
+  const cols = Math.max(1, Math.ceil(dots.width / step));
+  const rows = Math.max(1, Math.ceil(dots.height / step));
+  const time = fn => { const a = performance.now(); fn(); return performance.now() - a; };
+  const draw = [], read = [], loop = [], text = [];
+  for (let i = 0; i < n; i++) {
+    let px = null;
+    read.push(time(() => { px = sampleCells(src, cols, rows); }));
+    loop.push(time(() => { measureCells(px, cols, rows, step); }));
+    draw.push(time(() => {
+      if (gl && glr) { drawGL(src, step); gl.finish(); }
+      else if (ctx) drawCPU(px, cols, rows, step);
+    }));
+    text.push(time(() => {
+      lctx.clearRect(0, 0, labels.width, labels.height);
+      if (showCapitals) drawCapitals();
+    }));
+  }
+  const med = a => +[...a].sort((x, y) => x - y)[a.length >> 1].toFixed(2);
+  return { renderer: window.__renderer, zoom: +zoom.toFixed(2), cells: cols * rows,
+           drawMs: med(draw), readbackMs: med(read), countLoopMs: med(loop),
+           labelsMs: med(text) };
+};
 
 function hud(zoom, pitch, lit, cells, coverage) {
   set('h-zoom',  zoom.toFixed(2));
@@ -733,8 +950,9 @@ const set = (id, v) => { document.getElementById(id).textContent = v; };
 // map costs nothing — which is also the point of the tile-streaming design.
 map.on('render', () => { dirty = true; });
 (function loop() {
-  if (dirty) { dirty = false; halftone(); }
+  // Re-arm first: an exception inside halftone() must not stop rendering for good.
   requestAnimationFrame(loop);
+  if (dirty) { dirty = false; halftone(); }
 })();
 
 // Forward interaction to the map, since the dot canvas sits on top of it.
@@ -837,11 +1055,39 @@ document.getElementById('b-north').addEventListener('click', () => {
    turn to mush. So the names are drawn on top of the finished dot field.
    The dots stay the map; the type stays type. (showCapitals / CAPITALS are
    declared near the top — see the note there.) */
+/* Capital population uses the same reversed YlOrRd as France, on a LOG scale:
+   capitals run from 747 (Yaren, Nauru) to 21.9 M (Beijing) — four orders of
+   magnitude — and a linear ramp would paint all but a handful the same red.
+   Caveat carried in the legend: Wikidata's figure is the city proper in some
+   countries and a whole municipality in others (Beijing), so comparisons
+   between countries are rough. */
+const RAMP = ['#800026', '#bd0026', '#e31a1c', '#fc4e2a',
+              '#fd8d3c', '#feb24c', '#fed976', '#ffeda0'];
+const CAP_LOG_LO = 3, CAP_LOG_HI = Math.log10(22e6);        // 1 K .. 22 M
+function rampColor(t) {
+  const x = t * (RAMP.length - 1);
+  const i = Math.min(RAMP.length - 2, Math.floor(x)), f = x - i;
+  const a = parseInt(RAMP[i].slice(1), 16), b = parseInt(RAMP[i + 1].slice(1), 16);
+  const mix = s => Math.round(((a >> s) & 255) * (1 - f) + ((b >> s) & 255) * f);
+  return `rgb(${mix(16)},${mix(8)},${mix(0)})`;
+}
+const fmtCapPop = n => n >= 1e6 ? (n / 1e6).toFixed(1) + ' M'
+                     : n >= 1e3 ? Math.round(n / 1e3) + ' K' : String(n);
+
 fetch('data/world-capitals.geojson').then(r => r.json()).then(j => {
-  CAPITALS = j.features.map(f => ({
-    name: f.properties.name, country: f.properties.country,
-    pop: f.properties.pop, seats: f.properties.seats,
-    lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] }));
+  CAPITALS = j.features.map(f => {
+    const pop = f.properties.pop || 0;
+    const t = pop > 0
+      ? clamp((Math.log10(pop) - CAP_LOG_LO) / (CAP_LOG_HI - CAP_LOG_LO), 0, 1) : 0;
+    return {
+      name: f.properties.name, country: f.properties.country,
+      pop, seats: f.properties.seats,
+      // Colour AND size carry population, so it never rests on hue alone.
+      color: pop > 0 ? rampColor(t) : '#6a6a6a',
+      markerR: pop > 0 ? 1.8 + t * 3.2 : 1.6,
+      popLabel: pop > 0 ? fmtCapPop(pop) : '',
+      lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] };
+  });
   CAPITALS.sort((a, b) => b.pop - a.pop);   // when space is tight, biggest wins
   dirty = true;
 }).catch(() => {});
@@ -855,11 +1101,14 @@ function angularDist(aLat, aLon, bLat, bLon) {
 
 function drawCapitals() {
   if (!CAPITALS.length) return;
-  const W = dots.width, H = dots.height;
+  const W = labels.width, H = labels.height;
   const fs = Math.max(9, Math.round(9.5 * DPR));
-  ctx.font = fs + 'px "Space Mono", ui-monospace, monospace';
-  ctx.textBaseline = 'middle';
-  const onGlobe = map.getProjection && map.getProjection().type === 'globe';
+  lctx.font = fs + 'px "Space Mono", ui-monospace, monospace';
+  lctx.textBaseline = 'middle';
+  // getProjection() is undefined until the style has loaded, and the capitals
+  // file can arrive first — reading .type off it would throw mid-frame.
+  const proj = map.getProjection && map.getProjection();
+  const onGlobe = !!proj && proj.type === 'globe';
   const ctr = map.getCenter();
   const placed = [];
   let shown = 0;
@@ -873,24 +1122,30 @@ function drawCapitals() {
     const x = p.x * DPR, y = p.y * DPR;
     if (!(x > 0 && y > 0 && x < W && y < H)) continue;
 
-    const label = cap.name.toUpperCase();
-    const w = ctx.measureText(label).width;
-    const pad = 7 * DPR;
-    const box = [x + pad - 2, y - fs * 0.8, x + pad + w + 2, y + fs * 0.8];
+    const name = cap.name.toUpperCase();
+    const head = cap.popLabel ? name + '  ' : name;
+    const wHead = lctx.measureText(head).width;
+    const wPop = cap.popLabel ? lctx.measureText(cap.popLabel).width : 0;
+    const pad = 8 * DPR;
+    const box = [x + pad - 3, y - fs * 0.8, x + pad + wHead + wPop + 3, y + fs * 0.8];
     // Greedy de-clutter: skip anything that would collide with a placed label.
     if (placed.some(b => box[0] < b[2] && b[0] < box[2] &&
                          box[1] < b[3] && b[1] < box[3])) continue;
     placed.push(box);
     shown++;
 
-    ctx.beginPath();
-    ctx.arc(x, y, 2.4 * DPR, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffeda0';               // top of the population ramp
-    ctx.fill();
-    ctx.fillStyle = 'rgba(0,0,0,.85)';       // keep type legible over dots
-    ctx.fillRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(label, x + pad, y);
+    lctx.beginPath();
+    lctx.arc(x, y, cap.markerR * DPR, 0, Math.PI * 2);
+    lctx.fillStyle = cap.color;              // the mark carries the colour...
+    lctx.fill();
+    lctx.fillStyle = 'rgba(0,0,0,.85)';      // keep type legible over dots
+    lctx.fillRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
+    lctx.fillStyle = '#ffffff';
+    lctx.fillText(name, x + pad, y);
+    if (cap.popLabel) {
+      lctx.fillStyle = '#9a9a9a';            // ...the text stays in ink, not series colour
+      lctx.fillText(cap.popLabel, x + pad + wHead, y);
+    }
   }
 }
 
