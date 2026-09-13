@@ -1897,16 +1897,22 @@ async function countryPop(cap) {
   };
   if (!cap.cc) { paint(null); return; }
   if (cPopCache.has(cap.cc)) { paint(cPopCache.get(cap.cc)); return; }
-  try {
-    const r = await fetch('https://api.worldbank.org/v2/country/' + cap.cc
-                        + '/indicator/SP.POP.TOTL?format=json&mrv=1');
-    const j = await r.json();
-    const row = j && j[1] && j[1][0];
-    const v = row && row.value != null ? { value: row.value, year: +row.date } : null;
-    cPopCache.set(cap.cc, v);
-    paint(v);
-  } catch (e) {
-    paint(null);
+  /* Twice, because the World Bank fails the odd request with an error page that
+     carries no CORS header - the browser then reports it as a CORS problem rather
+     than as the 5xx it is, and a country that has a figure shows none. */
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch('https://api.worldbank.org/v2/country/' + cap.cc
+                          + '/indicator/SP.POP.TOTL?format=json&mrv=1');
+      const j = await r.json();
+      const row = j && j[1] && j[1][0];
+      const v = row && row.value != null ? { value: row.value, year: +row.date } : null;
+      cPopCache.set(cap.cc, v);
+      paint(v);
+      return;
+    } catch (e) {
+      if (attempt) paint(null);
+    }
   }
 }
 
@@ -1964,8 +1970,8 @@ function showFeature(kind, name, popText, band, note) {
 const bandRange = b => {
   const i = POP_BANDS.indexOf(b);
   const from = i === 0 ? 0 : POP_BANDS[i - 1].to;
-  return b.to === Infinity ? fmtPop(from) + ' and up'
-                           : fmtPop(from) + ' – ' + fmtPop(b.to);
+  return b.to === Infinity ? fmtEdge(from) + ' and up'
+                           : fmtEdge(from) + ' – ' + fmtEdge(b.to);
 };
 
 map.on('click', e => {
@@ -2027,12 +2033,15 @@ function popThreshold() {
 }
 const fmtPop = n => n >= 1e6 ? (n / 1e6).toFixed(2) + ' M'
                   : n >= 1e3 ? Math.round(n / 1e3) + ' K' : String(n);
+// Band edges are round numbers; printing them as 1.00 M reads like a measurement.
+const fmtEdge = n => n >= 1e6 ? +(n / 1e6).toFixed(2) + ' M'
+                   : n >= 1e3 ? Math.round(n / 1e3) + ' K' : String(n);
 /* The legend is written from POP_BANDS, so it cannot describe a colour the map is
    not actually drawing. */
 document.getElementById('bands').innerHTML = POP_BANDS.map((b, i) => {
   const from = i === 0 ? 15000 : POP_BANDS[i - 1].to;
-  const range = b.to === Infinity ? fmtPop(from) + ' and up'
-              : fmtPop(from) + ' – ' + fmtPop(b.to);
+  const range = b.to === Infinity ? fmtEdge(from) + ' and up'
+              : fmtEdge(from) + ' – ' + fmtEdge(b.to);
   return `<span class="band"><i style="background:${b.hex}"></i>`
        + `<b>${b.name}</b><em>${range}</em></span>`;
 }).join('');
