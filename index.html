@@ -226,6 +226,18 @@
     #zoombar { width:calc(100vw - 24px); bottom:56px; }
   }
 
+  /* Where am I: directly above the zoom bar, so both live at the bottom centre. */
+  #b-here { position:absolute; bottom:82px; left:50%; transform:translateX(-50%);
+    z-index:12; padding:8px 16px; cursor:pointer; background:rgba(0,0,0,.86);
+    color:#8a8a8a; border:1px solid #1e1e1e; font:inherit; letter-spacing:.1em;
+    text-transform:uppercase; white-space:nowrap;
+    transition:transform .38s cubic-bezier(.4,0,.2,1), opacity .38s ease; }
+  #b-here:hover { border-color:var(--lit); color:var(--lit); }
+  #b-here[aria-pressed=true] { border-color:var(--lit); color:var(--lit); }
+  body.ui-hidden #b-here { transform:translate(-50%, 140px); opacity:0;
+    pointer-events:none; }
+  @media (max-width: 900px) { #b-here { bottom:112px; } }
+
   #attr { position:absolute; bottom:8px; left:12px; z-index:10; font-size:10px;
     color:#5a5a5a; letter-spacing:.04em; }
   #attr a { color:#7a7a7a; }
@@ -280,10 +292,11 @@
 </div>
 
 <div id="legend" class="panel">
-  <span class="ttl">POPULATION — FRANCE</span>
+  <span class="ttl">POPULATION — WORLD</span>
   <div id="ramp"></div>
-  <div class="ends"><span id="l-min">15 K</span><span>2.1 M</span></div>
-  <span class="src">YlOrRd (ColorBrewer), reversed for a dark ground</span>
+  <div class="ends"><span id="l-min">15 K</span><span>25 M</span></div>
+  <span class="src">Every city over 15,000 people — 34,091 of them, from GeoNames.
+    YlOrRd (ColorBrewer), reversed for a dark ground, on a ratio scale.</span>
   <span class="ttl" style="margin:10px 0 5px">CAPITALS — POPULATION</span>
   <div class="ramp"></div>
   <div class="ends"><span>1 K</span><span>22 M</span></div>
@@ -344,6 +357,8 @@
 <div id="boot">LOADING TILES…</div>
 <div id="err" class="panel"><h3 id="err-t">Error</h3><div id="err-b"></div></div>
 
+<button id="b-here" type="button" aria-pressed="false">WHERE AM I</button>
+
 <div id="zoombar">
   <div class="top"><span>ZOOM</span><b id="l-zoom">—</b></div>
   <input id="s-zoom" type="range" min="0" max="20" step="0.1" value="5"
@@ -399,10 +414,11 @@
       <li><a href="https://data.worldbank.org/" target="_blank" rel="noopener">World Bank Open Data</a>
         (CC BY 4.0) — world population, birth and death rates, urban share, land area,
         and the population of whichever country you pick</li>
+      <li><a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a>
+        (CC BY 4.0) — the population of every city in the world over 15,000 people</li>
       <li><a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a>
-        (CC0) — French commune populations, the 195 capitals with their populations
-        and country codes, the best-known monuments of every capital, Montpellier's
-        monuments</li>
+        (CC0) — the 195 capitals with their populations and country codes, the
+        best-known monuments of every capital, Montpellier's monuments</li>
       <li><a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a>
         (public domain) — the country outline that lights up when you pick one</li>
       <li>Monument ranking is by Wikipedia language coverage — really the work of
@@ -502,7 +518,10 @@ const style = {
   projection: { type: 'globe' },
   sources: {
     ofm: { type: 'vector', url: OFM },
-    frpop:  { type: 'geojson', data: 'data/fr-population.geojson' },
+    // Filled in below from a compact [lon, lat, pop] file, not fetched as GeoJSON.
+    worldpop: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
+    // Where you are, once you ask - one point, rounded to about a kilometre.
+    me: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
     monuments: { type: 'geojson', data: 'data/montpellier-monuments.geojson' },
     capmon: { type: 'geojson', data: 'data/capital-monuments.geojson' }
   },
@@ -562,22 +581,37 @@ const style = {
        magnitude. Real figures (Wikidata P1082), not the tiles — the vector
        schema carries no population at all. Area encodes it too, so the
        reading never rests on colour alone. */
-    { id:'population', type:'circle', source:'frpop', maxzoom:11.5,
+    { id:'population', type:'circle', source:'worldpop', maxzoom:11.5,
       paint:{
         'circle-radius':['interpolate',['linear'],['zoom'],
-          4,['interpolate',['linear'],['get','pop'], 15000,1.1, 300000,4.5, 2100000,9],
-          9,['interpolate',['linear'],['get','pop'], 15000,3, 300000,13, 2100000,26]],
+          2,['interpolate',['linear'],['get','pop'], 15000,0.3, 1000000,1.6, 25000000,4],
+          5,['interpolate',['linear'],['get','pop'], 15000,0.9, 1000000,4, 25000000,9],
+          9,['interpolate',['linear'],['get','pop'], 15000,2.6, 1000000,12, 25000000,26]],
         /* YlOrRd — the standard sequential ramp for population, as used by
            ColorBrewer and Leaflet's own choropleth example. REVERSED: as
            published it runs light-to-dark, which is right on white paper
            (more ink = more) but backwards on black, where the biggest cities
            would be the dimmest and sink into the ground. Reversed, luminance
            rises monotonically with population. */
+        /* Stops spaced by a constant ratio, not evenly: city sizes run over three
+           orders of magnitude, and a linear ramp paints everything below a million
+           the same dark red. */
         'circle-color':['interpolate',['linear'],['get','pop'],
-          15000,'#800026',  25000,'#bd0026',  40000,'#e31a1c',
-          70000,'#fc4e2a', 120000,'#fd8d3c', 250000,'#feb24c',
-          600000,'#fed976', 2100000,'#ffeda0'],
+          15000,'#800026',   44000,'#bd0026',   128000,'#e31a1c',
+          373000,'#fc4e2a', 1090000,'#fd8d3c', 3180000,'#feb24c',
+          9300000,'#fed976', 25000000,'#ffeda0'],
         'circle-opacity':0.95 } },
+
+    /* Where you are, if you ask. Drawn from the rounded point, so nothing sharper
+       than about a kilometre exists anywhere in the page. */
+    { id:'me-ring', type:'circle', source:'me',
+      paint:{ 'circle-radius':['interpolate',['linear'],['zoom'], 3,6, 11,22, 16,60],
+        'circle-color':'#ffffff', 'circle-opacity':0.12,
+        'circle-stroke-color':'#ffffff', 'circle-stroke-width':1.5,
+        'circle-stroke-opacity':0.8 } },
+    { id:'me-dot', type:'circle', source:'me',
+      paint:{ 'circle-radius':['interpolate',['linear'],['zoom'], 3,2.5, 11,5, 16,9],
+        'circle-color':'#ffffff' } },
 
     /* Your own country, lit from your position. adm0_l/adm0_r are the country
        codes either side of a border line. */
@@ -1196,6 +1230,23 @@ fetch('data/capital-monuments.geojson').then(r => r.json()).then(j => {
   dirty = true;
 }).catch(() => {});
 
+/* The world's cities: 34,091 over 15,000 people, as [lon, lat, pop] triples.
+   The same data as GeoJSON is 5.1 MB against 762 KB (303 KB gzipped), and this
+   layer draws circles - it never reads a name - so the file carries the numbers
+   and the GeoJSON is built here in one pass. */
+map.once('load', () => {
+  fetch('data/world-population.json').then(r => r.json()).then(j => {
+    const features = j.cities.map(c => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [c[0], c[1]] },
+      properties: { pop: c[2] } }));
+    const src = map.getSource('worldpop');
+    if (src) src.setData({ type: 'FeatureCollection', features });
+    applyPopFilter();
+    dirty = true;
+  }).catch(() => {});
+});
+
 const RAD = Math.PI / 180;
 function angularDist(aLat, aLon, bLat, bLon) {
   const s = Math.sin, c = Math.cos;
@@ -1304,6 +1355,41 @@ bCaps.addEventListener('click', () => {
   showCapitals = bCaps.getAttribute('aria-pressed') !== 'true';
   bCaps.setAttribute('aria-pressed', showCapitals);
   dirty = true;
+});
+
+/* Where am I. Same rule as ILLUMINATE MY COUNTRY, which lights a whole country
+   without ever holding your position: the fix is rounded to 2 decimals - about a
+   kilometre - before anything is done with it. That rounded point is what the map
+   flies to, what the marker is drawn from, and what the geocoder is asked about, so
+   nothing sharper than a kilometre exists in the page, the URL hash or any request.
+   The button says the town it found, so you can see it worked. */
+const bHere = document.getElementById('b-here');
+bHere.addEventListener('click', () => {
+  if (!navigator.geolocation) { bHere.textContent = 'NO GEOLOCATION'; return; }
+  bHere.textContent = 'LOCATING…';
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const lat = +pos.coords.latitude.toFixed(2);
+    const lon = +pos.coords.longitude.toFixed(2);
+    const src = map.getSource('me');
+    if (src) src.setData({ type: 'FeatureCollection', features: [
+      { type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] },
+        properties: {} }] });
+    stopOrbit();
+    map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 10.5), duration: 1800 });
+    bHere.setAttribute('aria-pressed', 'true');
+    bHere.textContent = 'YOU ARE HERE';
+    dirty = true;
+    try {
+      const r = await fetch('https://nominatim.openstreetmap.org/reverse'
+                          + `?format=jsonv2&zoom=10&lat=${lat}&lon=${lon}`);
+      const j = await r.json();
+      const a = j.address || {};
+      const place = a.city || a.town || a.village || a.county || a.state || '';
+      if (place) bHere.textContent = 'YOU: ' + place.toUpperCase();
+    } catch (e) { /* the dot is on the map either way */ }
+  }, err => {
+    bHere.textContent = err.code === 1 ? 'PERMISSION DENIED' : 'LOCATION UNAVAILABLE';
+  }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 600000 });
 });
 
 /* Zoom bar. Dragging is a scrub: every input event jumps the camera with no
@@ -1598,7 +1684,7 @@ selCountry.addEventListener('change', () => {
    is two orders of magnitude and a linear slider would spend 95% of its travel
    between the biggest two cities. */
 const sPop = document.getElementById('s-minpop');
-const POP_MIN = 15000, POP_MAX = 2103778;
+const POP_MIN = 15000, POP_MAX = 24874500;   // Shanghai, the largest in the file
 function popThreshold() {
   const f = +sPop.value / 100;
   return Math.round(POP_MIN * Math.pow(POP_MAX / POP_MIN, f));

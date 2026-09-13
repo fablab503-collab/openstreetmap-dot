@@ -5,6 +5,37 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — The whole world's population, and a button that finds you
+
+### Changed
+
+- **The population layer is the world now, not France.** Every city over 15,000
+  people — **34,091 of them**, Shanghai (24.9 M) down to 15,001 — from GeoNames,
+  which publishes the lot as one maintained file. Wikidata, which gave France its
+  644 communes, does not scale to this: the same query worldwide times out, and its
+  population statements are uneven from country to country. `MIN POPULATION` now
+  runs 15 K to 25 M.
+- The colour stops are spaced by a constant ratio (15k, 44k, 128k, 373k, 1.09M,
+  3.18M, 9.3M, 25M) rather than evenly. City sizes cover three orders of magnitude,
+  and even spacing paints everything under a million the same dark red.
+- The file ships as `[lon, lat, pop]` triples, not GeoJSON: the layer draws circles
+  and never reads a name, and GeoJSON's scaffolding costs 5.1 MB against **762 KB**
+  (303 KB over the wire) for the same cities. The app builds the GeoJSON in one pass
+  at load.
+- `data/fr-population.geojson` is gone from the working tree; it stays in the
+  history, and `fetch_fr_population.py` still documents the Wikidata approach.
+
+### Added
+
+- **WHERE AM I**, under the zoom bar at the bottom centre. It marks where you are
+  and flies there, and the button names the town it found so you can see it worked.
+  Your fix is rounded to 2 decimals — about a kilometre — **before** anything is
+  done with it: that rounded point is what the map flies to, what the marker is
+  drawn from and what the geocoder is asked about, so nothing sharper than a
+  kilometre exists in the page, in the URL hash or in any request.
+
+---
+
 ## 2026-09-13 — Monuments drawn as the buildings they are
 
 ### Added

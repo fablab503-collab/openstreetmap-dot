@@ -83,7 +83,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | Layer | What it shows | Source |
 | --- | --- | --- |
 | World statistics | Population projected from the latest estimate at the net birth/death rate; born and died today; urban share; land area; the population of any country you pick | World Bank Open Data |
-| Population — France | 644 communes over 15,000 people, from Paris (2,103,778) down to 15,023 | Wikidata |
+| Population — world | Every city over 15,000 people, 34,091 of them, Shanghai (24.9 M) down to 15,001 | GeoNames |
 | Capitals | All 195 — 193 UN members plus Vatican and Palestine — with population and ISO country code | Wikidata |
 | The country you pick | Its outline lit over the lattice, at any zoom | Natural Earth (1:50m) |
 | Monuments — capitals | The three best-known places in each of the 195 capitals, by Wikipedia coverage | Wikidata |
@@ -113,6 +113,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 
 | Control | Effect |
 | --- | --- |
+| `WHERE AM I` (bottom centre) | Marks where you are, rounded to about a kilometre, and flies there |
 | `ZOOM` bar (bottom centre) | Drag to go from a street to the whole globe in one gesture; it follows the map too, and slides away with the panels |
 | `SEARCH A PLACE` | Search by name; countries and regions frame to their bounds |
 | `SETTINGS` | Show or hide the control panel |

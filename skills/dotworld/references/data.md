@@ -69,6 +69,28 @@ const diedPerSec = pop * (death / 1000) / (YEAR_MS / 1000);     // ≈ 1.99/s, n
 Refetch at load and keep baked-in constants as the fallback — and show which one is
 in use (green "WORLD BANK 2025" vs amber "CACHED").
 
+## Population of the whole world — GeoNames (CC BY 4.0)
+
+`scripts/fetch_world_population.py`. One file, no API: `cities15000.txt` inside
+https://download.geonames.org/export/dump/cities15000.zip is every settlement over
+15,000 people with coordinates, country and population — **34,091 cities**, Shanghai
+(24,874,500) down to 15,001.
+
+- **Wikidata does not scale to this.** The commune query below works for one
+  country; worldwide it times out, and population statements are uneven between
+  countries — a census figure here, an estimate there, nothing at all elsewhere.
+- **Ship `[lon, lat, pop]` triples, not GeoJSON**, when the layer draws circles and
+  never reads a name: 5.1 MB against **762 KB (303 KB gzipped)** for the same 34,091
+  cities. Build the GeoJSON client-side in one `map()` and hand it to `setData`.
+- Keep the UTF-8 name column, not the ASCII one, if you do need names.
+- Sort ascending by population so the biggest cities are last in the file and
+  therefore drawn on top.
+- **Space colour stops by a constant ratio.** City sizes cover three orders of
+  magnitude; DotWorld's world ramp is 15k, 44k, 128k, 373k, 1.09M, 3.18M, 9.3M, 25M
+  against the eight reversed YlOrRd steps. Even spacing paints everything under a
+  million the same dark red.
+- CC BY 4.0: the credit has to stay visible.
+
 ## Population of French communes — Wikidata (CC0)
 
 ```sparql
@@ -92,7 +114,8 @@ ORDER BY DESC(?pop)
   takes the statement with the latest `pq:P585` date and de-duplicates by INSEE code
   (`P374`).
 - Filter to metropolitan France with a bounding box (lon −5.5…10, lat 41…51.5).
-- Result used: **644 communes**, Paris 2,103,778 down to 15,023.
+- Result used: **644 communes**, Paris 2,103,778 down to 15,023. This was DotWorld's
+  population layer until 2026-09-14, when the whole world replaced it.
 - **Official alternative:** INSEE legal populations via API Géo —
   `https://geo.api.gouv.fr/communes?fields=nom,code,population,centre` — about 670
   communes of 15k+ including Paris (75056). Credit "Insee, populations légales".

@@ -22,7 +22,7 @@ URL did not change.
 | `index.html` | the whole app — style, shader, UI, data plumbing |
 | `vendor/` | MapLibre GL JS 6.9.0 `.mjs` bundles + CSS |
 | `fonts/` | Dotwork (+ OFL), Space Mono, Space Grotesk |
-| `data/fr-population.geojson` | 644 French communes over 15k |
+| `data/world-population.json` | 34,091 cities over 15k as `[lon, lat, pop]`, not GeoJSON |
 | `data/world-capitals.geojson` | 195 capitals with population, ISO country code and seat count |
 | `data/montpellier-monuments.geojson` | top-10 Montpellier monuments with category |
 | `data/countries.geojson` | 195 country outlines (Natural Earth 1:50m), loaded on first pick |
@@ -53,7 +53,7 @@ Open http://localhost:8732. `?renderer=cpu` forces the Canvas2D fallback;
 
 ## Controls
 
-SEARCH A PLACE · ZOOM BAR (bottom centre, scrub) · SETTINGS · HIDE PANELS · DOT SCALE · GAIN · CUTOFF · TILT ·
+SEARCH A PLACE · ZOOM BAR (bottom centre, scrub) · WHERE AM I (bottom centre) · SETTINGS · HIDE PANELS · DOT SCALE · GAIN · CUTOFF · TILT ·
 BEARING · SUN · SUNLIGHT · DOT COLOUR (16) · MIN POPULATION (log 15 K–2.1 M) ·
 CAPITAL NAMES · CAPITAL MONUMENTS · FIND A COUNTRY (all 195, lights its border and reads out its
 population) · DATA COLOUR · ILLUMINATE MY COUNTRY · WORLD: ROUND / PLATE ·

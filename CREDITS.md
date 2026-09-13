@@ -63,7 +63,8 @@ Requests are debounced to respect their one-per-second guidance.
 | Data | Source | Licence |
 |---|---|---|
 | World population, birth/death rates, urban share, land area, and the population of a chosen country | [World Bank Open Data](https://data.worldbank.org/) | CC BY 4.0 |
-| Population of 644 French communes | [Wikidata](https://www.wikidata.org/) (P1082) | CC0 1.0 |
+| Population of every city over 15,000 people (34,091 of them) | [GeoNames](https://www.geonames.org/) `cities15000` | CC BY 4.0 |
+| Population of 644 French communes (the layer this replaced, Sep 2026) | [Wikidata](https://www.wikidata.org/) (P1082) | CC0 1.0 |
 | 195 national capitals, their populations and ISO 3166-1 alpha-2 codes | [Wikidata](https://www.wikidata.org/) (P36, P625, P1082, P297) | CC0 1.0 |
 | Country outlines for the 195 | [Natural Earth](https://www.naturalearthdata.com/) 1:50m admin 0 | public domain |
 | Montpellier monuments + ranking | [Wikidata](https://www.wikidata.org/) & [OpenStreetMap](https://www.openstreetmap.org/) | CC0 1.0 / ODbL |
