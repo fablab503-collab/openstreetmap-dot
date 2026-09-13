@@ -5,6 +5,53 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-13 — The best-known monument of every capital
+
+### Added
+
+- **Capital monuments.** Next to each capital's name, what that capital is known
+  for: its three best-known places, ranked by how many Wikipedia editions and
+  sister projects cover them. They have a colour of their own — cyan, the only hue
+  left that stays clear of the population ramp, the country glow and all five
+  Montpellier categories (worst colour-vision deltaE 13.7, measured with the same
+  checker as the Montpellier palette, not chosen by eye). The best-known one shows
+  from the world view, the other two and all the names from z6 and z8, and
+  **CAPITAL MONUMENTS** in settings turns the lot off.
+- **`data/capital-monuments.geojson`**, built by
+  `skills/dotworld/scripts/fetch_capital_monuments.py`: one Wikidata query per
+  capital, monuments within 25 km ranked by sitelinks. **491 places for 192 of the
+  195 capitals** (105 KB). Three have none: Ciudad de la Paz has nothing notable
+  nearby in Wikidata, Brazzaville's only candidate is nearer to Kinshasa, and
+  Luxembourg's response was truncated on every attempt through this proxy.
+  Spot checks: Paris → Eiffel Tower, Louvre, Notre-Dame; Rome → Colosseum,
+  Pantheon, Roman Forum; Cairo → Great Pyramid of Giza; Washington → the White
+  House, the Library of Congress, the Capitol; East Jerusalem → Al-Aqsa Mosque,
+  Dome of the Rock.
+
+### Fixed
+
+- **One capital was drawn as "Q36262".** St. John's, the capital of Antigua and
+  Barbuda, no longer has an English label on Wikidata — the name moved to the
+  multilingual `mul` code — and a label service asked for `"en"` alone hands back
+  the bare item id. The query now asks for `"en,mul,en-gb,fr,es"`.
+
+### What it took to get a list worth showing
+
+- Walking `wdt:P31/wdt:P279*` from "architectural structure" is the obvious way to
+  catch an amphitheatre, a city gate and a mausoleum. It returns 504 on Paris, Rome
+  and Cairo. Types are filtered here instead, where it is free.
+- Keyword matching on type labels has to respect word boundaries: "arch" inside
+  *constitutional monarchy* put Antigua and Barbuda itself on the map, and "villa"
+  inside *village* added a hamlet called Bolans.
+- "historical country" contains "historic", so Rome first returned the Roman Empire,
+  Tokyo the Tokugawa shogunate and London the Kingdom of Great Britain.
+- The Colosseum is typed `stadium` as well as `Roman amphitheatre`. Blocking
+  stadiums to keep football grounds out buried Rome's most-linked monument.
+- Vatican City is 4 km from Rome, Brazzaville 5 km from Kinshasa: each monument
+  goes to the capital it is nearest to, so nothing is drawn twice.
+
+---
+
 ## 2026-09-13 — Find any of the 195 countries and light it up
 
 ### Added

@@ -273,6 +273,12 @@
     <span class="cat"><i style="background:#9085e9"></i>THEATRE</span>
     <span class="cat"><i style="background:#d55181"></i>SQUARE</span>
   </div>
+  <span class="ttl" style="margin:10px 0 5px">MONUMENTS — CAPITALS</span>
+  <div class="cats">
+    <span class="cat"><i style="background:#22e0d6"></i>BEST KNOWN OF EACH CAPITAL</span>
+  </div>
+  <span class="src">Top 3 per capital by Wikipedia coverage; names from z6.
+    The ranking is Wikipedia's editors' work, not mine.</span>
 </div>
 </div>
 
@@ -296,6 +302,7 @@
   <label>MIN POPULATION <span id="l-minpop">15 K</span></label>
   <input id="s-minpop" type="range" min="0" max="100" step="1" value="0">
   <button id="b-caps" aria-pressed="true">CAPITAL NAMES</button>
+  <button id="b-capmon" aria-pressed="true">CAPITAL MONUMENTS</button>
   <button id="b-data" aria-pressed="true">DATA COLOUR</button>
   <button id="b-locate">ILLUMINATE MY COUNTRY</button>
   <button id="b-globe" aria-pressed="true">WORLD: ROUND</button>
@@ -362,7 +369,8 @@
         and the population of whichever country you pick</li>
       <li><a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a>
         (CC0) — French commune populations, the 195 capitals with their populations
-        and country codes, Montpellier monuments</li>
+        and country codes, the best-known monuments of every capital, Montpellier's
+        monuments</li>
       <li><a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a>
         (public domain) — the country outline that lights up when you pick one</li>
       <li>Monument ranking is by Wikipedia language coverage — really the work of
@@ -463,7 +471,8 @@ const style = {
   sources: {
     ofm: { type: 'vector', url: OFM },
     frpop:  { type: 'geojson', data: 'data/fr-population.geojson' },
-    monuments: { type: 'geojson', data: 'data/montpellier-monuments.geojson' }
+    monuments: { type: 'geojson', data: 'data/montpellier-monuments.geojson' },
+    capmon: { type: 'geojson', data: 'data/capital-monuments.geojson' }
   },
   layers: [
     /* At country scale the silhouette has to come from somewhere, so land is
@@ -545,6 +554,22 @@ const style = {
       paint:{ 'line-color':'#ffeda0',
         'line-width':['interpolate',['linear'],['zoom'],2,1.2,6,3,10,5],
         'line-blur':0.4 } },
+
+    /* The best-known monuments of every capital, in one colour of their own:
+       cyan is the only hue left that is far from the population ramp, the country
+       glow and all five Montpellier categories - worst CVD deltaE 13.7, checked,
+       not guessed. The best-known one per capital shows from the world view; the
+       other two only once there is room for them, at z6. */
+    { id:'capital-monuments', type:'circle', source:'capmon', minzoom:2.2,
+      paint:{
+        'circle-color':'#22e0d6', 'circle-opacity':0.95,
+        'circle-radius':['interpolate',['linear'],['zoom'],
+          // Big enough at world zoom to light a cell: the lattice samples the map,
+          // so a 2 px circle under a 10 px dot pitch simply disappears.
+          2.2, ['case',['==',['get','rank'],1], 3.2, 0],
+          6,   ['case',['==',['get','rank'],1], 4,   2.4],
+          10,  ['case',['==',['get','rank'],1], 8,   6],
+          16,  18] } },
 
     /* Monuments: categorical, fixed hue per category, never cycled. Palette
        validated for colour-vision deficiency rather than chosen by eye. */
@@ -740,6 +765,8 @@ let dataColour = true;   // keep data hues; false neutralises everything to one 
    temporal dead zone and kill the first frame. */
 let showCapitals = true;
 let CAPITALS = [];
+let CAPMON = [];
+let showCapMon = true;
 let picked = null;       // the country chosen in the picker, declared here for the same reason
 let dirty = true;
 
@@ -922,7 +949,7 @@ function halftone() {
   }
 
   lctx.clearRect(0, 0, labels.width, labels.height);
-  if (showCapitals || picked) drawCapitals();
+  if (showCapitals || showCapMon || picked) drawCapitals();
   recordFrame(performance.now() - t0);
 }
 
@@ -957,7 +984,7 @@ window.__bench = (n = 20) => {
     }));
     text.push(time(() => {
       lctx.clearRect(0, 0, labels.width, labels.height);
-      if (showCapitals || picked) drawCapitals();
+      if (showCapitals || showCapMon || picked) drawCapitals();
     }));
   }
   const med = a => +[...a].sort((x, y) => x - y)[a.length >> 1].toFixed(2);
@@ -1122,6 +1149,17 @@ fetch('data/world-capitals.geojson').then(r => r.json()).then(j => {
   dirty = true;
 }).catch(() => {});
 
+/* The same file the map layer draws, read again for the label pass: names cannot
+   go through the lattice any more than the capitals' can. */
+fetch('data/capital-monuments.geojson').then(r => r.json()).then(j => {
+  CAPMON = j.features.map(f => ({
+    name: f.properties.name, city: f.properties.city, cc: f.properties.cc,
+    rank: f.properties.rank, wikis: f.properties.wikis,
+    lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] }));
+  CAPMON.sort((a, b) => b.wikis - a.wikis);
+  dirty = true;
+}).catch(() => {});
+
 const RAD = Math.PI / 180;
 function angularDist(aLat, aLon, bLat, bLon) {
   const s = Math.sin, c = Math.cos;
@@ -1190,12 +1228,56 @@ function drawCapitals() {
       lctx.fillText(cap.popLabel, x + pad + wHead, y);
     }
   }
+
+  /* Capital monuments, after the capitals: a capital's name matters more than its
+     monument's, so the monument yields the spot in a collision. Only once there is
+     room - at world zoom the names would be a smear over every capital. */
+  const z = map.getZoom();
+  if (!showCapMon || !CAPMON.length || z < 6) return;
+  const mfs = Math.max(8, Math.round(8.5 * DPR));
+  lctx.font = mfs + 'px "Space Mono", ui-monospace, monospace';
+  for (const mon of CAPMON) {
+    if (shown >= 70) break;
+    if (mon.rank > 1 && z < 8) continue;          // the other two need more room
+    if (onGlobe && angularDist(ctr.lat, ctr.lng, mon.lat, mon.lon) > 82) continue;
+    let p;
+    try { p = map.project([mon.lon, mon.lat]); } catch (e) { continue; }
+    const x = p.x * DPR, y = p.y * DPR;
+    if (!(x > 0 && y > 0 && x < W && y < H)) continue;
+    const name = mon.name.toUpperCase();
+    const w = lctx.measureText(name).width;
+    const pad = 7 * DPR;
+    const box = [x + pad - 3, y - mfs * 0.8, x + pad + w + 3, y + mfs * 0.8];
+    if (placed.some(b => box[0] < b[2] && b[0] < box[2] &&
+                         box[1] < b[3] && b[1] < box[3])) continue;
+    placed.push(box);
+    shown++;
+    lctx.fillStyle = 'rgba(0,0,0,.85)';
+    lctx.fillRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
+    lctx.fillStyle = '#22e0d6';                   // the mark carries the colour...
+    lctx.beginPath();
+    lctx.arc(x, y, 2.2 * DPR, 0, Math.PI * 2);
+    lctx.fill();
+    lctx.fillStyle = '#d8d8d8';                   // ...the name stays in ink
+    lctx.fillText(name, x + pad, y);
+  }
 }
 
 const bCaps = document.getElementById('b-caps');
 bCaps.addEventListener('click', () => {
   showCapitals = bCaps.getAttribute('aria-pressed') !== 'true';
   bCaps.setAttribute('aria-pressed', showCapitals);
+  dirty = true;
+});
+
+/* One switch for the capitals' monuments: the cyan marks and their names. */
+const bCapMon = document.getElementById('b-capmon');
+bCapMon.addEventListener('click', () => {
+  showCapMon = bCapMon.getAttribute('aria-pressed') !== 'true';
+  bCapMon.setAttribute('aria-pressed', showCapMon);
+  if (map.getLayer('capital-monuments'))
+    map.setLayoutProperty('capital-monuments', 'visibility',
+                          showCapMon ? 'visible' : 'none');
   dirty = true;
 });
 
@@ -1440,6 +1522,9 @@ bData.addEventListener('click', () => {
   dataColour = on;
   ['population', 'monuments'].forEach(id =>
     map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none'));
+  if (map.getLayer('capital-monuments'))
+    map.setLayoutProperty('capital-monuments', 'visibility',
+                          on && showCapMon ? 'visible' : 'none');
   legend.hidden = !on;
   dirty = true;
 });

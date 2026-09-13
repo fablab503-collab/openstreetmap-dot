@@ -67,9 +67,12 @@ Requests are debounced to respect their one-per-second guidance.
 | 195 national capitals, their populations and ISO 3166-1 alpha-2 codes | [Wikidata](https://www.wikidata.org/) (P36, P625, P1082, P297) | CC0 1.0 |
 | Country outlines for the 195 | [Natural Earth](https://www.naturalearthdata.com/) 1:50m admin 0 | public domain |
 | Montpellier monuments + ranking | [Wikidata](https://www.wikidata.org/) & [OpenStreetMap](https://www.openstreetmap.org/) | CC0 1.0 / ODbL |
+| The best-known monuments of all 195 capitals | [Wikidata](https://www.wikidata.org/) (P625 + sitelink counts) | CC0 1.0 |
 
-Monument ranking uses the number of Wikipedia language editions covering each
-site — so the ordering is really the work of **Wikipedia's editors**.
+Monument ranking counts how many Wikipedia editions and sister projects cover each
+site — so the ordering is really the work of **Wikipedia's editors**. Montpellier's
+ten count Wikipedia editions only; the capitals' three count every sitelink, which is
+cheaper to ask for and is applied the same way to every candidate.
 
 ## Colour
 

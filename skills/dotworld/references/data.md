@@ -108,7 +108,7 @@ SELECT ?country ?countryLabel ?cc ?capLabel ?coord (MAX(?p) AS ?pop) WHERE {
   FILTER NOT EXISTS { ?country wdt:P576 ?dissolved }
   OPTIONAL { ?cap wdt:P1082 ?p }
   OPTIONAL { ?country wdt:P297 ?cc }
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul,en-gb,fr,es" }
 }
 GROUP BY ?country ?countryLabel ?cc ?capLabel ?coord
 ORDER BY ?countryLabel
@@ -133,6 +133,10 @@ ORDER BY ?countryLabel
   has none of its own — the member is the *Kingdom of Denmark* (Q756617) while DK
   belongs to *Denmark* (Q35), its European part. Fill that one in by hand.
 - 194 of 195 have a population; **Ngerulmud (Palau)** has none.
+- **Ask the label service for `"en,mul,..."`, never `"en"` alone.** Wikidata is
+  moving names that read the same in every language to the `mul` code. St. John's
+  (Q36262), capital of Antigua and Barbuda, has no English label at all any more, so
+  the service returned the string "Q36262" — and DotWorld drew that on the map.
 - Range 747 (Yaren District, Nauru) to 21,893,095 (Beijing) — use a log scale.
 - Some figures are the city proper, others the whole municipality (Beijing, Tokyo),
   so cross-country comparisons are rough. Put that in the legend.
@@ -199,6 +203,54 @@ Babotte" from the script) — which is why the Wikidata id is the merge key and 
 name match is only the fallback for items without one.
 
 Categories are assigned by hand after ranking.
+
+## The best-known monuments of a capital — Wikidata (CC0)
+
+`scripts/fetch_capital_monuments.py`, one query per capital. The shape below is the
+third attempt; the first two timed out or returned empires instead of buildings.
+
+```sparql
+SELECT ?item ?itemLabel ?links ?typeLabel ?coord WHERE {
+  SERVICE wikibase:around {
+    ?item wdt:P625 ?coord .
+    bd:serviceParam wikibase:center "Point(2.3522 48.8567)"^^geo:wktLiteral .
+    bd:serviceParam wikibase:radius "25" .
+  }
+  ?item wikibase:sitelinks ?links . FILTER(?links >= 12)
+  ?item wdt:P31 ?type .
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
+}
+ORDER BY DESC(?links) LIMIT 150
+```
+
+- **Do not walk `wdt:P31/wdt:P279*`.** Against "architectural structure" it is the
+  only correct-looking way to catch an amphitheatre, a city gate and a mausoleum —
+  and it returns 504 on Paris, Rome and Cairo. Ask for `wdt:P31` and sort the types
+  out in your own code, where it costs nothing.
+- **`wikibase:sitelinks` instead of counting `schema:about`.** One indexed number
+  per item versus a join that made the query minutes long. It counts Commons and
+  Wikivoyage too; that is fine as long as every candidate is counted that way.
+- **`wikibase:around`, not `wdt:P131*`.** Administrative hierarchies differ from
+  country to country; a radius does not. 25 km reaches Versailles from Paris.
+- **The row limit is not an item limit.** Every P31 an item has is another row, so
+  150 rows may be 30 items. At 60, Rome came back without the Colosseum.
+- **Match type keywords on word boundaries.** "arch" inside *constitutional
+  monarchy* put Antigua and Barbuda itself on the map; "villa" inside *village*
+  added a hamlet called Bolans.
+- **A block list must not beat a strong match.** The Colosseum is typed `stadium`
+  as well as `Roman amphitheatre` and `archaeological site`; blocking stadiums to
+  keep football grounds out buried Rome's most-linked monument (148 sitelinks).
+  Modern stadiums have no strong type, so they still go.
+- **"historical country" contains "historic".** With that in the keep list, Rome
+  returned the Roman Empire, Tokyo the Tokugawa shogunate and London the Kingdom of
+  Great Britain — each out-linking the buildings those cities are known for.
+- **Give a monument to the nearest capital.** Vatican City is 4 km from Rome and
+  Brazzaville 5 km from Kinshasa, so a radius query hands the same item to both.
+- A city's own item always tops its list (Paris: 366 sitelinks), as do its language,
+  its region and any Olympics held there.
+- Sanity check on the result, not on the count: Paris → Eiffel Tower, Louvre,
+  Notre-Dame. Rome → Colosseum, St. Peter's, Sistine Chapel. Athens → Parthenon,
+  Acropolis. Moscow → Red Square, Kremlin, St. Basil's.
 
 ## Geocoding — Nominatim (OpenStreetMap Foundation)
 

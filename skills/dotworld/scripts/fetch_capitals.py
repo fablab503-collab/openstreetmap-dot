@@ -20,6 +20,11 @@ South Africa, Sri Lanka, Yemen). Jordan and Syria return the same capital twice 
 separate items; that is not a second seat. The most populous seat is kept — a rule,
 not a fact — and `seats` records how many distinct seats there were.
 
+Ask the label service for "en,mul,...", not "en". Wikidata is moving names that are
+the same in every language to the `mul` language code, and St. John's (Q36262), the
+capital of Antigua and Barbuda, no longer has an English label at all: with "en" the
+service hands back the literal string "Q36262", and that is what the map drew.
+
 Each country also carries its ISO 3166-1 alpha-2 code (P297). That is the code the
 OpenMapTiles boundary layer puts in `adm0_l`/`adm0_r`, so it is what lets the app
 light one country's border.
@@ -52,7 +57,7 @@ SELECT ?country ?countryLabel ?cc ?capLabel ?coord (MAX(?p) AS ?pop) WHERE {
   FILTER NOT EXISTS { ?country wdt:P576 ?dissolved }
   OPTIONAL { ?cap wdt:P1082 ?p }
   OPTIONAL { ?country wdt:P297 ?cc }
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul,en-gb,fr,es" }
 }
 GROUP BY ?country ?countryLabel ?cc ?capLabel ?coord
 ORDER BY ?countryLabel

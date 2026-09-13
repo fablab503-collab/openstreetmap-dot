@@ -26,6 +26,7 @@ URL did not change.
 | `data/world-capitals.geojson` | 195 capitals with population, ISO country code and seat count |
 | `data/montpellier-monuments.geojson` | top-10 Montpellier monuments with category |
 | `data/countries.geojson` | 195 country outlines (Natural Earth 1:50m), loaded on first pick |
+| `data/capital-monuments.geojson` | the 3 best-known monuments of each of the 195 capitals |
 | `shots/` | screenshots used in the README |
 | `skills/dotworld/` | this skill |
 | `archive/` | the first Canvas2D prototype and the first `dots` skill |
@@ -53,7 +54,7 @@ Open http://localhost:8732. `?renderer=cpu` forces the Canvas2D fallback;
 
 SEARCH A PLACE · SETTINGS · HIDE PANELS · DOT SCALE · GAIN · CUTOFF · TILT ·
 BEARING · SUN · SUNLIGHT · DOT COLOUR (16) · MIN POPULATION (log 15 K–2.1 M) ·
-CAPITAL NAMES · FIND A COUNTRY (all 195, lights its border and reads out its
+CAPITAL NAMES · CAPITAL MONUMENTS · FIND A COUNTRY (all 195, lights its border and reads out its
 population) · DATA COLOUR · ILLUMINATE MY COUNTRY · WORLD: ROUND / PLATE ·
 WHOLE EARTH · 3D DOT VIEW · ORBIT · RESET NORTH. Right-drag turns and tilts.
 

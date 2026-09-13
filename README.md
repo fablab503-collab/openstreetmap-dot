@@ -86,6 +86,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | Population — France | 644 communes over 15,000 people, from Paris (2,103,778) down to 15,023 | Wikidata |
 | Capitals | All 195 — 193 UN members plus Vatican and Palestine — with population and ISO country code | Wikidata |
 | The country you pick | Its outline lit over the lattice, at any zoom | Natural Earth (1:50m) |
+| Monuments — capitals | The three best-known places in each of the 195 capitals, by Wikipedia coverage | Wikidata |
 | Monuments — Montpellier | Top 10, ranked by number of Wikipedia language editions | Wikidata + OpenStreetMap |
 
 **Colour follows the job.**
@@ -120,6 +121,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | `DOT COLOUR` | 16 colours, warm to cool: roughly cheapest to most expensive on OLED |
 | `MIN POPULATION` | Hide places below a threshold (log scale, 15 K – 2.1 M) |
 | `CAPITAL NAMES` | The 195 capitals with their populations |
+| `CAPITAL MONUMENTS` | The best-known places of every capital, in cyan; the top one from the world view, all three and their names as you zoom in |
 | `FIND A COUNTRY` | Any of the 195, by name or by typing a few letters: its border lights up, the map frames it, and the panel reads out its capital and its population |
 | `DATA COLOUR` | Show or hide the data layers and their colours |
 | `ILLUMINATE MY COUNTRY` | Light up the border of the country you are in |
