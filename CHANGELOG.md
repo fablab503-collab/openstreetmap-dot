@@ -5,6 +5,21 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — Monuments drawn as edges, not as solids
+
+### Changed
+
+- **A monument is now its contour**: a bright line round the foot of the building
+  and, in 3D, another round its roofline, leaving the building itself to the
+  lattice. It replaces the solid cyan fill and the solid cyan volume.
+- The roofline is a **1.5 m slab, not a line**, because MapLibre 6.9 has no
+  elevated lines at all — `line-z-offset` is not in this build — so there is no way
+  to put a line at roof height. A slab that thin reads as a rim from any angle you
+  would look from. Heights are OpenStreetMap's where the building has one (110 of
+  the 355), 25 m otherwise.
+
+---
+
 ## 2026-09-14 — Shift-drag to turn and tilt
 
 ### Added
