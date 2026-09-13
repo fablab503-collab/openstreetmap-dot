@@ -1464,8 +1464,12 @@ function ensureShapes() {
 }
 
 /* Fetch them once the map is close enough to draw them, and never before: most
-   visits stay above z12 and should not pay for a file they will not see. */
-map.on('zoomend', () => { if (map.getZoom() >= 12) ensureShapes(); });
+   visits stay above z12 and should not pay for a file they will not see. Checked on
+   load as well as on zoom: arriving straight at a street zoom through the #map hash
+   fires no zoom event at all, and the outlines never loaded. */
+const shapesIfClose = () => { if (map.getZoom() >= 12) ensureShapes(); };
+map.on('zoomend', shapesIfClose);
+map.once('load', shapesIfClose);
 
 function showShape(cc) {
   ['country-fill', 'country-line'].forEach(id => {
