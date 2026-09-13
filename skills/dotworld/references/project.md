@@ -57,7 +57,7 @@ SEARCH A PLACE · ZOOM BAR (bottom centre, scrub) · WHERE AM I (bottom centre) 
 BEARING · SUN · SUNLIGHT · DOT COLOUR (16) · MIN POPULATION (log 15 K–2.1 M) ·
 ALL DATA · CAPITAL NAMES · CAPITAL MONUMENTS · FIND A COUNTRY (or click a capital) · BORDER TRACE (all 195, lights its border and reads out its
 population) · DATA COLOUR · ILLUMINATE MY COUNTRY · WORLD: ROUND / PLATE ·
-WHOLE EARTH · 3D DOT VIEW · ORBIT · RESET NORTH. Right-drag turns and tilts.
+WHOLE EARTH · 3D DOT VIEW · ORBIT · RESET NORTH. Shift-drag or right-drag turns and tilts.
 
 HUD: ZOOM, DOT PITCH, FRAME live; DOTS LIT, LIT AREA, PIXELS DARK when the map is at
 rest. World statistics panel: projected population, people per second, born and died

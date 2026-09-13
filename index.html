@@ -451,7 +451,7 @@
     that covers the code only and relicenses none of the above.</p>
   </div>
 </div>
-<div id="hint">drag to pan · scroll to zoom · right-drag to turn &amp; tilt</div>
+<div id="hint">drag to pan · scroll to zoom · shift- or right-drag to turn &amp; tilt</div>
 
 <link rel="stylesheet" href="./vendor/maplibre-gl.css">
 <script type="module">
@@ -1184,6 +1184,41 @@ map.on('move', () => {
   sTilt.value = p; document.getElementById('l-tilt').textContent = p;
   sBear.value = b; document.getElementById('l-bear').textContent = b;
 });
+
+/* Shift-drag turns and tilts, the same as right-drag. MapLibre has no option for
+   this: shift-drag is its box zoom, so that handler goes; and drag-pan has to be
+   switched off for the length of the gesture, or the map pans underneath the turn.
+   Bearing and pitch are set per move event rather than eased, so the camera follows
+   the hand exactly - and the TILT and BEARING sliders follow it from `move`. */
+map.boxZoom.disable();
+let shiftDrag = null;
+
+map.getCanvasContainer().addEventListener('mousedown', e => {
+  if (!e.shiftKey || e.button !== 0) return;
+  shiftDrag = { x: e.clientX, y: e.clientY,
+                bearing: map.getBearing(), pitch: map.getPitch() };
+  map.dragPan.disable();
+  stopOrbit();
+  e.preventDefault();
+  e.stopPropagation();
+});
+
+window.addEventListener('mousemove', e => {
+  if (!shiftDrag) return;
+  map.setBearing(shiftDrag.bearing - (e.clientX - shiftDrag.x) * 0.35);
+  map.setPitch(clamp(shiftDrag.pitch - (e.clientY - shiftDrag.y) * 0.3,
+                     map.getMinPitch(), map.getMaxPitch()));
+  dirty = true;
+  e.preventDefault();
+});
+
+const endShiftDrag = () => {
+  if (!shiftDrag) return;
+  shiftDrag = null;
+  map.dragPan.enable();
+};
+window.addEventListener('mouseup', endShiftDrag);
+window.addEventListener('blur', endShiftDrag);   // let go outside the window
 
 document.getElementById('b-north').addEventListener('click', () => {
   stopOrbit();

@@ -5,6 +5,19 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — Shift-drag to turn and tilt
+
+### Added
+
+- **Hold shift and drag** to turn and tilt, alongside right-drag. MapLibre has no
+  option for it — shift-drag is its box zoom — so the box-zoom handler is off and
+  drag-pan is suspended for the length of the gesture, or the map would pan
+  underneath the turn. Bearing and pitch are set per mouse-move rather than eased,
+  so the camera follows the hand exactly, and the TILT and BEARING sliders follow
+  the camera as always.
+
+---
+
 ## 2026-09-14 — A clock, one switch for everything, and a tidier panel
 
 ### Added

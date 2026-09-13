@@ -120,7 +120,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | `SETTINGS` | Show or hide the control panel |
 | `HIDE PANELS` | Slide every panel off the map and back |
 | `DOT SCALE` / `GAIN` / `CUTOFF` | Lattice pitch (0.01 to 2 - past about 0.05 the dots are finer than a screen pixel and the map goes continuous), brightness response, unlit threshold |
-| `TILT` / `BEARING` | 0–85°, 0–359° |
+| `TILT` / `BEARING` | 0–85°, 0–359° — or hold **shift** (or the right button) and drag the map |
 | `SUN` / `SUNLIGHT` | Light direction for 3D buildings — lit faces become bigger dots |
 | `DOT COLOUR` | 16 colours, warm to cool: roughly cheapest to most expensive on OLED |
 | `MIN POPULATION` | Hide places below a threshold (log scale, 15 K – 2.1 M) |
