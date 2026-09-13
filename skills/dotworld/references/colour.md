@@ -96,6 +96,48 @@ disappears on black) and use t = 0.3 → 1.0:
 Whichever ramp: check that luminance rises with value on the actual background, and
 use a log scale whenever the range spans orders of magnitude.
 
+## A colour can only mean one thing
+
+DotWorld shipped a version where the same reversed YlOrRd ramp coloured cities *and*
+capitals, and the country highlight was `#ffeda0` - the ramp's own top step. A lit
+country read as a 20-million city. The fix is not more hues, it is one meaning per
+ramp:
+
+- **Colour carries the quantity. The mark carries the kind.** Cities are dots,
+  capitals are the same colours with a white ring, monuments are turquoise. Add a
+  kind, add a shape - not a hue.
+- **Hue cannot separate categories from a ramp anyway.** Measured: green capitals
+  (`darkgreen`..`greenyellow`) against the warm city ramp come out **deltaE 0.6**
+  apart at worst under deuteranopia. Identical, for about one man in twelve. Warm
+  against turquoise measures 19.2, which is why monuments can have a hue of their own.
+
+## Bands, and colours with names
+
+Eight bands, each a **CSS named colour**, so every colour on the map has a name
+anyone can look up in the W3C list rather than a shade someone invented:
+
+| Band | CSS name | Hex | Luma | OLED cost |
+|---|---|---|---|---|
+| 15 K – 25 K | `darkred` | `#8b0000` | 0.16 | 0.12 |
+| 25 K – 50 K | `firebrick` | `#b22222` | 0.30 | 0.26 |
+| 50 K – 100 K | `crimson` | `#dc143c` | 0.33 | 0.33 |
+| 100 K – 250 K | `orangered` | `#ff4500` | 0.46 | 0.31 |
+| 250 K – 500 K | `chocolate` | `#d2691e` | 0.50 | 0.36 |
+| 500 K – 1 M | `darkorange` | `#ff8c00` | 0.62 | 0.39 |
+| 1 M – 5 M | `orange` | `#ffa500` | 0.68 | 0.42 |
+| 5 M and up | `gold` | `#ffd700` | 0.79 | 0.48 |
+
+- Verify the hex in the browser, not from memory: set `el.style.color = 'crimson'`
+  and read `getComputedStyle`. The CSS engine is the authority on its own names.
+- Luminance must rise with the value on a dark ground, band by band - that is what
+  makes the ramp readable at all.
+- **Stop the ramp at `gold`, not at white.** Same measure as the rest of this file:
+  near-white costs ~0.90 of full power, `gold` 0.48, and the top band is the one
+  every big city lights.
+- Banded, not smooth, because a band is a fact and a gradient is a guess: the eye
+  separates about eight steps of one hue on black. Millions of colours are available
+  and none of them can be *read*; the exact figure belongs in a readout, on click.
+
 ## Categorical palettes: validate, don't eyeball
 
 Run a colour-vision validator on the palette **in adjacency order**. For dark mode

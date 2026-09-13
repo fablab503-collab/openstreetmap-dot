@@ -58,6 +58,17 @@ def main():
     json.dump({"floor": floor, "count": len(cities),
                "cities": [[lon, lat, pop] for pop, name, cc, lon, lat in cities]},
               sys.stdout, separators=(",", ":"))
+
+    # Names go in their own file, in the same order, joined by index. The map never
+    # needs them to draw - only to answer a click - so they are fetched then and not
+    # before, and they cost nothing to the visit that never clicks.
+    if len(sys.argv) > 2:
+        with open(sys.argv[2], "w", encoding="utf-8") as fh:
+            json.dump({"count": len(cities),
+                       "names": [name for _, name, _, _, _ in cities],
+                       "cc": [cc for _, _, cc, _, _ in cities]},
+                      fh, ensure_ascii=False, separators=(",", ":"))
+        print(f"names written to {sys.argv[2]}", file=sys.stderr)
     print(f"{len(rows)} rows -> {len(cities)} cities at {floor}+; "
           f"largest {cities[-1][1]} {cities[-1][0]:,}", file=sys.stderr)
 

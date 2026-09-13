@@ -5,6 +5,38 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — Colours that mean one thing, and have a name
+
+### Changed
+
+- **Population is banded, and every band is a CSS named colour.** Eight of them:
+  `darkred` under 25 K, `firebrick` to 50 K, `crimson` to 100 K, `orangered` to
+  250 K, `chocolate` to 500 K, `darkorange` to 1 M, `orange` to 5 M, `gold` above.
+  A colour on the map is now a fact you can look up in the W3C list — not a shade
+  from the middle of a gradient. The legend lists every band with its name and
+  range, and is written from the same table the map draws from.
+- **One ramp, one meaning.** Cities and capitals share the population colours; a
+  capital is told apart by a **white ring**, not by a hue. Hue could not do the job:
+  green capitals against the warm city ramp measure **deltaE 0.6** apart under
+  deuteranopia — no difference at all for about one man in twelve. Warm against
+  turquoise measures 19.2, which is why monuments keep a hue of their own.
+- **The country highlight is `silver` now**, not `#ffeda0` — which was the old
+  ramp's top step, so a lit country read as a 20-million city.
+- **The ramp stops at `gold` rather than white.** Measured against the screen's own
+  subpixels, near-white costs about 0.90 of full power against gold's 0.48, and the
+  top band is the one every big city lights.
+
+### Added
+
+- **Click anything for what it is**: a city gives its name, exact population, band
+  and colour name; a capital adds its country and how many seats it has; a monument
+  gives how many Wikipedia editions cover it and where it ranks in its capital.
+- City names ship in their **own file, joined by index**, and are fetched only when
+  someone clicks a city — 593 KB that a visit which never clicks never pays for.
+  The map needs no names to draw.
+
+---
+
 ## 2026-09-14 — Monuments drawn as edges, not as solids
 
 ### Changed

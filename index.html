@@ -95,14 +95,16 @@
      carried by colour alone. */
   #legend { flex:0 0 auto; }
   #legend .ttl { color:#6a6a6a; display:block; margin-bottom:5px; }
-  #ramp, .ramp { height:9px; margin:2px 0 3px;
-    background:linear-gradient(90deg,#800026,#bd0026,#e31a1c,#fc4e2a,
-                               #fd8d3c,#feb24c,#fed976,#ffeda0); }
-  #legend .ends { display:flex; justify-content:space-between; color:#6a6a6a;
-    font-size:9px; letter-spacing:.03em; }
   #legend .src { color:#4a4a4a; font-size:9px; letter-spacing:.03em;
     text-transform:none; display:block; margin-top:4px; }
   #legend .cats { margin-top:9px; display:grid; gap:3px; }
+  /* One row per band: swatch, the colour's own name, the range it stands for. */
+  #bands { display:grid; gap:2px; margin:2px 0 5px; }
+  #bands .band { display:grid; grid-template-columns:9px 1fr auto; gap:7px;
+    align-items:center; font-size:10px; letter-spacing:.03em; }
+  #bands .band i { width:9px; height:9px; border-radius:50%; }
+  #bands .band b { color:#8a8a8a; font-weight:400; text-transform:none; }
+  #bands .band em { color:#6a6a6a; font-style:normal; letter-spacing:0; }
   #legend .cat { display:flex; align-items:center; gap:7px; font-size:10px;
     color:#8a8a8a; letter-spacing:.04em; }
   #legend .cat i { width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
@@ -285,6 +287,12 @@
     <span class="row">POPULATION <b id="s-pcpop">—</b></span>
     <span class="note" id="s-pnote"></span>
   </div>
+  <div class="picked" id="s-feat" hidden>
+    <span class="row"><span id="s-feat-kind">CITY</span> <b id="s-feat-name">—</b></span>
+    <span class="row">POPULATION <b id="s-feat-pop">—</b></span>
+    <span class="row">COLOUR <b id="s-feat-band">—</b></span>
+    <span class="note" id="s-feat-note"></span>
+  </div>
   <div class="sep"></div>
   <span class="row">TIME <b id="s-time">—</b></span>
   <span class="row">ZONE <b id="s-zone">—</b></span>
@@ -299,20 +307,20 @@
 </div>
 
 <div id="legend" class="panel">
-  <span class="ttl">POPULATION — WORLD</span>
-  <div id="ramp"></div>
-  <div class="ends"><span id="l-min">15 K</span><span>25 M</span></div>
-  <span class="src">Every city over 15,000 people — 34,091 of them, from GeoNames.
-    YlOrRd (ColorBrewer), reversed for a dark ground, on a ratio scale.</span>
-  <span class="ttl" style="margin:10px 0 5px">CAPITALS — POPULATION</span>
-  <div class="ramp"></div>
-  <div class="ends"><span>1 K</span><span>22 M</span></div>
-  <span class="src">Log scale; marker size too. City vs. whole municipality
-    varies by country, so compare loosely.</span>
-  <span class="ttl" style="margin:10px 0 5px">MONUMENTS — CAPITALS</span>
+  <span class="ttl">POPULATION — BANDS</span>
+  <div id="bands"></div>
+  <span class="src" id="l-minband">Every city over 15,000 people — 34,091 of them,
+    from GeoNames. Colour names are the CSS ones, so each is a name you can look up.</span>
+  <span class="ttl" style="margin:10px 0 5px">WHAT THE MARK MEANS</span>
   <div class="cats">
-    <span class="cat"><i style="background:#22e0d6"></i>BEST KNOWN OF EACH CAPITAL</span>
+    <span class="cat"><i style="background:#ff8c00"></i>DOT — A CITY</span>
+    <span class="cat"><i style="background:#ff8c00;box-shadow:0 0 0 1.5px #fff"></i>RING — A CAPITAL</span>
+    <span class="cat"><i style="background:#40e0d0"></i>TURQUOISE — A MONUMENT</span>
   </div>
+  <span class="src">Colour is always population; the mark says what kind of place it
+    is. Hue alone cannot do both: green capitals against amber cities measure 0.6
+    apart for red-green colour blindness, which is no difference at all. Click
+    anything for its exact figure.</span>
   <span class="src">Top 3 per capital by Wikipedia coverage. Close in, the
     building's own edges are drawn from OpenStreetMap — its foot, and its roofline
     in 3D. The ranking is Wikipedia's editors' work, not mine.</span>
@@ -460,6 +468,35 @@
    next to this file rather than pulled from a CDN. */
 import * as maplibregl from './vendor/maplibre-gl.mjs';
 
+/* Population bands. Every colour is a CSS named colour, so each one has a name
+   anybody can look up in the same place a browser does - `darkred` is exactly
+   #8b0000 in the W3C colour list, not a shade I invented.
+
+   Banded, not smooth, on purpose: a smooth ramp has millions of values and no
+   value has a meaning, while a band is a fact - this dot is a city of 50 to 100
+   thousand people and it is `crimson`. Eight is about as many steps as anyone can
+   tell apart on a dark ground at two pixels a dot; the exact figure comes from
+   clicking, not from squinting at a shade.
+
+   The ramp stops at `gold` rather than running on to white: measured against the
+   screen's own subpixels, near-white costs about 0.90 of full power against gold's
+   0.48, and the brightest band is the one every big city lights. */
+const POP_BANDS = [
+  { to:    25000, hex: '#8b0000', name: 'darkred'    },
+  { to:    50000, hex: '#b22222', name: 'firebrick'  },
+  { to:   100000, hex: '#dc143c', name: 'crimson'    },
+  { to:   250000, hex: '#ff4500', name: 'orangered'  },
+  { to:   500000, hex: '#d2691e', name: 'chocolate'  },
+  { to:  1000000, hex: '#ff8c00', name: 'darkorange' },
+  { to:  5000000, hex: '#ffa500', name: 'orange'     },
+  { to: Infinity, hex: '#ffd700', name: 'gold'       }
+];
+const bandFor = pop => POP_BANDS.find(b => pop < b.to) || POP_BANDS[POP_BANDS.length - 1];
+/* MapLibre wants the same table as a step expression: first colour, then
+   threshold/colour pairs. Built from the table so the two cannot drift apart. */
+const POP_STEPS = ['step', ['get', 'pop'], POP_BANDS[0].hex].concat(
+  ...POP_BANDS.slice(0, -1).map(b => [b.to, POP_BANDS[POP_BANDS.indexOf(b) + 1].hex]));
+
 const OFM = 'https://tiles.openfreemap.org/planet';
 
 // Metropolitan France, fitted to the viewport when the URL carries no view.
@@ -594,13 +631,7 @@ const style = {
            (more ink = more) but backwards on black, where the biggest cities
            would be the dimmest and sink into the ground. Reversed, luminance
            rises monotonically with population. */
-        /* Stops spaced by a constant ratio, not evenly: city sizes run over three
-           orders of magnitude, and a linear ramp paints everything below a million
-           the same dark red. */
-        'circle-color':['interpolate',['linear'],['get','pop'],
-          15000,'#800026',   44000,'#bd0026',   128000,'#e31a1c',
-          373000,'#fc4e2a', 1090000,'#fd8d3c', 3180000,'#feb24c',
-          9300000,'#fed976', 25000000,'#ffeda0'],
+        'circle-color': POP_STEPS,
         'circle-opacity':0.95 } },
 
     /* Where you are, if you ask. Drawn from the rounded point, so nothing sharper
@@ -618,7 +649,7 @@ const style = {
        codes either side of a border line. */
     { id:'country-glow', type:'line', source:'ofm', 'source-layer':'boundary',
       filter:['==',['get','admin_level'],2], layout:{ visibility:'none' },
-      paint:{ 'line-color':'#ffeda0',
+      paint:{ 'line-color':'#ffffff',
         'line-width':['interpolate',['linear'],['zoom'],2,1.2,6,3,10,5],
         'line-blur':0.4 } },
 
@@ -629,7 +660,7 @@ const style = {
        other two only once there is room for them, at z6. */
     { id:'capital-monuments', type:'circle', source:'capmon', minzoom:2.2,
       paint:{
-        'circle-color':'#22e0d6', 'circle-opacity':0.95,
+        'circle-color':'#40e0d0', 'circle-opacity':0.95,   // CSS turquoise
         'circle-radius':['interpolate',['linear'],['zoom'],
           // Big enough at world zoom to light a cell: the lattice samples the map,
           // so a 2 px circle under a 10 px dot pitch simply disappears.
@@ -1238,22 +1269,13 @@ document.getElementById('b-north').addEventListener('click', () => {
    turn to mush. So the names are drawn on top of the finished dot field.
    The dots stay the map; the type stays type. (showCapitals / CAPITALS are
    declared near the top — see the note there.) */
-/* Capital population uses the same reversed YlOrRd as France, on a LOG scale:
-   capitals run from 747 (Yaren, Nauru) to 21.9 M (Beijing) — four orders of
-   magnitude — and a linear ramp would paint all but a handful the same red.
-   Caveat carried in the legend: Wikidata's figure is the city proper in some
-   countries and a whole municipality in others (Beijing), so comparisons
-   between countries are rough. */
-const RAMP = ['#800026', '#bd0026', '#e31a1c', '#fc4e2a',
-              '#fd8d3c', '#feb24c', '#fed976', '#ffeda0'];
+/* A capital is coloured by the same population bands as every other city - one
+   ramp, one meaning - and told apart by its ring, not by a hue of its own. Size
+   still rises with population on a log scale, because capitals run from 747 people
+   (Yaren) to 21.9 M (Beijing) and a linear size would make all but a handful
+   identical. Wikidata's figure is the city proper in some countries and the whole
+   municipality in others, so compare loosely. */
 const CAP_LOG_LO = 3, CAP_LOG_HI = Math.log10(22e6);        // 1 K .. 22 M
-function rampColor(t) {
-  const x = t * (RAMP.length - 1);
-  const i = Math.min(RAMP.length - 2, Math.floor(x)), f = x - i;
-  const a = parseInt(RAMP[i].slice(1), 16), b = parseInt(RAMP[i + 1].slice(1), 16);
-  const mix = s => Math.round(((a >> s) & 255) * (1 - f) + ((b >> s) & 255) * f);
-  return `rgb(${mix(16)},${mix(8)},${mix(0)})`;
-}
 const fmtCapPop = n => n >= 1e6 ? (n / 1e6).toFixed(1) + ' M'
                      : n >= 1e3 ? Math.round(n / 1e3) + ' K' : String(n);
 
@@ -1267,7 +1289,8 @@ fetch('data/world-capitals.geojson').then(r => r.json()).then(j => {
       cc: f.properties.cc || '', tz: f.properties.tz || '',
       pop, seats: f.properties.seats,
       // Colour AND size carry population, so it never rests on hue alone.
-      color: pop > 0 ? rampColor(t) : '#6a6a6a',
+      color: pop > 0 ? bandFor(pop).hex : '#6a6a6a',
+      band: pop > 0 ? bandFor(pop) : null,
       markerR: pop > 0 ? 1.8 + t * 3.2 : 1.6,
       popLabel: pop > 0 ? fmtCapPop(pop) : '',
       lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] };
@@ -1295,10 +1318,13 @@ fetch('data/capital-monuments.geojson').then(r => r.json()).then(j => {
    and the GeoJSON is built here in one pass. */
 map.once('load', () => {
   fetch('data/world-population.json').then(r => r.json()).then(j => {
-    const features = j.cities.map(c => ({
+    /* The index is the join key to the names file: it costs nothing on the wire
+       (it is made here, not shipped) and it is what a click uses to look a city up
+       without the map ever holding 34,091 names it does not need to draw. */
+    const features = j.cities.map((c, i) => ({
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [c[0], c[1]] },
-      properties: { pop: c[2] } }));
+      properties: { pop: c[2], i } }));
     const src = map.getSource('worldpop');
     if (src) src.setData({ type: 'FeatureCollection', features });
     applyPopFilter();
@@ -1358,6 +1384,13 @@ function drawCapitals() {
     lctx.arc(x, y, cap.markerR * DPR, 0, Math.PI * 2);
     lctx.fillStyle = cap.color;              // the mark carries the colour...
     lctx.fill();
+    /* ...and the ring says it is a capital rather than a city. Shape, not hue:
+       a second hue would be invisible to a red-green colour blind reader. */
+    lctx.beginPath();
+    lctx.arc(x, y, (cap.markerR + 1.6) * DPR, 0, Math.PI * 2);
+    lctx.strokeStyle = 'rgba(255,255,255,.75)';
+    lctx.lineWidth = 1 * DPR;
+    lctx.stroke();
     if (isPicked) {                          // a ring, never a different hue
       lctx.beginPath();
       lctx.arc(x, y, (cap.markerR + 3.5) * DPR, 0, Math.PI * 2);
@@ -1569,14 +1602,15 @@ function ensureCountries() {
       const none = ['==', ['get', 'cc'], '\u0000'];
       map.addLayer({ id: 'country-fill', type: 'fill', source: 'countries',
         filter: none, layout: { visibility: 'none' },
-        paint: { 'fill-color': '#ffeda0',
+        paint: { 'fill-color': '#c0c0c0',   // CSS silver: neutral, so a lit country
+                                            // cannot be read as a 20-million city
           // Enough to lift the lattice inside the country, not enough to drown
           // the roads under it; lighter as you zoom in and the border takes over.
           'fill-opacity': ['interpolate', ['linear'], ['zoom'],
             1, 0.22, 6, 0.15, 9, 0.07] } }, 'country-glow');
       map.addLayer({ id: 'country-line', type: 'line', source: 'countries',
         filter: none, layout: { visibility: 'none' },
-        paint: { 'line-color': '#ffeda0',
+        paint: { 'line-color': '#c0c0c0',
           'line-width': ['interpolate', ['linear'], ['zoom'], 1, 0.8, 5, 2],
           // Fades out where the tiles' own, sharper border starts to work.
           'line-opacity': ['interpolate', ['linear'], ['zoom'], 4, 1, 6, 0] } },
@@ -1718,7 +1752,7 @@ function ensureShapes() {
          attempt shipped. */
       map.addLayer({ id: 'monument-shape-line', type: 'line', source: 'monshapes',
         minzoom: 12.5, layout: { visibility: 'none', 'line-join': 'round' },
-        paint: { 'line-color': '#9ff6ee',
+        paint: { 'line-color': '#afeeee',   // CSS paleturquoise
           'line-width': ['interpolate', ['linear'], ['zoom'], 12.5, 1, 16, 2.2],
           'line-opacity': ['interpolate', ['linear'], ['zoom'], 12.5, 0.5, 15, 1] } });
       /* In 3D the contour has to be built out of geometry. MapLibre 6.9 has no
@@ -1735,11 +1769,11 @@ function ensureShapes() {
       const H = ['case', ['>', ['get', 'h'], 0], ['get', 'h'], 25];
       map.addLayer({ id: 'monument-base', type: 'fill-extrusion', source: 'monedges',
         minzoom: 12.5, layout: { visibility: 'none' },
-        paint: { 'fill-extrusion-color': '#9ff6ee', 'fill-extrusion-base': 0,
+        paint: { 'fill-extrusion-color': '#afeeee', 'fill-extrusion-base': 0,
           'fill-extrusion-height': 2, 'fill-extrusion-opacity': 1 } });
       map.addLayer({ id: 'monument-top', type: 'fill-extrusion', source: 'monedges',
         minzoom: 12.5, layout: { visibility: 'none' },
-        paint: { 'fill-extrusion-color': '#d6fffb',
+        paint: { 'fill-extrusion-color': '#e0ffff',   // CSS lightcyan
           'fill-extrusion-base': ['max', ['-', H, 2], 0],
           'fill-extrusion-height': H, 'fill-extrusion-opacity': 1 } });
       monumentVisibility();
@@ -1906,11 +1940,71 @@ function capitalAt(point) {
   return best;
 }
 
+/* Click anything for what it actually is. A shade can carry a band; only a readout
+   can carry a number, which is the honest answer to "what is this dot". */
+let CITY_NAMES = null, namesReady = null;
+function ensureCityNames() {
+  if (namesReady) return namesReady;
+  namesReady = fetch('data/world-city-names.json')
+    .then(r => r.json())
+    .then(j => { CITY_NAMES = j; return j; })
+    .catch(() => { namesReady = null; return null; });
+  return namesReady;
+}
+
+const featBox = document.getElementById('s-feat');
+function showFeature(kind, name, popText, band, note) {
+  featBox.hidden = false;
+  set('s-feat-kind', kind);
+  set('s-feat-name', name);
+  set('s-feat-pop', popText);
+  set('s-feat-band', band ? band.name + ' ' + band.hex : '—');
+  document.getElementById('s-feat-note').textContent = note || '';
+}
+const bandRange = b => {
+  const i = POP_BANDS.indexOf(b);
+  const from = i === 0 ? 0 : POP_BANDS[i - 1].to;
+  return b.to === Infinity ? fmtPop(from) + ' and up'
+                           : fmtPop(from) + ' – ' + fmtPop(b.to);
+};
+
 map.on('click', e => {
   const cap = CAPITALS.length ? capitalAt(e.point) : null;
-  if (!cap) return;
-  selCountry.value = cap.country;
-  pickCountry(cap, true);
+  if (cap) {
+    selCountry.value = cap.country;
+    pickCountry(cap, true);
+    const b = cap.pop ? bandFor(cap.pop) : null;
+    showFeature('CAPITAL', cap.name.toUpperCase(), cap.pop ? fmtPop(cap.pop) : 'NO FIGURE',
+      b, (b ? bandRange(b) + '. ' : '') + 'Capital of ' + cap.country
+         + (cap.seats > 1 ? ', one of ' + cap.seats + ' seats' : '') + '.');
+    return;
+  }
+  const box = [[e.point.x - 7, e.point.y - 7], [e.point.x + 7, e.point.y + 7]];
+  const near = ids => {
+    const layers = ids.filter(id => map.getLayer(id));
+    return layers.length ? map.queryRenderedFeatures(box, { layers }) : [];
+  };
+
+  const mon = near(['capital-monuments'])[0];
+  if (mon) {
+    showFeature('MONUMENT', mon.properties.name.toUpperCase(),
+      mon.properties.wikis + ' WIKIS', null,
+      'In ' + mon.properties.city + '. Ranked ' + mon.properties.rank
+      + ' of 3 there, by how many Wikipedia editions cover it.');
+    return;
+  }
+
+  const hits = near(['population']);
+  if (!hits.length) { featBox.hidden = true; return; }
+  // The biggest city under the cursor is the one that was aimed at.
+  const f = hits.reduce((a, b) => (b.properties.pop > a.properties.pop ? b : a));
+  const pop = f.properties.pop, band = bandFor(pop), idx = f.properties.i;
+  showFeature('CITY', '—', fmtPop(pop), band, bandRange(band) + '.');
+  ensureCityNames().then(j => {
+    if (!j || !j.names[idx]) return;
+    showFeature('CITY', j.names[idx].toUpperCase(), fmtPop(pop), band,
+      bandRange(band) + '. ' + j.cc[idx] + ', from GeoNames.');
+  });
 });
 
 map.on('mousemove', e => {
@@ -1933,11 +2027,19 @@ function popThreshold() {
 }
 const fmtPop = n => n >= 1e6 ? (n / 1e6).toFixed(2) + ' M'
                   : n >= 1e3 ? Math.round(n / 1e3) + ' K' : String(n);
+/* The legend is written from POP_BANDS, so it cannot describe a colour the map is
+   not actually drawing. */
+document.getElementById('bands').innerHTML = POP_BANDS.map((b, i) => {
+  const from = i === 0 ? 15000 : POP_BANDS[i - 1].to;
+  const range = b.to === Infinity ? fmtPop(from) + ' and up'
+              : fmtPop(from) + ' – ' + fmtPop(b.to);
+  return `<span class="band"><i style="background:${b.hex}"></i>`
+       + `<b>${b.name}</b><em>${range}</em></span>`;
+}).join('');
+
 function applyPopFilter() {
   const min = popThreshold();
   document.getElementById('l-minpop').textContent = fmtPop(min);
-  const el = document.getElementById('l-min');
-  if (el) el.textContent = fmtPop(min);
   if (map.getLayer && map.getLayer('population'))
     map.setFilter('population', ['>=', ['get', 'pop'], min]);
   dirty = true;
