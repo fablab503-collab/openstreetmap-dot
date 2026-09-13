@@ -16,6 +16,15 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 - **Click a capital on the map to pick its country**, instead of going through the
   list. The pointer changes over a capital, so you can tell it is clickable.
 
+### Changed
+
+- **A country is framed from its own outline now, not from a geocoder's box.**
+  Nominatim answers with everything a country owns: asking for Portugal framed
+  900 km of Atlantic because of the Azores, and France's box spans the planet
+  because of French Polynesia. The mainland is the biggest ring of the outline the
+  map already holds — rings that wrap the antimeridian are skipped rather than
+  fitted. One less network call, too.
+
 ### Notes
 
 - The light is a `line-gradient` travelling along the outline, not a crawling dash:

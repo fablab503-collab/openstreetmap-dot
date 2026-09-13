@@ -304,10 +304,12 @@ point — the Colosseum's ellipse, the Capitol's wings.
 - Search: `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&q=…`,
   debounced ~450 ms — the usage policy allows about one request a second.
 - Frame results with `boundingbox` when present; otherwise `flyTo` the point.
-- Framing a country by name costs one search, worth caching for the session. A
-  country that crosses the antimeridian (Fiji, Kiribati, Russia) comes back with a
-  box spanning the whole planet, so check `east - west < 180` before using it —
-  otherwise picking Fiji frames the world.
+- **Do not frame a country from a geocoder box.** Nominatim returns everything the
+  country owns: Portugal's box reaches the Azores, France's spans the planet because
+  of French Polynesia, and Fiji's is the whole world because it crosses the
+  antimeridian. If you have the country's outline, frame the biggest ring of it and
+  skip any ring whose longitude span is over 180 degrees; it is more accurate and it
+  costs no request at all.
 - Reverse for "illuminate my country":
   `…/reverse?format=jsonv2&zoom=3&lat=…&lon=…` → `address.country_code`.
 - Privacy: request location only on a button press, round coordinates to 2 decimal
