@@ -182,6 +182,33 @@ Measure it before replacing `countWhenStill`.
 | Canvas sized from `innerWidth` once | Measure the element; `ResizeObserver` |
 | `getLayer`/`getStyle` before the style loads | Check `map.isStyleLoaded()` |
 
+## Tracing a border with a light
+
+A gradient that travels along the line, not a dash pattern crawling everywhere at
+once.
+
+```js
+map.addSource('trace', { type:'geojson', lineMetrics:true, data:empty });   // lineMetrics!
+map.setPaintProperty('country-trace', 'line-gradient',
+  ['interpolate', ['linear'], ['line-progress'],
+    0,'#ffeda0', tail,'#ffeda0', head,'#ffffff',
+    head + 0.012,'rgba(255,237,160,0)', 1,'rgba(255,237,160,0)']);
+```
+
+- **`lineMetrics: true` on the source or nothing happens.** `line-progress` does not
+  exist without it and the gradient is ignored silently: no error, no line, nothing
+  to debug.
+- Stops must be strictly increasing and within 0..1. Clamp the head to
+  `[0.002, 0.999]` and build the array in code rather than writing it by hand.
+- **One feature per ring.** Progress runs 0..1 along each feature, so islands trace
+  at the same time as the mainland instead of queueing behind it, and a country made
+  of pieces still finishes as one.
+- Progress is normalised, so the light takes the same time round Russia as round
+  Monaco. That is the point: fix the duration, not the speed. DotWorld uses 3.2 s.
+- Trace on `moveend`, never during a camera flight - the light comes out a smear.
+- Set `dirty = true` on every frame, or the lattice never resamples the map and the
+  light does not appear at all.
+
 ## B — custom layer inside MapLibre (not built, unverified)
 
 An independent design pass proposed drawing the dots **inside** MapLibre's own WebGL2

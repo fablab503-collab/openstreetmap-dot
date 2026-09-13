@@ -5,6 +5,30 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — A light that runs round the border
+
+### Added
+
+- **Picking a country now draws its border.** The map frames the country, then a
+  light runs round the outline and leaves it lit behind it — the whole border in
+  **3.2 seconds**, however big the country is. Islands trace alongside the mainland
+  rather than queueing after them, and the light fades once the outline is complete.
+- **Click a capital on the map to pick its country**, instead of going through the
+  list. The pointer changes over a capital, so you can tell it is clickable.
+
+### Notes
+
+- The light is a `line-gradient` travelling along the outline, not a crawling dash:
+  a bright head, the lit border behind it, nothing ahead of it yet. It needs
+  `lineMetrics: true` on the source — without that `line-progress` does not exist
+  and the gradient is ignored silently.
+- Each ring is its own feature, so progress runs 0 to 1 along every piece of a
+  country at once. The duration is fixed rather than the speed, so Russia and
+  Monaco take the same 3.2 seconds.
+- It starts on `moveend`. Drawn during the flight, it is a smear.
+
+---
+
 ## 2026-09-14 — The whole world's population, and a button that finds you
 
 ### Changed
