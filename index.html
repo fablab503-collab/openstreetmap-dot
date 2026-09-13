@@ -324,7 +324,7 @@
 <button id="b-set" aria-pressed="true">SETTINGS</button>
 <div id="ctl" class="panel">
   <label>DOT SCALE <span id="l-scale">0.65</span></label>
-  <input id="s-scale" type="range" min="0.4" max="2" step="0.05" value="0.65">
+  <input id="s-scale" type="range" min="0.01" max="2" step="0.01" value="0.65">
   <label>GAIN <span id="l-gain">2.05</span></label>
   <input id="s-gain" type="range" min="0.4" max="2.2" step="0.05" value="2.05">
   <label>CUTOFF <span id="l-cut">0.03</span></label>
@@ -754,7 +754,10 @@ void main() {
   o = vec4(0.0, 0.0, 0.0, 1.0);
   if (L <= u_cut) return;
   float r = pow((L - u_cut) / (1.0 - u_cut), 1.0 / u_gain) * u_step * 0.5;
-  if (r < 0.35) return;
+  // Cull sub-pixel specks - but the threshold has to follow the lattice. Fixed at
+  // 0.35 it culls EVERY dot once the pitch drops near a pixel, and the screen goes
+  // black instead of going fine.
+  if (r < min(0.35, u_step * 0.22)) return;
   float mx = max(c.r, max(c.g, c.b));
   float mn = min(c.r, min(c.g, c.b));
   vec3 col = u_dot;
@@ -827,6 +830,13 @@ const hexRgb = h => {
 let DPR = Math.min(window.devicePixelRatio || 1, 2);
 // Defaults calibrated by eye at street zoom in 3D — the look worth keeping.
 let scale = 0.65, gain = 2.05, cutoff = 0.03;
+/* The shader is happy at any pitch: it costs one texture read per PIXEL, not per
+   dot. The other two paths are not. Canvas2D draws an arc per cell, so a pitch
+   under a couple of device pixels is millions of arcs a frame; and counting builds
+   a cell grid, which below one device pixel is a canvas of 300 million cells that
+   cannot even be allocated. Both get a floor; the shader does not need one. */
+const CPU_MIN_STEP = 2;      // device px, Canvas2D fallback
+const COUNT_MIN_STEP = 1;    // device px, the lit-area statistic
 let dotColor = '#ffffff';
 let dataColour = true;   // keep data hues; false neutralises everything to one colour
 /* Declared here, not beside their loader below: the render loop starts before
@@ -886,7 +896,7 @@ function cellDot(r8, g8, b8, rMax) {
   const L = (r8 * 0.299 + g8 * 0.587 + b8 * 0.114) / 255;
   if (L <= cutoff) return null;                 // stays black => unlit => no power
   let r = Math.pow((L - cutoff) / (1 - cutoff), 1 / gain) * rMax;
-  if (r < 0.35) return null;
+  if (r < Math.min(0.35, rMax * 0.44)) return null;   // follows the lattice, as above
   const mx = Math.max(r8, g8, b8), mn = Math.min(r8, g8, b8);
   const data = dataColour && mx > 0 && (mx - mn) / mx > 0.28;
   if (data) r = Math.max(r, 0.9);               // data must not vanish into the lattice
@@ -983,7 +993,8 @@ function countWhenStill() {
     if (map.isMoving() || orbitRAF) { countWhenStill(); return; }
     const src = map.getCanvas();
     if (!src.width || !src.height || dots.width < 2 || dots.height < 2) return;
-    const zoom = map.getZoom(), pitch = pitchFor(zoom), step = pitch * DPR;
+    const zoom = map.getZoom(), pitch = pitchFor(zoom);
+    const step = Math.max(pitch * DPR, COUNT_MIN_STEP);   // never finer than a pixel
     const cols = Math.max(1, Math.ceil(dots.width / step));
     const rows = Math.max(1, Math.ceil(dots.height / step));
     const s = measureCells(sampleCells(src, cols, rows), cols, rows, step);
@@ -1000,8 +1011,6 @@ function halftone() {
   const zoom  = map.getZoom();
   const pitch = pitchFor(zoom);            // CSS px between dot centres
   const step  = pitch * DPR;               // device px
-  const cols  = Math.max(1, Math.ceil(dots.width  / step));
-  const rows  = Math.max(1, Math.ceil(dots.height / step));
 
   if (gl && glr && src.width <= glr.maxTex && src.height <= glr.maxTex) {
     drawGL(src, step);                     // no readback anywhere on this path
@@ -1009,10 +1018,13 @@ function halftone() {
     set('h-pitch', pitch.toFixed(1) + ' PX');
     countWhenStill();
   } else if (ctx) {
+    const cstep = Math.max(step, CPU_MIN_STEP);
+    const cols  = Math.max(1, Math.ceil(dots.width  / cstep));
+    const rows  = Math.max(1, Math.ceil(dots.height / cstep));
     const px = sampleCells(src, cols, rows);
-    drawCPU(px, cols, rows, step);
-    const s = measureCells(px, cols, rows, step);
-    hud(zoom, pitch, s.lit, cols * rows, s.coverage);
+    drawCPU(px, cols, rows, cstep);
+    const s = measureCells(px, cols, rows, cstep);
+    hud(zoom, cstep / DPR, s.lit, cols * rows, s.coverage);   // the pitch it drew
   } else {
     return;                                // GL context lost, not yet restored
   }
@@ -1038,7 +1050,8 @@ function recordFrame(ms) {
    frames this works in a hidden tab too. Compare against ?renderer=cpu. */
 window.__bench = (n = 20) => {
   const src = map.getCanvas();
-  const zoom = map.getZoom(), step = pitchFor(zoom) * DPR;
+  const zoom = map.getZoom();
+  const step = Math.max(pitchFor(zoom) * DPR, COUNT_MIN_STEP);
   const cols = Math.max(1, Math.ceil(dots.width / step));
   const rows = Math.max(1, Math.ceil(dots.height / step));
   const time = fn => { const a = performance.now(); fn(); return performance.now() - a; };

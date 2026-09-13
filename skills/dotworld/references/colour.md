@@ -26,7 +26,10 @@ With water and ground at pure `#000000`, open sea rendered 0 dots at every zoom 
 open country at z18 reached a maximum channel of 13. The screen looked broken. Keep
 a floor; raising CUTOFF still removes it.
 
-A floor must also clear the **minimum radius cull** (`r < 0.35` device px). With
+A floor must also clear the **minimum radius cull**, `r < min(0.35, step * 0.22)`
+device px. A *fixed* 0.35 looks harmless until someone winds the dot pitch down: once
+the pitch is near a pixel, the largest possible radius is under the threshold, every
+dot is culled and the screen goes black. Tie the cull to the pitch. With
 cutoff 0.03, gain 2.05 and a 2.3 px pitch at DPR 2, a cell needs luma ≈ 0.057
 (`#0f0f0f`) to survive. An earlier land value of `#131313` sat just above the cutoff,
 produced ~0.06 px dots, and silently vanished.

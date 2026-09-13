@@ -5,6 +5,33 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — A dot scale that goes all the way down
+
+### Changed
+
+- **DOT SCALE now starts at 0.01, not 0.4**, in steps of 0.01. At 0.05 the lattice
+  is about two device pixels across at world zoom; below that the dots are finer
+  than a screen pixel and the map goes continuous, which is as far as any screen can
+  take it.
+
+### Fixed
+
+- **A fine lattice used to go black.** The minimum-radius cull was a fixed 0.35
+  device pixels, so once the pitch came near a pixel the largest possible dot was
+  already under the threshold and every single one was culled. The cull follows the
+  pitch now — `min(0.35, step * 0.22)` in the shader, the same rule on the CPU path.
+
+### Notes
+
+- The shader does not care how fine the lattice is: it costs one texture read per
+  *pixel*, not per dot. The other two paths do, so they have floors it does not
+  need — the Canvas2D fallback draws one arc per cell (millions a frame below two
+  device pixels), and the lit-area count builds a cell grid, which under one device
+  pixel is a canvas of hundreds of millions of cells that cannot be allocated. The
+  HUD reports the pitch each path actually drew.
+
+---
+
 ## 2026-09-14 — A light that runs round the border
 
 ### Added

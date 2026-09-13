@@ -53,7 +53,7 @@ void main() {
   o = vec4(0.0, 0.0, 0.0, 1.0);
   if (L <= u_cut) return;
   float r = pow((L - u_cut) / (1.0 - u_cut), 1.0 / u_gain) * u_step * 0.5;
-  if (r < 0.35) return;
+  if (r < min(0.35, u_step * 0.22)) return;   // the cull has to follow the pitch
   float mx = max(c.r, max(c.g, c.b));
   float mn = min(c.r, min(c.g, c.b));
   vec3 col = u_dot;
@@ -97,7 +97,7 @@ function cellDot(r8, g8, b8, rMax) {
   const L = (r8 * 0.299 + g8 * 0.587 + b8 * 0.114) / 255;
   if (L <= cutoff) return null;
   let r = Math.pow((L - cutoff) / (1 - cutoff), 1 / gain) * rMax;
-  if (r < 0.35) return null;
+  if (r < Math.min(0.35, rMax * 0.44)) return null;   // same rule on the CPU path
   const mx = Math.max(r8, g8, b8), mn = Math.min(r8, g8, b8);
   const data = dataColour && mx > 0 && (mx - mn) / mx > 0.28;
   if (data) r = Math.max(r, 0.9);
