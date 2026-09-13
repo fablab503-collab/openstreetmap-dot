@@ -68,6 +68,7 @@ Requests are debounced to respect their one-per-second guidance.
 | Country outlines for the 195 | [Natural Earth](https://www.naturalearthdata.com/) 1:50m admin 0 | public domain |
 | Montpellier monuments + ranking | [Wikidata](https://www.wikidata.org/) & [OpenStreetMap](https://www.openstreetmap.org/) | CC0 1.0 / ODbL |
 | The best-known monuments of all 195 capitals | [Wikidata](https://www.wikidata.org/) (P625 + sitelink counts) | CC0 1.0 |
+| The outline of each of those monuments | [OpenStreetMap](https://www.openstreetmap.org/copyright) via [Overpass](https://overpass-api.de/) | ODbL 1.0 |
 
 Monument ranking counts how many Wikipedia editions and sister projects cover each
 site — so the ordering is really the work of **Wikipedia's editors**. Montpellier's

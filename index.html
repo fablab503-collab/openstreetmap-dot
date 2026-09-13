@@ -301,8 +301,9 @@
   <div class="cats">
     <span class="cat"><i style="background:#22e0d6"></i>BEST KNOWN OF EACH CAPITAL</span>
   </div>
-  <span class="src">Top 3 per capital by Wikipedia coverage; names from z6.
-    The ranking is Wikipedia's editors' work, not mine.</span>
+  <span class="src">Top 3 per capital by Wikipedia coverage, with the building's
+    own outline from OpenStreetMap once you are close. The ranking is Wikipedia's
+    editors' work, not mine.</span>
 </div>
 </div>
 
@@ -600,7 +601,10 @@ const style = {
           2.2, ['case',['==',['get','rank'],1], 3.2, 0],
           6,   ['case',['==',['get','rank'],1], 4,   2.4],
           10,  ['case',['==',['get','rank'],1], 8,   6],
-          16,  18] } },
+          // Past z14 the outline is the mark; the circle shrinks to a centre dot
+          // instead of swallowing the building it points at.
+          14,  ['case',['==',['get','rank'],1], 9,   7],
+          17,  3] } },
 
     /* Monuments: categorical, fixed hue per category, never cycled. Palette
        validated for colour-vision deficiency rather than chosen by eye. */
@@ -1353,9 +1357,11 @@ const bCapMon = document.getElementById('b-capmon');
 bCapMon.addEventListener('click', () => {
   showCapMon = bCapMon.getAttribute('aria-pressed') !== 'true';
   bCapMon.setAttribute('aria-pressed', showCapMon);
-  if (map.getLayer('capital-monuments'))
-    map.setLayoutProperty('capital-monuments', 'visibility',
-                          showCapMon ? 'visible' : 'none');
+  ['capital-monuments', 'monument-shape', 'monument-shape-line'].forEach(id => {
+    if (map.getLayer(id))
+      map.setLayoutProperty(id, 'visibility', showCapMon ? 'visible' : 'none');
+  });
+  if (showCapMon && map.getZoom() >= 12) ensureShapes();
   dirty = true;
 });
 
@@ -1423,6 +1429,43 @@ function ensureCountries() {
     .catch(() => { countriesReady = null; });   // let the next pick try again
   return countriesReady;
 }
+
+/* The monuments' own footprints, from OpenStreetMap. A dot at a coordinate says
+   something is here; the outline says what it is - at street zoom the lattice
+   fills the Colosseum's ellipse and the Capitol's wings. The tiles cannot do this:
+   their building layer carries render heights and no name or id, so there is no way
+   to ask them for one particular building. Loaded the first time you are close
+   enough for an outline to be more than a speck. */
+let shapesReady = null;
+
+function ensureShapes() {
+  if (shapesReady) return shapesReady;
+  shapesReady = whenStyled()
+    .then(() => fetch('data/capital-monument-shapes.geojson'))
+    .then(r => r.json())
+    .then(j => {
+      if (map.getSource('monshapes')) return;
+      map.addSource('monshapes', { type: 'geojson', data: j });
+      map.addLayer({ id: 'monument-shape', type: 'fill', source: 'monshapes',
+        minzoom: 12.5,
+        layout: { visibility: showCapMon ? 'visible' : 'none' },
+        paint: { 'fill-color': '#22e0d6',
+          'fill-opacity': ['interpolate', ['linear'], ['zoom'], 12.5, 0.35, 15, 0.7] } },
+        'capital-monuments');
+      map.addLayer({ id: 'monument-shape-line', type: 'line', source: 'monshapes',
+        minzoom: 12.5,
+        layout: { visibility: showCapMon ? 'visible' : 'none' },
+        paint: { 'line-color': '#8ff6ee', 'line-width': 1,
+          'line-opacity': ['interpolate', ['linear'], ['zoom'], 12.5, 0.4, 15, 0.9] } },
+        'capital-monuments');
+    })
+    .catch(() => { shapesReady = null; });
+  return shapesReady;
+}
+
+/* Fetch them once the map is close enough to draw them, and never before: most
+   visits stay above z12 and should not pay for a file they will not see. */
+map.on('zoomend', () => { if (map.getZoom() >= 12) ensureShapes(); });
 
 function showShape(cc) {
   ['country-fill', 'country-line'].forEach(id => {
@@ -1600,9 +1643,10 @@ bData.addEventListener('click', () => {
   dataColour = on;
   ['population', 'monuments'].forEach(id =>
     map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none'));
-  if (map.getLayer('capital-monuments'))
-    map.setLayoutProperty('capital-monuments', 'visibility',
-                          on && showCapMon ? 'visible' : 'none');
+  ['capital-monuments', 'monument-shape', 'monument-shape-line'].forEach(id => {
+    if (map.getLayer(id))
+      map.setLayoutProperty(id, 'visibility', on && showCapMon ? 'visible' : 'none');
+  });
   legend.hidden = !on;
   dirty = true;
 });

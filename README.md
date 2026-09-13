@@ -87,6 +87,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | Capitals | All 195 — 193 UN members plus Vatican and Palestine — with population and ISO country code | Wikidata |
 | The country you pick | Its outline lit over the lattice, at any zoom | Natural Earth (1:50m) |
 | Monuments — capitals | The three best-known places in each of the 195 capitals, by Wikipedia coverage | Wikidata |
+| Monument outlines | The building's own footprint, drawn from z12.5 — the Colosseum's ellipse, the Capitol's wings | OpenStreetMap (Overpass) |
 | Monuments — Montpellier | Top 10, ranked by number of Wikipedia language editions | Wikidata + OpenStreetMap |
 
 **Colour follows the job.**

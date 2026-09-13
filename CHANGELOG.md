@@ -5,6 +5,33 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-13 — Monuments drawn as the buildings they are
+
+### Added
+
+- **Every capital monument now has its own outline**, taken from OpenStreetMap:
+  from z12.5 the cyan circle gives way to the building's footprint, so the lattice
+  fills the Colosseum's ellipse, the Capitol's wings and the Forbidden City's
+  rectangles instead of a blob. **355 of the 491 monuments (72%), across 162
+  capitals**, 220 KB — 44 KB over the wire — fetched only once you are close enough
+  for an outline to be more than a speck. The rest keep the marker; OSM has no
+  wikidata-tagged building near their point.
+- `skills/dotworld/scripts/fetch_monument_shapes.py` builds it through Overpass.
+
+### Notes
+
+- The vector tiles cannot do this: their building layer carries render heights and
+  no name or id, so there is no way to ask them for one particular building.
+- Matched by position — every OSM way or relation with a `wikidata` tag within
+  150 m, nearest centroid inside 200 m wins — so two monuments on the same street
+  cannot swap outlines.
+- A relation's outer ways come back from Overpass unordered and sometimes reversed;
+  they are joined end to end into rings here, or the Louvre draws as a scribble.
+- Simplified at ~2 m, which is far under one dot of the lattice even at street
+  zoom: Westminster Abbey goes from 547 points to 108, the file from 400 KB to 220.
+
+---
+
 ## 2026-09-13 — A zoom bar you can throw
 
 ### Added

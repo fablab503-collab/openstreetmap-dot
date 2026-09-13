@@ -27,6 +27,7 @@ URL did not change.
 | `data/montpellier-monuments.geojson` | top-10 Montpellier monuments with category |
 | `data/countries.geojson` | 195 country outlines (Natural Earth 1:50m), loaded on first pick |
 | `data/capital-monuments.geojson` | the 3 best-known monuments of each of the 195 capitals |
+| `data/capital-monument-shapes.geojson` | 355 of those monuments' OSM footprints, loaded past z12 |
 | `shots/` | screenshots used in the README |
 | `skills/dotworld/` | this skill |
 | `archive/` | the first Canvas2D prototype and the first `dots` skill |

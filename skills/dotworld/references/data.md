@@ -252,6 +252,30 @@ ORDER BY DESC(?links) LIMIT 150
   Notre-Dame. Rome → Colosseum, St. Peter's, Sistine Chapel. Athens → Parthenon,
   Acropolis. Moscow → Red Square, Kremlin, St. Basil's.
 
+## Monument footprints — OpenStreetMap via Overpass (ODbL)
+
+`scripts/fetch_monument_shapes.py`. A dot at a coordinate says something is there;
+the building's outline says what it is, and in a dot lattice the shape is the whole
+point — the Colosseum's ellipse, the Capitol's wings.
+
+- **The tiles cannot help.** Their `building` layer carries `render_height` and
+  `render_min_height` and nothing else: no name, no id, no wikidata tag. There is no
+  way to ask them for one particular building.
+- **Match by position, not by id.** Wikidata gives you a point; OSM has the polygon.
+  Ask Overpass for every way and relation with a `wikidata` tag within 150 m of the
+  point and keep the nearest centroid inside 200 m, so two monuments on one street
+  cannot swap outlines.
+- **Batch the `around` clauses**: 40 monuments per query is 13 queries for 491
+  rather than 491. Expect HTTP errors and truncated reads anyway — retry.
+- **Assemble relations yourself.** `out geom` returns a multipolygon's outer ways as
+  separate strips, unordered and sometimes reversed. Join them end to end into
+  closed rings or the biggest monuments come out as scribbles.
+- **Simplify.** Westminster Abbey arrives with 547 points. Ramer-Douglas-Peucker at
+  0.00002 degrees (~2 m, far under one dot even at street zoom) leaves 108 and takes
+  the file from 400 KB to 220 KB (44 KB gzipped).
+- Coverage: **355 of 491 monuments (72%), in 162 capitals.** The rest have no
+  wikidata-tagged way near the point — the marker still shows, it just has no shape.
+
 ## Geocoding — Nominatim (OpenStreetMap Foundation)
 
 - Search: `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&q=…`,
