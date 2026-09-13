@@ -1068,6 +1068,7 @@ b3d.addEventListener('click', () => {
   b3d.setAttribute('aria-pressed', on);
   map.setLayoutProperty('building-3d', 'visibility', on ? 'visible' : 'none');
   map.setLayoutProperty('building',    'visibility', on ? 'none' : 'visible');
+  monumentVisibility();          // flat outline or cyan volume, to match
   if (!on) stopOrbit();
   map.easeTo({ pitch: on ? 60 : 0, bearing: on ? -22 : 0, duration: 900 });
 });
@@ -1357,12 +1358,8 @@ const bCapMon = document.getElementById('b-capmon');
 bCapMon.addEventListener('click', () => {
   showCapMon = bCapMon.getAttribute('aria-pressed') !== 'true';
   bCapMon.setAttribute('aria-pressed', showCapMon);
-  ['capital-monuments', 'monument-shape', 'monument-shape-line'].forEach(id => {
-    if (map.getLayer(id))
-      map.setLayoutProperty(id, 'visibility', showCapMon ? 'visible' : 'none');
-  });
+  monumentVisibility();
   if (showCapMon && map.getZoom() >= 12) ensureShapes();
-  dirty = true;
 });
 
 /* Find one of the 195 countries and show it on the map.
@@ -1446,18 +1443,27 @@ function ensureShapes() {
     .then(j => {
       if (map.getSource('monshapes')) return;
       map.addSource('monshapes', { type: 'geojson', data: j });
+      /* On top of everything, with no beforeId: under the buildings layer the
+         outline is simply invisible, which is how the first attempt shipped. */
       map.addLayer({ id: 'monument-shape', type: 'fill', source: 'monshapes',
-        minzoom: 12.5,
-        layout: { visibility: showCapMon ? 'visible' : 'none' },
+        minzoom: 12.5, layout: { visibility: 'none' },
         paint: { 'fill-color': '#22e0d6',
-          'fill-opacity': ['interpolate', ['linear'], ['zoom'], 12.5, 0.35, 15, 0.7] } },
-        'capital-monuments');
+          'fill-opacity': ['interpolate', ['linear'], ['zoom'], 12.5, 0.35, 15, 0.7] } });
       map.addLayer({ id: 'monument-shape-line', type: 'line', source: 'monshapes',
-        minzoom: 12.5,
-        layout: { visibility: showCapMon ? 'visible' : 'none' },
+        minzoom: 12.5, layout: { visibility: 'none' },
         paint: { 'line-color': '#8ff6ee', 'line-width': 1,
-          'line-opacity': ['interpolate', ['linear'], ['zoom'], 12.5, 0.4, 15, 0.9] } },
-        'capital-monuments');
+          'line-opacity': ['interpolate', ['linear'], ['zoom'], 12.5, 0.4, 15, 0.9] } });
+      /* In 3D the tiles' own extrusion writes depth, so a flat fill at ground
+         level is hidden underneath it however late it is drawn. The monument has
+         to be a volume too. Heights are OSM's where it has one (110 of the 355);
+         25 m otherwise, which clears the tiles' guesses - they give the Colosseum
+         all of 1 m. */
+      map.addLayer({ id: 'monument-shape-3d', type: 'fill-extrusion',
+        source: 'monshapes', minzoom: 12.5, layout: { visibility: 'none' },
+        paint: { 'fill-extrusion-color': '#22e0d6',
+          'fill-extrusion-height': ['case', ['>', ['get', 'h'], 0], ['get', 'h'], 25],
+          'fill-extrusion-base': 0, 'fill-extrusion-opacity': 0.9 } });
+      monumentVisibility();
     })
     .catch(() => { shapesReady = null; });
   return shapesReady;
@@ -1470,6 +1476,22 @@ function ensureShapes() {
 const shapesIfClose = () => { if (map.getZoom() >= 12) ensureShapes(); };
 map.on('zoomend', shapesIfClose);
 map.once('load', shapesIfClose);
+
+/* Three switches decide these layers: the monuments toggle, the data-colour
+   toggle, and whether the map is in 3D - flat outline or cyan volume, never both. */
+function monumentVisibility() {
+  const threeD = b3d.getAttribute('aria-pressed') === 'true';
+  const on = showCapMon && dataColour;
+  const set = (id, v) => {
+    if (map.getLayer(id))
+      map.setLayoutProperty(id, 'visibility', v ? 'visible' : 'none');
+  };
+  set('capital-monuments', on);
+  set('monument-shape', on && !threeD);
+  set('monument-shape-line', on && !threeD);
+  set('monument-shape-3d', on && threeD);
+  dirty = true;
+}
 
 function showShape(cc) {
   ['country-fill', 'country-line'].forEach(id => {
@@ -1647,10 +1669,7 @@ bData.addEventListener('click', () => {
   dataColour = on;
   ['population', 'monuments'].forEach(id =>
     map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none'));
-  ['capital-monuments', 'monument-shape', 'monument-shape-line'].forEach(id => {
-    if (map.getLayer(id))
-      map.setLayoutProperty(id, 'visibility', on && showCapMon ? 'visible' : 'none');
-  });
+  monumentVisibility();
   legend.hidden = !on;
   dirty = true;
 });

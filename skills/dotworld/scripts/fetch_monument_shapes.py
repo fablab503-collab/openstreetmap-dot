@@ -103,6 +103,25 @@ def geometry_of(el):
     return {"type": "MultiPolygon", "coordinates": [[r] for r in rings]}
 
 
+def height_of(tags):
+    """Metres, for drawing the monument as a volume rather than a footprint. OSM's
+    `height` is usually plain metres but can carry a unit; levels are a fallback at
+    3.5 m each. 0 means "unknown" - the app picks its own default then."""
+    raw = (tags.get("height") or tags.get("building:height") or "").strip()
+    if raw:
+        try:
+            return round(float(raw.replace("m", "").replace(",", ".").strip()), 1)
+        except ValueError:
+            pass
+    lv = (tags.get("building:levels") or "").strip()
+    if lv:
+        try:
+            return round(float(lv.replace(",", ".")) * 3.5, 1)
+        except ValueError:
+            pass
+    return 0
+
+
 def centroid(geom):
     pts = []
     if geom["type"] == "Polygon":
@@ -205,6 +224,7 @@ def main():
             hit += 1
             props = dict(c["properties"])
             props["osm"] = best[1].get("wikidata", "")
+            props["h"] = height_of(best[1])
             out.append({"type": "Feature",
                         "geometry": round_geom(simplify(best[0])),
                         "properties": props})

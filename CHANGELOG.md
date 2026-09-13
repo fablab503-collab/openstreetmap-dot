@@ -17,6 +17,11 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
   for an outline to be more than a speck. The rest keep the marker; OSM has no
   wikidata-tagged building near their point.
 - `skills/dotworld/scripts/fetch_monument_shapes.py` builds it through Overpass.
+- **In 3D the monument rises as a cyan volume.** A flat fill at ground level is
+  hidden under the tiles' own extruded building however late it is drawn - the
+  extrusion writes depth - so the monument has to be a volume too. Heights are
+  OpenStreetMap's where the building has one (110 of the 355), 25 m otherwise,
+  which clears what the tiles guess: they give the Colosseum a 1 m extrusion.
 
 ### Notes
 
