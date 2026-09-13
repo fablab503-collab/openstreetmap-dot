@@ -85,6 +85,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | World statistics | Population projected from the latest estimate at the net birth/death rate; born and died today; urban share; land area; the population of any country you pick | World Bank Open Data |
 | Population — France | 644 communes over 15,000 people, from Paris (2,103,778) down to 15,023 | Wikidata |
 | Capitals | All 195 — 193 UN members plus Vatican and Palestine — with population and ISO country code | Wikidata |
+| The country you pick | Its outline lit over the lattice, at any zoom | Natural Earth (1:50m) |
 | Monuments — Montpellier | Top 10, ranked by number of Wikipedia language editions | Wikidata + OpenStreetMap |
 
 **Colour follows the job.**

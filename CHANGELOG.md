@@ -5,7 +5,7 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
-## 2026-09-11 — Find any of the 195 countries and light it up
+## 2026-09-13 — Find any of the 195 countries and light it up
 
 ### Added
 
@@ -20,6 +20,13 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
   a single country's border light up. One UN member carries no code of its own:
   the member is the *Kingdom of Denmark*, while DK belongs to *Denmark*, its
   European part — filled in by the script and documented there.
+- **The country's own outline**, from Natural Earth's 1:50m set, lit over the
+  lattice. The tiles have no country polygons, and their boundary lines only name
+  the countries either side from zoom 5 up — checked by decoding tiles — so at the
+  zoom where you look at a whole country there was nothing to light. The outline
+  file is 780 KB (225 KB over the wire) and is fetched only when someone picks a
+  country. It fades out as you zoom past 6, where the tiles' own sharper border
+  takes over.
 - **Every earlier version is now tagged on GitHub**, `v0.1.0` (2026-09-09) through
   `v0.4.0`, with `v0.5.0-beta` published as a release.
 

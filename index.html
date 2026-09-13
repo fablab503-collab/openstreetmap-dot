@@ -363,6 +363,8 @@
       <li><a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a>
         (CC0) — French commune populations, the 195 capitals with their populations
         and country codes, Montpellier monuments</li>
+      <li><a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a>
+        (public domain) — the country outline that lights up when you pick one</li>
       <li>Monument ranking is by Wikipedia language coverage — really the work of
         Wikipedia's editors</li>
     </ul>
@@ -1223,6 +1225,61 @@ function fillCountries() {
   selCountry.options[0].textContent = 'FIND A COUNTRY (' + CAPITALS.length + ')';
 }
 
+/* The tiles' boundary lines only name the countries either side from zoom 5 up
+   (checked by decoding tiles: at z3 and z4 the features carry admin_level and
+   maritime and nothing else). A country framed whole sits at z2-z7, so below z5
+   there would be nothing to light. Natural Earth's outlines are a polygon per
+   country and the same at every zoom, so they carry the highlight and the tiles'
+   own border takes over as you zoom in. Loaded only when a country is first
+   picked: 780 KB that most visits never need. */
+let countriesReady = null;
+const whenStyled = () => map.getLayer('country-glow')
+  ? Promise.resolve() : new Promise(res => map.once('load', res));
+
+function ensureCountries() {
+  if (countriesReady) return countriesReady;
+  countriesReady = whenStyled()
+    .then(() => fetch('data/countries.geojson'))
+    .then(r => r.json())
+    .then(j => {
+      if (map.getSource('countries')) return;
+      map.addSource('countries', { type: 'geojson', data: j });
+      const none = ['==', ['get', 'cc'], '\u0000'];
+      map.addLayer({ id: 'country-fill', type: 'fill', source: 'countries',
+        filter: none, layout: { visibility: 'none' },
+        paint: { 'fill-color': '#ffeda0',
+          // Enough to lift the lattice inside the country, not enough to drown
+          // the roads under it; lighter as you zoom in and the border takes over.
+          'fill-opacity': ['interpolate', ['linear'], ['zoom'],
+            1, 0.22, 6, 0.15, 9, 0.07] } }, 'country-glow');
+      map.addLayer({ id: 'country-line', type: 'line', source: 'countries',
+        filter: none, layout: { visibility: 'none' },
+        paint: { 'line-color': '#ffeda0',
+          'line-width': ['interpolate', ['linear'], ['zoom'], 1, 0.8, 5, 2],
+          // Fades out where the tiles' own, sharper border starts to work.
+          'line-opacity': ['interpolate', ['linear'], ['zoom'], 4, 1, 6, 0] } },
+        'country-glow');
+    })
+    .catch(() => { countriesReady = null; });   // let the next pick try again
+  return countriesReady;
+}
+
+function showShape(cc) {
+  ['country-fill', 'country-line'].forEach(id => {
+    if (!map.getLayer(id)) return;
+    if (cc) map.setFilter(id, ['==', ['get', 'cc'], cc]);
+    map.setLayoutProperty(id, 'visibility', cc ? 'visible' : 'none');
+  });
+  dirty = true;
+}
+
+async function highlight(cc) {
+  setGlow(cc);                    // the tiles' border: sharp, but only from z5
+  if (!cc) { showShape(null); return; }
+  await ensureCountries();
+  if (picked && picked.cc === cc) showShape(cc);
+}
+
 function setGlow(cc) {
   if (!map.getLayer || !map.getLayer('country-glow')) return;
   if (!cc) { map.setLayoutProperty('country-glow', 'visibility', 'none'); return; }
@@ -1295,7 +1352,7 @@ async function countryPop(cap) {
 
 function pickCountry(cap, frame) {
   picked = cap;
-  setGlow(cap && cap.cc);
+  highlight(cap && cap.cc);
   showPicked(cap);
   if (cap) {
     countryPop(cap);

@@ -11,7 +11,7 @@ OpenFreeMap serves the OpenMapTiles schema.
 |---|---|---|
 | `place` | `capital`, `class`, `iso_a2`, `name`, `rank` | **population** |
 | `poi` | `class`, `subclass`, `name`, `rank` | notability, rankings |
-| `boundary` | `admin_level`, `adm0_l`, `adm0_r` (country code on each side) | — |
+| `boundary` | `admin_level`, `disputed`, `maritime` always; `adm0_l`/`adm0_r` (country code each side) **only from z5** | country polygons |
 | `building` | `render_height`, `render_min_height` | — |
 
 `adm0_l`/`adm0_r` are what light up one country's border:
@@ -20,6 +20,24 @@ OpenFreeMap serves the OpenMapTiles schema.
 map.setFilter('country-glow', ['all', ['==', ['get', 'admin_level'], 2],
   ['any', ['==', ['get', 'adm0_l'], cc], ['==', ['get', 'adm0_r'], cc]]]);
 ```
+
+**But only from zoom 5.** The TileJSON lists `adm0_l`/`adm0_r` for z0-14, which is
+the schema, not the data. Decode a tile and look: at z3 and z4 the boundary features
+carry `admin_level`, `disputed` and `maritime` and nothing else, so that filter
+matches nothing — and a country framed whole sits at z2-z7. Check it without a
+browser:
+
+```bash
+curl -sS https://tiles.openfreemap.org/planet            # -> tiles URL template
+curl -sS --compressed -o t.pbf ".../5/16/11.pbf"          # a tile over the border
+python3 -c "import re;print(set(re.findall(rb'adm0_[lr]', open('t.pbf','rb').read())))"
+```
+
+A vector tile stores its property names as plain strings, so grepping the
+decompressed bytes answers "is this field in this tile" in one line.
+
+There are **no country polygons in the tiles at all**, at any zoom. To fill or
+outline a whole country you have to bring your own - see *Country outlines* below.
 
 ## World statistics — World Bank Open Data (CC BY 4.0)
 
@@ -119,6 +137,24 @@ ORDER BY ?countryLabel
 - Some figures are the city proper, others the whole municipality (Beijing, Tokyo),
   so cross-country comparisons are rough. Put that in the legend.
 - "Country count" is definitional: 195 here; ISO 3166 lists 249 codes.
+
+## Country outlines — Natural Earth (public domain)
+
+`scripts/build_countries.py` turns Natural Earth's admin-0 set into one polygon per
+country, keyed by ISO 3166-1 alpha-2 so it joins the capitals file and the tiles.
+
+- **Use 1:50m, not 1:110m.** 110m is half the size and drops 29 of the 195: every
+  small island state, plus Singapore, Malta, Monaco and Vatican City. 50m has all 195.
+- **Match on `ISO_A2_EH`.** Plain `ISO_A2` is `-99` for France, Norway and others.
+  Fall back to `ISO_A2`, then `WB_A2`.
+- Raw it is 2.9 MB. Simplified (Ramer-Douglas-Peucker at 0.02 degrees) and rounded to
+  2 decimals it is **780 KB, 225 KB gzipped, 47k points** - fetched only when someone
+  picks a country. 0.01 degrees is under a pixel at z7, which is as far in as this
+  layer is drawn.
+- Simplification can erase a country: a ring that survives with fewer than 4 points
+  keeps its original shape, or Tuvalu, Nauru and the Maldives vanish.
+- Draw it as a translucent fill (the lattice lifts inside the country) plus a line
+  that fades out by z6, where the tiles' own sharper border takes over.
 
 ## Ranking a city's monuments
 
