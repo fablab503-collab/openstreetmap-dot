@@ -1195,8 +1195,15 @@ let shiftDrag = null;
 
 map.getCanvasContainer().addEventListener('mousedown', e => {
   if (!e.shiftKey || e.button !== 0) return;
+  const r = map.getCanvasContainer().getBoundingClientRect();
   shiftDrag = { x: e.clientX, y: e.clientY,
-                bearing: map.getBearing(), pitch: map.getPitch() };
+                bearing: map.getBearing(), pitch: map.getPitch(),
+                /* Right-drag turns the map like a wheel, not like a slider: pulling
+                   right along the bottom spins it one way, along the top the other.
+                   Read MapLibre's own handler and it negates the delta above the
+                   centre — so the sign is taken once, where the drag started, which
+                   also keeps it steady if you cross the middle mid-turn. */
+                spin: e.clientY < r.top + r.height / 2 ? -1 : 1 };
   map.dragPan.disable();
   stopOrbit();
   e.preventDefault();
@@ -1205,9 +1212,10 @@ map.getCanvasContainer().addEventListener('mousedown', e => {
 
 window.addEventListener('mousemove', e => {
   if (!shiftDrag) return;
-  map.setBearing(shiftDrag.bearing - (e.clientX - shiftDrag.x) * 0.35);
-  map.setPitch(clamp(shiftDrag.pitch - (e.clientY - shiftDrag.y) * 0.3,
-                     map.getMinPitch(), map.getMaxPitch()));
+  map.setBearing(shiftDrag.bearing
+    + shiftDrag.spin * (e.clientX - shiftDrag.x) * 0.35);
+  map.setPitch(clamp(shiftDrag.pitch - (e.clientY - shiftDrag.y) * 0.5,
+                     map.getMinPitch(), map.getMaxPitch()));   // 0.5°/px, as MapLibre
   dirty = true;
   e.preventDefault();
 });

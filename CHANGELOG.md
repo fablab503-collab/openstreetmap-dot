@@ -15,6 +15,11 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
   underneath the turn. Bearing and pitch are set per mouse-move rather than eased,
   so the camera follows the hand exactly, and the TILT and BEARING sliders follow
   the camera as always.
+- It turns the way right-drag turns: like a wheel, not a slider. MapLibre's own
+  handler negates the rotation above the screen centre, so pulling right along the
+  bottom spins the map one way and along the top the other; the sign is taken where
+  the drag starts, so it stays steady if you cross the middle mid-turn. Tilt is
+  0.5° per pixel, the same as MapLibre's.
 
 ---
 
