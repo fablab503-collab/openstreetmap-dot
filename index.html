@@ -1678,6 +1678,31 @@ function traceCountry(cc) {
    enough for an outline to be more than a speck. */
 let shapesReady = null;
 
+/* Turn an outline into a ribbon of quads, one per edge, `w` metres wide: the way to
+   draw a line in a world that only extrudes polygons. Corners are left to overlap -
+   mitring them would cost more than it shows at three metres wide. */
+function edgeRibbon(geom, w) {
+  const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
+  const quads = [];
+  for (const poly of polys) {
+    for (const ring of poly) {
+      for (let i = 0; i + 1 < ring.length; i++) {
+        const [x1, y1] = ring[i], [x2, y2] = ring[i + 1];
+        const degPerMLat = 1 / 110540;
+        const degPerMLon = 1 / (111320 * Math.max(0.15, Math.cos((y1 + y2) / 2 * RAD)));
+        const dx = (x2 - x1) / degPerMLon, dy = (y2 - y1) / degPerMLat;   // metres
+        const len = Math.hypot(dx, dy);
+        if (len < 0.2) continue;                       // a step too small to see
+        const ox = (-dy / len) * (w / 2) * degPerMLon;
+        const oy = ((dx / len) * (w / 2)) * degPerMLat;
+        quads.push([[[x1 + ox, y1 + oy], [x2 + ox, y2 + oy],
+                     [x2 - ox, y2 - oy], [x1 - ox, y1 - oy], [x1 + ox, y1 + oy]]]);
+      }
+    }
+  }
+  return quads.length ? { type: 'MultiPolygon', coordinates: quads } : null;
+}
+
 function ensureShapes() {
   if (shapesReady) return shapesReady;
   shapesReady = whenStyled()
@@ -1696,18 +1721,27 @@ function ensureShapes() {
         paint: { 'line-color': '#9ff6ee',
           'line-width': ['interpolate', ['linear'], ['zoom'], 12.5, 1, 16, 2.2],
           'line-opacity': ['interpolate', ['linear'], ['zoom'], 12.5, 0.5, 15, 1] } });
-      /* The top contour has to be a 1.5 m slab rather than a line: MapLibre 6.9 has
-         no elevated lines (`line-z-offset` does not exist in this build), so there
-         is no way to put a line at roof height. A slab that thin reads as a bright
-         rim from any angle you would actually look from. Heights are OSM's where the
-         building has one (110 of the 355); 25 m otherwise. */
+      /* In 3D the contour has to be built out of geometry. MapLibre 6.9 has no
+         elevated lines at all - `line-z-offset` is not in this build - so a line
+         cannot be put at roof height; and an extruded slab of the footprint shows
+         its cap, which fills the building in again from any tilted view. So the
+         outline is turned into a ribbon of thin walls, one quad per edge: extruded
+         from the ground it is a fence round the foot, extruded at roof height it is
+         a fence round the roofline, and neither has a cap to fill anything. */
+      map.addSource('monedges', { type: 'geojson', data: {
+        type: 'FeatureCollection',
+        features: j.features.map(f => ({ type: 'Feature', properties: f.properties,
+          geometry: edgeRibbon(f.geometry, 3) })).filter(f => f.geometry) } });
       const H = ['case', ['>', ['get', 'h'], 0], ['get', 'h'], 25];
-      map.addLayer({ id: 'monument-top', type: 'fill-extrusion', source: 'monshapes',
+      map.addLayer({ id: 'monument-base', type: 'fill-extrusion', source: 'monedges',
+        minzoom: 12.5, layout: { visibility: 'none' },
+        paint: { 'fill-extrusion-color': '#9ff6ee', 'fill-extrusion-base': 0,
+          'fill-extrusion-height': 2, 'fill-extrusion-opacity': 1 } });
+      map.addLayer({ id: 'monument-top', type: 'fill-extrusion', source: 'monedges',
         minzoom: 12.5, layout: { visibility: 'none' },
         paint: { 'fill-extrusion-color': '#d6fffb',
-          'fill-extrusion-base': ['max', ['-', H, 1.5], 0],
-          'fill-extrusion-height': H,
-          'fill-extrusion-opacity': 0.95 } });
+          'fill-extrusion-base': ['max', ['-', H, 2], 0],
+          'fill-extrusion-height': H, 'fill-extrusion-opacity': 1 } });
       monumentVisibility();
     })
     .catch(() => { shapesReady = null; });
@@ -1732,8 +1766,9 @@ function monumentVisibility() {
       map.setLayoutProperty(id, 'visibility', v ? 'visible' : 'none');
   };
   set('capital-monuments', on);
-  set('monument-shape-line', on);          // the foot of the building, either way
-  set('monument-top', on && threeD);       // its roofline, only when there is one
+  set('monument-shape-line', on && !threeD);   // flat: a line is enough
+  set('monument-base', on && threeD);          // tilted: a fence round the foot...
+  set('monument-top', on && threeD);           // ...and another round the roofline
   dirty = true;
 }
 

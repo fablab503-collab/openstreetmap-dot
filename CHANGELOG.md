@@ -12,10 +12,13 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 - **A monument is now its contour**: a bright line round the foot of the building
   and, in 3D, another round its roofline, leaving the building itself to the
   lattice. It replaces the solid cyan fill and the solid cyan volume.
-- The roofline is a **1.5 m slab, not a line**, because MapLibre 6.9 has no
-  elevated lines at all — `line-z-offset` is not in this build — so there is no way
-  to put a line at roof height. A slab that thin reads as a rim from any angle you
-  would look from. Heights are OpenStreetMap's where the building has one (110 of
+- In 3D both contours are **ribbons of thin walls**, one quad per edge of the
+  outline, three metres wide: extruded from the ground they fence the foot,
+  extruded at roof height they fence the roofline. Two dead ends came first.
+  MapLibre 6.9 has no elevated lines at all — `line-z-offset` is not in this build —
+  so a line cannot be put at roof height; and an extruded slab of the footprint
+  shows its cap, which fills the building in again the moment the camera tilts. A
+  ribbon has no cap. Heights are OpenStreetMap's where the building has one (110 of
   the 355), 25 m otherwise.
 
 ---

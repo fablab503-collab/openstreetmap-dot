@@ -182,10 +182,14 @@ country, keyed by ISO 3166-1 alpha-2 so it joins the capitals file and the tiles
   keeps its original shape, or Tuvalu, Nauru and the Maldives vanish.
 - Draw it as a translucent fill (the lattice lifts inside the country) plus a line
   that fades out by z6, where the tiles' own sharper border takes over.
-- For a *building*, draw edges rather than a fill: a contour round the foot and, in
-  3D, a 1.5 m slab at roof height standing in for a line round the top. **MapLibre
-  6.9 has no elevated lines** - `line-z-offset` is not in the build - so a line at
-  height is not available at all, and a thin slab is the nearest honest thing.
+- For a *building*, draw edges rather than a fill, and in 3D draw them as geometry:
+  **MapLibre 6.9 has no elevated lines** (`line-z-offset` is not in the build), so a
+  line cannot sit at roof height; and an extruded slab of the footprint shows its
+  cap, which fills the building in again as soon as the camera tilts. Turn the
+  outline into a ribbon of quads instead - one per edge, a few metres wide - and
+  extrude that: from the ground it fences the foot, at roof height it fences the
+  roofline, and a ribbon has no cap to fill anything. Corners can overlap; mitring
+  them costs more than it shows.
 
 ## Ranking a city's monuments
 
