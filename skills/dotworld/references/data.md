@@ -275,6 +275,25 @@ ORDER BY DESC(?links) LIMIT 150
   Notre-Dame. Rome → Colosseum, St. Peter's, Sistine Chapel. Athens → Parthenon,
   Acropolis. Moscow → Red Square, Kremlin, St. Basil's.
 
+## Time zones — GeoNames (CC BY 4.0)
+
+`scripts/add_capital_timezones.py` writes an IANA zone name onto each capital.
+
+- **A zone cannot be derived from longitude.** China runs one zone across sixty
+  degrees, India is half an hour off the hour, Spain keeps Berlin's time, Kathmandu
+  is +05:45. Nepal is not an edge case you can round away.
+- The tz boundary polygons are tens of megabytes; `cities15000.txt` already carries
+  a zone per city, so the nearest city gives the capital its zone for free.
+- **Nearest city *in the same country*.** Otherwise Vienna borrows Bratislava's zone
+  55 km away. Fall back to the nearest city anywhere only when the country has no
+  city in the file — Vatican City takes Rome's, which is correct.
+- **Store the name, never the offset.** `Europe/Paris` lets the browser apply
+  daylight saving; `+02:00` is wrong for half the year.
+- For the user's own zone, `Intl.DateTimeFormat().resolvedOptions().timeZone` needs
+  no permission and no lookup at all.
+- Offsets: round-trip `toLocaleString` through UTC and the zone rather than parsing
+  `timeZoneName: 'longOffset'` — same answer to the minute, works in every engine.
+
 ## Monument footprints — OpenStreetMap via Overpass (ODbL)
 
 `scripts/fetch_monument_shapes.py`. A dot at a coordinate says something is there;

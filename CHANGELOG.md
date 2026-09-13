@@ -5,6 +5,30 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — A clock, one switch for everything, and a tidier panel
+
+### Added
+
+- **The time where you are**, in the statistics panel: the clock, the UTC offset,
+  and how many hours you are **ahead of** the world's first capital and **behind**
+  its last. Pick a country and the clock becomes that capital's, with how far ahead
+  of or behind you it is.
+- Every capital now carries its **IANA time zone** (`Europe/Paris`, not `+02:00`),
+  taken from the nearest GeoNames city in the same country — so the browser applies
+  daylight saving, and Kathmandu shows +05:45 rather than a rounded hour. Your own
+  zone comes from the browser and needs no permission.
+- The two ends of the day are worked out from the capitals themselves rather than
+  from UTC-12 and UTC+14: they are real places on this map, and the pair moves with
+  daylight saving, so it is recomputed every quarter of an hour.
+- **ALL DATA**, one switch that turns every layer on or off instead of four.
+
+### Changed
+
+- **Montpellier's monument categories are out of the panel.** They were a leftover
+  from when the map was one city; the layer still colours them when you are there.
+
+---
+
 ## 2026-09-14 — A dot scale that goes all the way down
 
 ### Changed

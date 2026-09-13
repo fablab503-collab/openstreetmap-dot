@@ -55,7 +55,7 @@ Open http://localhost:8732. `?renderer=cpu` forces the Canvas2D fallback;
 
 SEARCH A PLACE · ZOOM BAR (bottom centre, scrub) · WHERE AM I (bottom centre) · SETTINGS · HIDE PANELS · DOT SCALE · GAIN · CUTOFF · TILT ·
 BEARING · SUN · SUNLIGHT · DOT COLOUR (16) · MIN POPULATION (log 15 K–2.1 M) ·
-CAPITAL NAMES · CAPITAL MONUMENTS · FIND A COUNTRY (or click a capital) · BORDER TRACE (all 195, lights its border and reads out its
+ALL DATA · CAPITAL NAMES · CAPITAL MONUMENTS · FIND A COUNTRY (or click a capital) · BORDER TRACE (all 195, lights its border and reads out its
 population) · DATA COLOUR · ILLUMINATE MY COUNTRY · WORLD: ROUND / PLATE ·
 WHOLE EARTH · 3D DOT VIEW · ORBIT · RESET NORTH. Right-drag turns and tilts.
 

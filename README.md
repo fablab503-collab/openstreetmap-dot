@@ -83,6 +83,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | Layer | What it shows | Source |
 | --- | --- | --- |
 | World statistics | Population projected from the latest estimate at the net birth/death rate; born and died today; urban share; land area; the population of any country you pick | World Bank Open Data |
+| Time | The clock where you are — or in the capital you picked — with how far ahead of the world's first capital and behind its last you are | GeoNames zones, your browser |
 | Population — world | Every city over 15,000 people, 34,091 of them, Shanghai (24.9 M) down to 15,001 | GeoNames |
 | Capitals | All 195 — 193 UN members plus Vatican and Palestine — with population and ISO country code | Wikidata |
 | The country you pick | Its outline lit over the lattice, at any zoom | Natural Earth (1:50m) |
@@ -123,6 +124,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | `SUN` / `SUNLIGHT` | Light direction for 3D buildings — lit faces become bigger dots |
 | `DOT COLOUR` | 16 colours, warm to cool: roughly cheapest to most expensive on OLED |
 | `MIN POPULATION` | Hide places below a threshold (log scale, 15 K – 2.1 M) |
+| `ALL DATA` | Everything the map can show, in one switch |
 | `CAPITAL NAMES` | The 195 capitals with their populations |
 | `CAPITAL MONUMENTS` | The best-known places of every capital, in cyan; the top one from the world view, all three and their names as you zoom in |
 | `FIND A COUNTRY` | Any of the 195, by name or by typing a few letters: the map frames it, a light runs round its border, and the panel reads out its capital and its population |

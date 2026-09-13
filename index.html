@@ -285,6 +285,13 @@
     <span class="row">POPULATION <b id="s-pcpop">—</b></span>
     <span class="note" id="s-pnote"></span>
   </div>
+  <div class="sep"></div>
+  <span class="row">TIME <b id="s-time">—</b></span>
+  <span class="row">ZONE <b id="s-zone">—</b></span>
+  <span class="row">AHEAD OF <b id="s-ahead">—</b></span>
+  <span class="row">BEHIND <b id="s-behind">—</b></span>
+  <span class="note" id="s-tznote"></span>
+  <div class="sep"></div>
   <span class="row">URBAN <b id="s-urb">—</b></span>
   <span class="row">LAND AREA <b id="s-land">—</b></span>
   <span class="note" id="s-note">Projected from a periodic estimate. Nobody counts
@@ -302,14 +309,6 @@
   <div class="ends"><span>1 K</span><span>22 M</span></div>
   <span class="src">Log scale; marker size too. City vs. whole municipality
     varies by country, so compare loosely.</span>
-  <div class="cats">
-    <span class="ttl" style="margin:6px 0 1px">MONUMENTS — MONTPELLIER</span>
-    <span class="cat"><i style="background:#d95926"></i>MUSEUM</span>
-    <span class="cat"><i style="background:#199e70"></i>FORTIFICATION</span>
-    <span class="cat"><i style="background:#c98500"></i>RELIGIOUS</span>
-    <span class="cat"><i style="background:#9085e9"></i>THEATRE</span>
-    <span class="cat"><i style="background:#d55181"></i>SQUARE</span>
-  </div>
   <span class="ttl" style="margin:10px 0 5px">MONUMENTS — CAPITALS</span>
   <div class="cats">
     <span class="cat"><i style="background:#22e0d6"></i>BEST KNOWN OF EACH CAPITAL</span>
@@ -339,6 +338,7 @@
   <div id="pal"></div>
   <label>MIN POPULATION <span id="l-minpop">15 K</span></label>
   <input id="s-minpop" type="range" min="0" max="100" step="1" value="0">
+  <button id="b-all" aria-pressed="true">ALL DATA</button>
   <button id="b-caps" aria-pressed="true">CAPITAL NAMES</button>
   <button id="b-capmon" aria-pressed="true">CAPITAL MONUMENTS</button>
   <button id="b-data" aria-pressed="true">DATA COLOUR</button>
@@ -415,7 +415,8 @@
         (CC BY 4.0) — world population, birth and death rates, urban share, land area,
         and the population of whichever country you pick</li>
       <li><a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a>
-        (CC BY 4.0) — the population of every city in the world over 15,000 people</li>
+        (CC BY 4.0) — the population of every city in the world over 15,000 people,
+        and the time zone of each capital</li>
       <li><a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a>
         (CC0) — the 195 capitals with their populations and country codes, the
         best-known monuments of every capital, Montpellier's monuments</li>
@@ -1220,7 +1221,8 @@ fetch('data/world-capitals.geojson').then(r => r.json()).then(j => {
       ? clamp((Math.log10(pop) - CAP_LOG_LO) / (CAP_LOG_HI - CAP_LOG_LO), 0, 1) : 0;
     return {
       name: f.properties.name, country: f.properties.country,
-      cc: f.properties.cc || '', pop, seats: f.properties.seats,
+      cc: f.properties.cc || '', tz: f.properties.tz || '',
+      pop, seats: f.properties.seats,
       // Colour AND size carry population, so it never rests on hue alone.
       color: pop > 0 ? rampColor(t) : '#6a6a6a',
       markerR: pop > 0 ? 1.8 + t * 3.2 : 1.6,
@@ -1229,6 +1231,7 @@ fetch('data/world-capitals.geojson').then(r => r.json()).then(j => {
   });
   CAPITALS.sort((a, b) => b.pop - a.pop);   // when space is tight, biggest wins
   fillCountries();
+  refreshExtremes();
   dirty = true;
 }).catch(() => {});
 
@@ -1451,6 +1454,18 @@ sZoom.addEventListener('input', () => {
 });
 // Arrow keys belong to the slider while it has focus, not to the map.
 sZoom.addEventListener('keydown', e => e.stopPropagation());
+
+/* One switch for everything the map can show, so you do not have to find four.
+   It drives the buttons rather than the layers, so each keeps its own behaviour and
+   stays in step with what it is showing. */
+const bAll = document.getElementById('b-all');
+bAll.addEventListener('click', () => {
+  const on = bAll.getAttribute('aria-pressed') !== 'true';
+  bAll.setAttribute('aria-pressed', on);
+  for (const b of [bData, bCaps, bCapMon]) {
+    if ((b.getAttribute('aria-pressed') === 'true') !== on) b.click();
+  }
+});
 
 /* One switch for the capitals' monuments: the cyan marks and their names. */
 const bCapMon = document.getElementById('b-capmon');
@@ -2068,6 +2083,80 @@ function projectedPop(now) {
   return WORLD.pop * Math.pow(1 + (WORLD.birth - WORLD.death) / 1000, years);
 }
 
+/* The clock. A time zone cannot be guessed from longitude - China runs one zone
+   across sixty degrees, India is half an hour off the hour, Spain keeps Berlin's
+   time - so every capital carries its IANA zone name and the browser applies the
+   rest, daylight saving included. With nothing picked the clock is your device's
+   own zone; pick a country and it is that capital's.
+
+   `toLocaleString` round-tripping rather than `timeZoneName: 'longOffset'`: same
+   answer to the minute (Kathmandu is +05:45) and it works in every engine rather
+   than only recent ones. */
+function tzOffsetMinutes(tz, date) {
+  try {
+    const utc = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const here = new Date(date.toLocaleString('en-US', { timeZone: tz }));
+    return Math.round((here - utc) / 60000);
+  } catch (e) {
+    return 0;                                  // unknown zone: treat it as UTC
+  }
+}
+
+const fmtOffset = m => 'UTC' + (m < 0 ? '-' : '+')
+  + String(Math.floor(Math.abs(m) / 60)).padStart(2, '0') + ':'
+  + String(Math.abs(m) % 60).padStart(2, '0');
+const fmtHours = m => (Math.abs(m) % 60 ? (m / 60).toFixed(2).replace(/0$/, '')
+                                        : String(m / 60)) + ' H';
+const HERE_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+/* The two ends of the world's day, taken from the capitals themselves rather than
+   from UTC-12 and UTC+14: those are real places on this map, and the pair moves
+   with daylight saving, so it is recomputed every quarter of an hour. */
+let TZ_LO = null, TZ_HI = null;
+function refreshExtremes() {
+  const now = new Date();
+  let lo = null, hi = null;
+  for (const c of CAPITALS) {
+    if (!c.tz) continue;
+    const off = tzOffsetMinutes(c.tz, now);
+    if (!lo || off < lo.off) lo = { off, name: c.name };
+    if (!hi || off > hi.off) hi = { off, name: c.name };
+  }
+  TZ_LO = lo; TZ_HI = hi;
+}
+setInterval(refreshExtremes, 15 * 60 * 1000);
+
+function tickClock() {
+  const tz = (picked && picked.tz) || HERE_TZ;
+  const now = new Date();
+  let clock;
+  try {
+    clock = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour12: false,
+      hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(now);
+  } catch (e) {
+    clock = now.toTimeString().slice(0, 8);
+  }
+  const off = tzOffsetMinutes(tz, now);
+  set('s-time', clock);
+  set('s-zone', fmtOffset(off));
+  if (TZ_LO && TZ_HI) {
+    set('s-ahead', fmtHours(off - TZ_LO.off));
+    set('s-behind', fmtHours(TZ_HI.off - off));
+  }
+  const note = document.getElementById('s-tznote');
+  const where = tz.split('/').pop().replace(/_/g, ' ');
+  const ends = (TZ_LO && TZ_HI)
+    ? ' Ahead of ' + TZ_LO.name + ', behind ' + TZ_HI.name + '.' : '';
+  if (picked) {
+    const d = off - tzOffsetMinutes(HERE_TZ, now);
+    note.textContent = where + ' time, ' + (d === 0 ? 'the same as yours.'
+      : fmtHours(Math.abs(d)) + (d > 0 ? ' ahead of you.' : ' behind you.')) + ends;
+  } else {
+    note.textContent = 'Your device says ' + where + '.' + ends
+      + ' Pick a country for its capital\'s clock.';
+  }
+}
+
 function tickStats() {
   const now = Date.now();
   const pop = projectedPop(now);
@@ -2084,6 +2173,7 @@ function tickStats() {
     Math.floor(bornPerSec * secsToday).toLocaleString('en-GB');
   document.getElementById('s-died').textContent =
     Math.floor(diedPerSec * secsToday).toLocaleString('en-GB');
+  tickClock();
 }
 // Text only — this never marks the dot canvas dirty, so it costs no redraw.
 loadWorldStats();
