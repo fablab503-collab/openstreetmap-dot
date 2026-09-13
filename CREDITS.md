@@ -62,9 +62,9 @@ Requests are debounced to respect their one-per-second guidance.
 
 | Data | Source | Licence |
 |---|---|---|
-| World population, birth/death rates, urban share, land area | [World Bank Open Data](https://data.worldbank.org/) | CC BY 4.0 |
+| World population, birth/death rates, urban share, land area, and the population of a chosen country | [World Bank Open Data](https://data.worldbank.org/) | CC BY 4.0 |
 | Population of 644 French communes | [Wikidata](https://www.wikidata.org/) (P1082) | CC0 1.0 |
-| 195 national capitals and their populations | [Wikidata](https://www.wikidata.org/) (P36, P625, P1082) | CC0 1.0 |
+| 195 national capitals, their populations and ISO 3166-1 alpha-2 codes | [Wikidata](https://www.wikidata.org/) (P36, P625, P1082, P297) | CC0 1.0 |
 | Montpellier monuments + ranking | [Wikidata](https://www.wikidata.org/) & [OpenStreetMap](https://www.openstreetmap.org/) | CC0 1.0 / ODbL |
 
 Monument ranking uses the number of Wikipedia language editions covering each

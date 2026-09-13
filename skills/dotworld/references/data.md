@@ -25,6 +25,10 @@ map.setFilter('country-glow', ['all', ['==', ['get', 'admin_level'], 2],
 
 `https://api.worldbank.org/v2/country/WLD/indicator/<ID>?format=json&mrv=1`
 
+Swap `WLD` for an ISO 3166-1 alpha-2 code to get one country:
+`…/country/FR/indicator/SP.POP.TOTL?format=json&mrv=1`. Not every code has a figure
+(Vatican City has none), so treat a missing `value` as "no figure", not an error.
+
 | Indicator | Meaning | Value used (year) |
 |---|---|---|
 | `SP.POP.TOTL` | population | 8,215,424,893 (2025) |
@@ -78,16 +82,17 @@ ORDER BY DESC(?pop)
 ## The 195 capitals — Wikidata (CC0)
 
 ```sparql
-SELECT ?country ?countryLabel ?capLabel ?coord (MAX(?p) AS ?pop) WHERE {
+SELECT ?country ?countryLabel ?cc ?capLabel ?coord (MAX(?p) AS ?pop) WHERE {
   { ?country p:P463 ?m . ?m ps:P463 wd:Q1065 . FILTER NOT EXISTS { ?m pq:P582 ?end } }
   UNION { VALUES ?country { wd:Q237 wd:Q219060 } }
   ?country wdt:P31 wd:Q3624078 ; wdt:P36 ?cap .
   ?cap wdt:P625 ?coord .
   FILTER NOT EXISTS { ?country wdt:P576 ?dissolved }
   OPTIONAL { ?cap wdt:P1082 ?p }
+  OPTIONAL { ?country wdt:P297 ?cc }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
 }
-GROUP BY ?country ?countryLabel ?capLabel ?coord
+GROUP BY ?country ?countryLabel ?cc ?capLabel ?coord
 ORDER BY ?countryLabel
 ```
 
@@ -105,6 +110,10 @@ ORDER BY ?countryLabel
   Pakistan, Palestine, South Africa, Sri Lanka, Yemen. Jordan and Syria return the
   *same* capital twice as separate items; count distinct names, not rows. DotWorld
   shows the most populous seat (South Africa → Cape Town) — a rule, not a fact.
+- **Store P297, the ISO 3166-1 alpha-2 code**, if you ever want to light one
+  country: that is exactly what the tiles put in `adm0_l`/`adm0_r`. One UN member
+  has none of its own — the member is the *Kingdom of Denmark* (Q756617) while DK
+  belongs to *Denmark* (Q35), its European part. Fill that one in by hand.
 - 194 of 195 have a population; **Ngerulmud (Palau)** has none.
 - Range 747 (Yaren District, Nauru) to 21,893,095 (Beijing) — use a log scale.
 - Some figures are the city proper, others the whole municipality (Beijing, Tokyo),
@@ -160,6 +169,10 @@ Categories are assigned by hand after ranking.
 - Search: `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&q=…`,
   debounced ~450 ms — the usage policy allows about one request a second.
 - Frame results with `boundingbox` when present; otherwise `flyTo` the point.
+- Framing a country by name costs one search, worth caching for the session. A
+  country that crosses the antimeridian (Fiji, Kiribati, Russia) comes back with a
+  box spanning the whole planet, so check `east - west < 180` before using it —
+  otherwise picking Fiji frames the world.
 - Reverse for "illuminate my country":
   `…/reverse?format=jsonv2&zoom=3&lat=…&lon=…` → `address.country_code`.
 - Privacy: request location only on a button press, round coordinates to 2 decimal
@@ -173,7 +186,8 @@ Categories are assigned by hand after ranking.
  "properties":{"name":"Paris","pop":2103778}}
 
 {"type":"Feature","geometry":{"type":"Point","coordinates":[116.3913,39.9057]},
- "properties":{"name":"Beijing","country":"People's Republic of China","pop":21893095,"seats":1}}
+ "properties":{"name":"Beijing","country":"People's Republic of China","cc":"CN",
+               "pop":21893095,"seats":1}}
 
 {"type":"Feature","geometry":{"type":"Point","coordinates":[3.88019,43.61174]},
  "properties":{"name":"musée Fabre","cat":"museum","rank":1,"wikis":25}}

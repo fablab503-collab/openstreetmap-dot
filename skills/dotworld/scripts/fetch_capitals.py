@@ -20,6 +20,10 @@ South Africa, Sri Lanka, Yemen). Jordan and Syria return the same capital twice 
 separate items; that is not a second seat. The most populous seat is kept — a rule,
 not a fact — and `seats` records how many distinct seats there were.
 
+Each country also carries its ISO 3166-1 alpha-2 code (P297). That is the code the
+OpenMapTiles boundary layer puts in `adm0_l`/`adm0_r`, so it is what lets the app
+light one country's border.
+
 Usage:
     python3 fetch_capitals.py > world-capitals.geojson
 """
@@ -34,17 +38,23 @@ from collections import defaultdict
 
 UA = "DotWorld-data/1.0 (https://github.com/fablab503-collab/openstreetmap-dot)"
 
+# One UN member has no P297: the member is the Kingdom of Denmark (Q756617), while
+# the code DK belongs to Denmark (Q35), its European part. The tiles label that
+# border DK, so fill it in rather than leave the country impossible to light.
+CODE_FIXUP = {"Kingdom of Denmark": "DK"}
+
 QUERY = """
-SELECT ?country ?countryLabel ?capLabel ?coord (MAX(?p) AS ?pop) WHERE {
+SELECT ?country ?countryLabel ?cc ?capLabel ?coord (MAX(?p) AS ?pop) WHERE {
   { ?country p:P463 ?m . ?m ps:P463 wd:Q1065 . FILTER NOT EXISTS { ?m pq:P582 ?end } }
   UNION { VALUES ?country { wd:Q237 wd:Q219060 } }
   ?country wdt:P31 wd:Q3624078 ; wdt:P36 ?cap .
   ?cap wdt:P625 ?coord .
   FILTER NOT EXISTS { ?country wdt:P576 ?dissolved }
   OPTIONAL { ?cap wdt:P1082 ?p }
+  OPTIONAL { ?country wdt:P297 ?cc }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
 }
-GROUP BY ?country ?countryLabel ?capLabel ?coord
+GROUP BY ?country ?countryLabel ?cc ?capLabel ?coord
 ORDER BY ?countryLabel
 """
 
@@ -79,6 +89,7 @@ def main():
             "lon": round(float(m.group(1)), 4),
             "lat": round(float(m.group(2)), 4),
             "pop": int(float(r["pop"]["value"])) if "pop" in r else 0,
+            "cc": r["cc"]["value"].upper() if "cc" in r else "",
         })
 
     features, multi = [], []
@@ -91,11 +102,15 @@ def main():
             "type": "Feature",
             "geometry": {"type": "Point", "coordinates": [best["lon"], best["lat"]]},
             "properties": {"name": best["cap"], "country": country,
+                           "cc": best["cc"] or CODE_FIXUP.get(country, ""),
                            "pop": best["pop"], "seats": seats},
         })
 
     json.dump({"type": "FeatureCollection", "features": features},
               sys.stdout, ensure_ascii=False)
+    nocode = [f["properties"]["country"] for f in features if not f["properties"]["cc"]]
+    if nocode:
+        print(f"WARNING: no ISO 3166-1 alpha-2 code: {nocode}", file=sys.stderr)
     missing = [f["properties"]["name"] for f in features if not f["properties"]["pop"]]
     print(f"{len(rows)} rows -> {len(features)} capitals; several seats ({len(multi)}): "
           f"{multi}; no population: {missing}", file=sys.stderr)

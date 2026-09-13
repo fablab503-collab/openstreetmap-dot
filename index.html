@@ -78,6 +78,19 @@
     color:var(--lit); letter-spacing:.01em; font-variant-numeric:tabular-nums; }
   #stats .note { display:block; margin-top:9px; font-size:9px; line-height:1.45;
     color:#4a4a4a; letter-spacing:.03em; text-transform:none; }
+  /* Find one of the 195 countries. A native select on purpose: it gives
+     type-to-find over 195 options for free, which a custom list reinvents
+     badly. Styled to match, with its own chevron since appearance is off. */
+  #s-country { width:100%; margin:7px 0 3px; padding:7px 22px 7px 8px;
+    color:#e8e8e8; border:1px solid #2a2a2a; font:inherit; letter-spacing:.06em;
+    text-transform:uppercase; cursor:pointer; outline:none;
+    -webkit-appearance:none; appearance:none;
+    background:#000 no-repeat right 8px center/9px 5px
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0h10L5 6z' fill='%236a6a6a'/%3E%3C/svg%3E"); }
+  #s-country:hover { border-color:#4a4a4a; }
+  #s-country:focus { border-color:var(--lit); }
+  #s-country option { background:#0a0a0a; color:#e8e8e8; text-transform:none; }
+  #stats .picked { margin:5px 0 2px; padding-top:7px; border-top:1px solid #1e1e1e; }
   /* Legend is not optional: two encodings on screen, so identity is never
      carried by colour alone. */
   #legend { flex:0 0 auto; }
@@ -227,6 +240,15 @@
   <span class="row">DIED TODAY <b id="s-died">—</b></span>
   <div class="sep"></div>
   <span class="row">COUNTRIES <b id="s-cty">195</b></span>
+  <select id="s-country" aria-label="Find a country and show it on the map">
+    <option value="">FIND A COUNTRY</option>
+  </select>
+  <div class="picked" id="s-picked" hidden>
+    <span class="row">CAPITAL <b id="s-pcap">—</b></span>
+    <span class="row">CAPITAL POP <b id="s-pcappop">—</b></span>
+    <span class="row">POPULATION <b id="s-pcpop">—</b></span>
+    <span class="note" id="s-pnote"></span>
+  </div>
   <span class="row">URBAN <b id="s-urb">—</b></span>
   <span class="row">LAND AREA <b id="s-land">—</b></span>
   <span class="note" id="s-note">Projected from a periodic estimate. Nobody counts
@@ -330,16 +352,17 @@
         (BSD-3-Clause) — does all the hard work: tiles, projection, globe, WebGL.
         The dot lattice is a thin pass over their output</li>
       <li><a href="https://nominatim.org/" target="_blank" rel="noopener">Nominatim</a>
-        (OpenStreetMap Foundation) — place search and country lookup</li>
+        (OpenStreetMap Foundation) — place search, country lookup and framing</li>
     </ul>
 
     <h3>Data</h3>
     <ul>
       <li><a href="https://data.worldbank.org/" target="_blank" rel="noopener">World Bank Open Data</a>
-        (CC BY 4.0) — world population, birth and death rates, urban share, land area</li>
+        (CC BY 4.0) — world population, birth and death rates, urban share, land area,
+        and the population of whichever country you pick</li>
       <li><a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a>
-        (CC0) — French commune populations, the 195 capitals and their populations,
-        Montpellier monuments</li>
+        (CC0) — French commune populations, the 195 capitals with their populations
+        and country codes, Montpellier monuments</li>
       <li>Monument ranking is by Wikipedia language coverage — really the work of
         Wikipedia's editors</li>
     </ul>
@@ -715,6 +738,7 @@ let dataColour = true;   // keep data hues; false neutralises everything to one 
    temporal dead zone and kill the first frame. */
 let showCapitals = true;
 let CAPITALS = [];
+let picked = null;       // the country chosen in the picker, declared here for the same reason
 let dirty = true;
 
 /* Dot pitch is a function of zoom, and it is the whole LOD story:
@@ -896,7 +920,7 @@ function halftone() {
   }
 
   lctx.clearRect(0, 0, labels.width, labels.height);
-  if (showCapitals) drawCapitals();
+  if (showCapitals || picked) drawCapitals();
   recordFrame(performance.now() - t0);
 }
 
@@ -931,7 +955,7 @@ window.__bench = (n = 20) => {
     }));
     text.push(time(() => {
       lctx.clearRect(0, 0, labels.width, labels.height);
-      if (showCapitals) drawCapitals();
+      if (showCapitals || picked) drawCapitals();
     }));
   }
   const med = a => +[...a].sort((x, y) => x - y)[a.length >> 1].toFixed(2);
@@ -1084,7 +1108,7 @@ fetch('data/world-capitals.geojson').then(r => r.json()).then(j => {
       ? clamp((Math.log10(pop) - CAP_LOG_LO) / (CAP_LOG_HI - CAP_LOG_LO), 0, 1) : 0;
     return {
       name: f.properties.name, country: f.properties.country,
-      pop, seats: f.properties.seats,
+      cc: f.properties.cc || '', pop, seats: f.properties.seats,
       // Colour AND size carry population, so it never rests on hue alone.
       color: pop > 0 ? rampColor(t) : '#6a6a6a',
       markerR: pop > 0 ? 1.8 + t * 3.2 : 1.6,
@@ -1092,6 +1116,7 @@ fetch('data/world-capitals.geojson').then(r => r.json()).then(j => {
       lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] };
   });
   CAPITALS.sort((a, b) => b.pop - a.pop);   // when space is tight, biggest wins
+  fillCountries();
   dirty = true;
 }).catch(() => {});
 
@@ -1116,8 +1141,14 @@ function drawCapitals() {
   const placed = [];
   let shown = 0;
 
-  for (const cap of CAPITALS) {
-    if (shown >= 55) break;                  // past this it is noise, not data
+  /* The chosen country goes first and is never dropped: it is the one label
+     the user actually asked for. With CAPITAL NAMES off it is the only one. */
+  const list = picked
+    ? [picked].concat(showCapitals ? CAPITALS.filter(c => c !== picked) : [])
+    : CAPITALS;
+  for (const cap of list) {
+    const isPicked = cap === picked;
+    if (shown >= 55 && !isPicked) break;     // past this it is noise, not data
     // On a sphere, project() still returns a point for the far side; cull it.
     if (onGlobe && angularDist(ctr.lat, ctr.lng, cap.lat, cap.lon) > 82) continue;
     let p;
@@ -1132,8 +1163,8 @@ function drawCapitals() {
     const pad = 8 * DPR;
     const box = [x + pad - 3, y - fs * 0.8, x + pad + wHead + wPop + 3, y + fs * 0.8];
     // Greedy de-clutter: skip anything that would collide with a placed label.
-    if (placed.some(b => box[0] < b[2] && b[0] < box[2] &&
-                         box[1] < b[3] && b[1] < box[3])) continue;
+    if (!isPicked && placed.some(b => box[0] < b[2] && b[0] < box[2] &&
+                                     box[1] < b[3] && b[1] < box[3])) continue;
     placed.push(box);
     shown++;
 
@@ -1141,6 +1172,13 @@ function drawCapitals() {
     lctx.arc(x, y, cap.markerR * DPR, 0, Math.PI * 2);
     lctx.fillStyle = cap.color;              // the mark carries the colour...
     lctx.fill();
+    if (isPicked) {                          // a ring, never a different hue
+      lctx.beginPath();
+      lctx.arc(x, y, (cap.markerR + 3.5) * DPR, 0, Math.PI * 2);
+      lctx.strokeStyle = '#ffffff';
+      lctx.lineWidth = 1.2 * DPR;
+      lctx.stroke();
+    }
     lctx.fillStyle = 'rgba(0,0,0,.85)';      // keep type legible over dots
     lctx.fillRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
     lctx.fillStyle = '#ffffff';
@@ -1157,6 +1195,117 @@ bCaps.addEventListener('click', () => {
   showCapitals = bCaps.getAttribute('aria-pressed') !== 'true';
   bCaps.setAttribute('aria-pressed', showCapitals);
   dirty = true;
+});
+
+/* Find one of the 195 countries and show it on the map.
+   The list is built from the capitals file, so it is exactly the 195 the panel
+   counts. Choosing one lights that country's border - the boundary layer's
+   adm0_l/adm0_r carry the ISO 3166-1 alpha-2 code the file now stores - frames
+   it, and reads its population from the World Bank. (`picked` is declared with
+   the other render-loop state above, out of the temporal dead zone.) */
+const selCountry = document.getElementById('s-country');
+const pickedBox = document.getElementById('s-picked');
+const bboxCache = new Map(), cPopCache = new Map();
+const fmtBig = n => n >= 1e9 ? (n / 1e9).toFixed(2) + ' B'
+                  : n >= 1e6 ? (n / 1e6).toFixed(1) + ' M'
+                  : n >= 1e3 ? Math.round(n / 1e3) + ' K' : String(n);
+
+function fillCountries() {
+  const frag = document.createDocumentFragment();
+  const byName = CAPITALS.slice().sort((a, b) => a.country.localeCompare(b.country, 'en'));
+  for (const c of byName) {
+    const o = document.createElement('option');
+    o.value = c.country;
+    o.textContent = c.cc ? c.country + ' (' + c.cc + ')' : c.country;
+    frag.appendChild(o);
+  }
+  selCountry.appendChild(frag);
+  selCountry.options[0].textContent = 'FIND A COUNTRY (' + CAPITALS.length + ')';
+}
+
+function setGlow(cc) {
+  if (!map.getLayer || !map.getLayer('country-glow')) return;
+  if (!cc) { map.setLayoutProperty('country-glow', 'visibility', 'none'); return; }
+  map.setFilter('country-glow',
+    ['all', ['==', ['get', 'admin_level'], 2],
+      ['any', ['==', ['get', 'adm0_l'], cc], ['==', ['get', 'adm0_r'], cc]]]);
+  map.setLayoutProperty('country-glow', 'visibility', 'visible');
+}
+
+function showPicked(cap) {
+  pickedBox.hidden = !cap;
+  if (!cap) return;
+  document.getElementById('s-pcap').textContent = cap.name.toUpperCase();
+  document.getElementById('s-pcappop').textContent = cap.popLabel || 'NO FIGURE';
+  document.getElementById('s-pcpop').textContent = '…';
+  document.getElementById('s-pnote').textContent = '';
+}
+
+async function frameCountry(cap) {
+  let box = bboxCache.get(cap.country);
+  if (box === undefined) {
+    box = null;
+    try {
+      const r = await fetch('https://nominatim.openstreetmap.org/search'
+        + '?format=jsonv2&limit=1&q=' + encodeURIComponent(cap.country),
+        { headers: { Accept: 'application/json' } });
+      const j = await r.json();
+      if (j[0] && j[0].boundingbox) box = j[0].boundingbox.map(Number);
+    } catch (e) { box = null; }
+    bboxCache.set(cap.country, box);
+  }
+  if (picked !== cap) return;               // another country was chosen meanwhile
+  // Nominatim returns [south, north, west, east]. A country crossing the
+  // antimeridian (Fiji, Kiribati, Russia) comes back spanning the whole planet,
+  // which would frame the world instead of the country - fall back to its capital.
+  if (box && box[3] - box[2] < 180) {
+    map.fitBounds([[box[2], box[0]], [box[3], box[1]]],
+      { padding: 60, duration: 1600, maxZoom: 7 });
+  } else {
+    map.flyTo({ center: [cap.lon, cap.lat], zoom: 4.2, duration: 1600 });
+  }
+}
+
+async function countryPop(cap) {
+  const el = document.getElementById('s-pcpop');
+  const note = document.getElementById('s-pnote');
+  const seatNote = cap.seats > 1
+    ? cap.seats + ' seats of government; the most populous is shown. ' : '';
+  const paint = v => {
+    if (picked !== cap) return;
+    el.textContent = v ? fmtBig(v.value) : 'NO FIGURE';
+    note.textContent = seatNote + (v
+      ? 'Country population: World Bank ' + v.year + '.'
+      : 'No World Bank population for this entry.');
+  };
+  if (!cap.cc) { paint(null); return; }
+  if (cPopCache.has(cap.cc)) { paint(cPopCache.get(cap.cc)); return; }
+  try {
+    const r = await fetch('https://api.worldbank.org/v2/country/' + cap.cc
+                        + '/indicator/SP.POP.TOTL?format=json&mrv=1');
+    const j = await r.json();
+    const row = j && j[1] && j[1][0];
+    const v = row && row.value != null ? { value: row.value, year: +row.date } : null;
+    cPopCache.set(cap.cc, v);
+    paint(v);
+  } catch (e) {
+    paint(null);
+  }
+}
+
+function pickCountry(cap, frame) {
+  picked = cap;
+  setGlow(cap && cap.cc);
+  showPicked(cap);
+  if (cap) {
+    countryPop(cap);
+    if (frame) { stopOrbit(); frameCountry(cap); }
+  }
+  dirty = true;
+}
+
+selCountry.addEventListener('change', () => {
+  pickCountry(CAPITALS.find(c => c.country === selCountry.value) || null, true);
 });
 
 /* Population threshold. Logarithmic, because the distribution is: 15k to 2.1M
@@ -1207,6 +1356,9 @@ bLocate.addEventListener('click', () => {
       map.setLayoutProperty('country-glow', 'visibility', 'visible');
       bLocate.textContent = name.toUpperCase();
       bLocate.setAttribute('aria-pressed', 'true');
+      // Same glow, same country: keep the picker showing what the map shows.
+      const hit = CAPITALS.find(c => c.cc === cc);
+      if (hit) { selCountry.value = hit.country; pickCountry(hit, false); }
       // Frame the country, not the person.
       if (j.boundingbox) {
         const [s, n, w, e] = j.boundingbox.map(Number);

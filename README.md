@@ -82,9 +82,9 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 
 | Layer | What it shows | Source |
 | --- | --- | --- |
-| World statistics | Population projected from the latest estimate at the net birth/death rate; born and died today; urban share; land area | World Bank Open Data |
+| World statistics | Population projected from the latest estimate at the net birth/death rate; born and died today; urban share; land area; the population of any country you pick | World Bank Open Data |
 | Population — France | 644 communes over 15,000 people, from Paris (2,103,778) down to 15,023 | Wikidata |
-| Capitals | All 195 — 193 UN members plus Vatican and Palestine — with population | Wikidata |
+| Capitals | All 195 — 193 UN members plus Vatican and Palestine — with population and ISO country code | Wikidata |
 | Monuments — Montpellier | Top 10, ranked by number of Wikipedia language editions | Wikidata + OpenStreetMap |
 
 **Colour follows the job.**
@@ -119,6 +119,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | `DOT COLOUR` | 16 colours, warm to cool: roughly cheapest to most expensive on OLED |
 | `MIN POPULATION` | Hide places below a threshold (log scale, 15 K – 2.1 M) |
 | `CAPITAL NAMES` | The 195 capitals with their populations |
+| `FIND A COUNTRY` | Any of the 195, by name or by typing a few letters: its border lights up, the map frames it, and the panel reads out its capital and its population |
 | `DATA COLOUR` | Show or hide the data layers and their colours |
 | `ILLUMINATE MY COUNTRY` | Light up the border of the country you are in |
 | `WORLD: ROUND` / `PLATE` | Globe or flat map |

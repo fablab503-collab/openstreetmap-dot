@@ -23,7 +23,7 @@ URL did not change.
 | `vendor/` | MapLibre GL JS 6.9.0 `.mjs` bundles + CSS |
 | `fonts/` | Dotwork (+ OFL), Space Mono, Space Grotesk |
 | `data/fr-population.geojson` | 644 French communes over 15k |
-| `data/world-capitals.geojson` | 195 capitals with population and seat count |
+| `data/world-capitals.geojson` | 195 capitals with population, ISO country code and seat count |
 | `data/montpellier-monuments.geojson` | top-10 Montpellier monuments with category |
 | `shots/` | screenshots used in the README |
 | `skills/dotworld/` | this skill |

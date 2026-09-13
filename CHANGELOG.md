@@ -5,6 +5,34 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-11 — Find any of the 195 countries and light it up
+
+### Added
+
+- **A country picker, in the statistics panel under COUNTRIES.** All 195 in one
+  list; type a few letters to jump to one. Choosing a country lights its border on
+  the map, frames it, keeps its capital's name on screen even when labels are
+  crowded or switched off, and reads out that capital's population beside the
+  country's own, from World Bank Open Data. Choosing the empty entry puts
+  everything back.
+- **ISO 3166-1 alpha-2 codes in the capitals file** (Wikidata P297). That is the
+  code the tiles' boundary layer carries in `adm0_l`/`adm0_r`, so it is what makes
+  a single country's border light up. One UN member carries no code of its own:
+  the member is the *Kingdom of Denmark*, while DK belongs to *Denmark*, its
+  European part — filled in by the script and documented there.
+- **Every earlier version is now tagged on GitHub**, `v0.1.0` (2026-09-09) through
+  `v0.4.0`, with `v0.5.0-beta` published as a release.
+
+### Notes
+
+- Framing costs one Nominatim lookup per country, cached for the session. A country
+  that crosses the antimeridian — Fiji, Kiribati, Russia — comes back with a box
+  spanning the whole planet, so those fall back to flying to the capital.
+- **ILLUMINATE MY COUNTRY** and the picker now agree: finding your own country
+  also sets the picker, so the panel says what the map is showing.
+
+---
+
 ## 2026-09-11 — A new home, a skill, and corrections to what the site claimed
 
 ### Fixed
