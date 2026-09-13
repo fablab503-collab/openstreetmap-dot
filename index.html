@@ -216,8 +216,12 @@
     letter-spacing:.1em; text-transform:uppercase; font-size:10px; }
   #zoombar .top b { color:#e8e8e8; font-weight:400; letter-spacing:0; }
   #s-zoom { width:100%; accent-color:#8a8a8a; height:16px; margin:2px 0 0; }
-  #zoombar .marks { display:flex; justify-content:space-between; color:#3e3e3e;
+  /* Placed at the zoom each word actually means, not spread evenly: the scale is
+     -2 to 22, so even spacing would put "city" at z14, which is a rooftop. */
+  #zoombar .marks { position:relative; height:12px; color:#3e3e3e;
     font-size:9px; letter-spacing:.08em; text-transform:uppercase; }
+  #zoombar .marks span { position:absolute; transform:translateX(-50%);
+    white-space:nowrap; }
   @media (max-width: 900px) {
     #zoombar { width:calc(100vw - 24px); bottom:56px; }
   }
@@ -343,7 +347,7 @@
   <div class="top"><span>ZOOM</span><b id="l-zoom">—</b></div>
   <input id="s-zoom" type="range" min="0" max="20" step="0.1" value="5"
          aria-label="Zoom level">
-  <div class="marks"><span>World</span><span>Country</span><span>City</span><span>Street</span></div>
+  <div class="marks" id="zoom-marks"></div>
 </div>
 
 <div id="attr"><a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>
@@ -1311,9 +1315,24 @@ function syncZoomBar() {
   lZoom.textContent = z.toFixed(2);
 }
 
+/* The words sit at the zoom they describe: a whole globe, a country filling the
+   screen, a city, a street. */
+const ZOOM_MARKS = [['World', 1], ['Country', 5], ['City', 11], ['Street', 16]];
+
 map.once('load', () => {
-  sZoom.min = map.getMinZoom();
-  sZoom.max = map.getMaxZoom();
+  const lo = map.getMinZoom(), hi = map.getMaxZoom();
+  sZoom.min = lo;
+  sZoom.max = hi;
+  const marks = document.getElementById('zoom-marks');
+  for (const [text, z] of ZOOM_MARKS) {
+    const el = document.createElement('span');
+    el.textContent = text;
+    const pct = (z - lo) / (hi - lo) * 100;
+    if (pct < 8) { el.style.left = '0'; el.style.transform = 'none'; }
+    else if (pct > 92) { el.style.right = '0'; el.style.transform = 'none'; }
+    else el.style.left = pct.toFixed(1) + '%';
+    marks.appendChild(el);
+  }
   syncZoomBar();
 });
 map.on('zoom', syncZoomBar);
