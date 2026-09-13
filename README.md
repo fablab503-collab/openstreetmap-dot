@@ -68,11 +68,15 @@ grid, so capital names are drawn on their own layer above it.
 
 | Feature | Value | Result |
 | --- | --- | --- |
-| Sea | `#0f0f0f` | faint texture — never a black void |
+| Ocean | `midnightblue` at a third | reads as sea, at the brightness the old grey had |
+| Lake, pond, river, canal, stream, dock, pool | `darkslateblue` … `royalblue` | nine named blues, dimmer the more screen they cover |
 | Land | `#242424` → `#151515` as you zoom in | faint field; the coastline is its edge |
 | Buildings | `#333333`, `#8a8a8a` outlines from z15 | small dots with readable edges |
 | Minor roads and paths → secondary roads | `#5a5a5a` → `#9a9a9a` | mid dots |
 | Motorway, trunk, primary | `#ffffff` | full dots |
+
+Every kind of water has a blue of its own — the tiles carry a class per body and per
+channel — and anything that dries up for part of the year is drawn faint.
 
 Sea and ground keep a faint floor on purpose: pure black made open water a total
 void that looked like a broken app. Raise `CUTOFF` to take them back to nothing.
