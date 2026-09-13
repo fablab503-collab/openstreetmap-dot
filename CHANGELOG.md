@@ -5,6 +5,21 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-13 — A zoom bar you can throw
+
+### Added
+
+- **A zoom bar across the bottom centre.** Drag it and the map follows the handle
+  frame by frame, so a street becomes the whole globe in one gesture. It reads the
+  map's own minimum and maximum zoom rather than hard-coded numbers, shows the
+  level to two decimals, marks world / country / city / street, stops ORBIT like
+  every other camera control, and slides away with **HIDE PANELS**.
+- Dragging is a **scrub, not a flight**: each input jumps the camera with no
+  animation. Easing every step would queue hundreds of eased moves and the lattice
+  would arrive late; jumping lets it redraw as fast as it can.
+
+---
+
 ## 2026-09-13 — The best-known monument of every capital
 
 ### Added

@@ -52,7 +52,7 @@ Open http://localhost:8732. `?renderer=cpu` forces the Canvas2D fallback;
 
 ## Controls
 
-SEARCH A PLACE · SETTINGS · HIDE PANELS · DOT SCALE · GAIN · CUTOFF · TILT ·
+SEARCH A PLACE · ZOOM BAR (bottom centre, scrub) · SETTINGS · HIDE PANELS · DOT SCALE · GAIN · CUTOFF · TILT ·
 BEARING · SUN · SUNLIGHT · DOT COLOUR (16) · MIN POPULATION (log 15 K–2.1 M) ·
 CAPITAL NAMES · CAPITAL MONUMENTS · FIND A COUNTRY (all 195, lights its border and reads out its
 population) · DATA COLOUR · ILLUMINATE MY COUNTRY · WORLD: ROUND / PLATE ·

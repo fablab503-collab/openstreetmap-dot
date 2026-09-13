@@ -112,6 +112,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 
 | Control | Effect |
 | --- | --- |
+| `ZOOM` bar (bottom centre) | Drag to go from a street to the whole globe in one gesture; it follows the map too, and slides away with the panels |
 | `SEARCH A PLACE` | Search by name; countries and regions frame to their bounds |
 | `SETTINGS` | Show or hide the control panel |
 | `HIDE PANELS` | Slide every panel off the map and back |

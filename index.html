@@ -202,6 +202,26 @@
     padding:0; text-decoration:underline; letter-spacing:.04em; }
   #b-about:hover { color:var(--lit); }
 
+  /* Zoom bar: bottom centre, clear of the attribution on the left and the panel
+     toggle on the right. Dragging it is a scrub, not a flight - the map follows
+     the handle frame by frame, so you can go from a street to the whole globe in
+     one gesture. */
+  #zoombar { position:absolute; bottom:26px; left:50%; transform:translateX(-50%);
+    z-index:12; width:min(420px, calc(100vw - 320px)); padding:7px 12px 5px;
+    background:rgba(0,0,0,.86); border:1px solid #1e1e1e;
+    transition:transform .38s cubic-bezier(.4,0,.2,1), opacity .38s ease; }
+  body.ui-hidden #zoombar { transform:translate(-50%, 90px); opacity:0;
+    pointer-events:none; }
+  #zoombar .top { display:flex; justify-content:space-between; color:#6a6a6a;
+    letter-spacing:.1em; text-transform:uppercase; font-size:10px; }
+  #zoombar .top b { color:#e8e8e8; font-weight:400; letter-spacing:0; }
+  #s-zoom { width:100%; accent-color:#8a8a8a; height:16px; margin:2px 0 0; }
+  #zoombar .marks { display:flex; justify-content:space-between; color:#3e3e3e;
+    font-size:9px; letter-spacing:.08em; text-transform:uppercase; }
+  @media (max-width: 900px) {
+    #zoombar { width:calc(100vw - 24px); bottom:56px; }
+  }
+
   #attr { position:absolute; bottom:8px; left:12px; z-index:10; font-size:10px;
     color:#5a5a5a; letter-spacing:.04em; }
   #attr a { color:#7a7a7a; }
@@ -318,6 +338,13 @@
 
 <div id="boot">LOADING TILES…</div>
 <div id="err" class="panel"><h3 id="err-t">Error</h3><div id="err-b"></div></div>
+
+<div id="zoombar">
+  <div class="top"><span>ZOOM</span><b id="l-zoom">—</b></div>
+  <input id="s-zoom" type="range" min="0" max="20" step="0.1" value="5"
+         aria-label="Zoom level">
+  <div class="marks"><span>World</span><span>Country</span><span>City</span><span>Street</span></div>
+</div>
 
 <div id="attr"><a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>
   <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">© OpenMapTiles</a>
@@ -1269,6 +1296,38 @@ bCaps.addEventListener('click', () => {
   bCaps.setAttribute('aria-pressed', showCapitals);
   dirty = true;
 });
+
+/* Zoom bar. Dragging is a scrub: every input event jumps the camera with no
+   animation, so the lattice redraws as fast as it can rather than queueing 200
+   eased flights. The flag stops the map's own zoom event from writing the handle
+   back underneath the finger. */
+const sZoom = document.getElementById('s-zoom');
+const lZoom = document.getElementById('l-zoom');
+let zoomFromBar = false;
+
+function syncZoomBar() {
+  const z = map.getZoom();
+  if (!zoomFromBar) sZoom.value = z;
+  lZoom.textContent = z.toFixed(2);
+}
+
+map.once('load', () => {
+  sZoom.min = map.getMinZoom();
+  sZoom.max = map.getMaxZoom();
+  syncZoomBar();
+});
+map.on('zoom', syncZoomBar);
+
+sZoom.addEventListener('input', () => {
+  zoomFromBar = true;
+  stopOrbit();
+  map.jumpTo({ zoom: +sZoom.value });   // no duration: this is a scrub, not a flight
+  zoomFromBar = false;
+  lZoom.textContent = (+sZoom.value).toFixed(2);
+  dirty = true;
+});
+// Arrow keys belong to the slider while it has focus, not to the map.
+sZoom.addEventListener('keydown', e => e.stopPropagation());
 
 /* One switch for the capitals' monuments: the cyan marks and their names. */
 const bCapMon = document.getElementById('b-capmon');
