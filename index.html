@@ -311,6 +311,11 @@
   <div id="bands"></div>
   <span class="src" id="l-minband">Every city over 15,000 people — 34,091 of them,
     from GeoNames. Colour names are the CSS ones, so each is a name you can look up.</span>
+  <span class="ttl" style="margin:10px 0 5px">WATER</span>
+  <div id="water-key" class="cats"></div>
+  <span class="src">Named CSS blues, dimmed by how much screen each one covers: the
+    sea is most of a world view, a swimming pool is four pixels. Anything that dries
+    up for part of the year is drawn faint.</span>
   <span class="ttl" style="margin:10px 0 5px">WHAT THE MARK MEANS</span>
   <div class="cats">
     <span class="cat"><i style="background:#ff8c00"></i>DOT — A CITY</span>
@@ -578,10 +583,47 @@ const style = {
     { id:'bg', type:'background', paint:{ 'background-color':
       ['interpolate',['linear'],['zoom'], 4,'#242424', 8,'#181818', 14,'#151515'] } },
 
+    /* Water was one flat grey. The tiles know better than that: the `water` layer
+       carries a class per body - ocean, lake, pond, river, dock, swimming_pool -
+       and `waterway` carries river, canal, stream, drain and ditch as lines, both
+       with an `intermittent` flag for what dries up. Each gets a blue of its own,
+       named from the CSS list like everything else on this map.
+
+       Brightness is set by how much screen each one covers, not by taste. The ocean
+       is most of a world view, so it is `midnightblue` held down to a third - about
+       as dark as the grey it replaces (luma 0.05 against 0.06) - while a swimming
+       pool is a few pixels and can be `royalblue` at full strength. Blue is the
+       expensive subpixel on an OLED, and the sea is the one thing you cannot afford
+       to light. */
     { id:'water', type:'fill', source:'ofm', 'source-layer':'water',
-      paint:{ 'fill-color':'#0f0f0f' } },
+      paint:{
+        'fill-color':['match',['get','class'],
+          'ocean','#191970',          // midnightblue
+          'lake','#483d8b',           // darkslateblue
+          'pond','#4682b4',           // steelblue
+          'river','#5f9ea0',          // cadetblue
+          'dock','#708090',           // slategray
+          'swimming_pool','#4169e1',  // royalblue
+          '#483d8b'],
+        'fill-opacity':['case',
+          ['==',['get','intermittent'],1], 0.35,     // dry for part of the year
+          ['match',['get','class'],
+            'ocean', 0.35, 'lake', 0.75, 'pond', 0.85,
+            'river', 0.9, 'dock', 0.85, 'swimming_pool', 1, 0.8]] } },
     { id:'waterway', type:'line', source:'ofm', 'source-layer':'waterway',
-      paint:{ 'line-color':'#2c2c2c', 'line-width':1 } },
+      paint:{
+        'line-color':['match',['get','class'],
+          'river','#4682b4',          // steelblue
+          'canal','#5f9ea0',          // cadetblue
+          'stream','#778899',         // lightslategray
+          'drain','#2f4f4f',          // darkslategray
+          'ditch','#2f4f4f',
+          '#4682b4'],
+        'line-opacity':['case',['==',['get','intermittent'],1], 0.4, 0.95],
+        'line-width':['interpolate',['linear'],['zoom'],
+          6, ['match',['get','class'], 'river', 0.8, 0.4],
+          12,['match',['get','class'], 'river', 2, 'canal', 1.4, 1],
+          16,['match',['get','class'], 'river', 4, 'canal', 3, 2]] } },
 
     { id:'green', type:'fill', source:'ofm', 'source-layer':'landcover',
       filter:['in','class','wood','grass','park'],
@@ -2036,6 +2078,18 @@ const fmtPop = n => n >= 1e6 ? (n / 1e6).toFixed(2) + ' M'
 // Band edges are round numbers; printing them as 1.00 M reads like a measurement.
 const fmtEdge = n => n >= 1e6 ? +(n / 1e6).toFixed(2) + ' M'
                    : n >= 1e3 ? Math.round(n / 1e3) + ' K' : String(n);
+/* Water, in the same words the style uses. */
+const WATER_KEY = [
+  ['ocean', 'midnightblue', '#191970'], ['lake', 'darkslateblue', '#483d8b'],
+  ['pond / little lake', 'steelblue', '#4682b4'], ['river', 'cadetblue', '#5f9ea0'],
+  ['canal', 'cadetblue', '#5f9ea0'], ['stream', 'lightslategray', '#778899'],
+  ['drain / ditch', 'darkslategray', '#2f4f4f'], ['dock', 'slategray', '#708090'],
+  ['swimming pool', 'royalblue', '#4169e1']
+];
+document.getElementById('water-key').innerHTML = WATER_KEY.map(([what, name, hex]) =>
+  `<span class="cat"><i style="background:${hex}"></i>${what.toUpperCase()} — ${name}</span>`
+).join('');
+
 /* The legend is written from POP_BANDS, so it cannot describe a colour the map is
    not actually drawing. */
 document.getElementById('bands').innerHTML = POP_BANDS.map((b, i) => {

@@ -5,6 +5,28 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — Every kind of water gets its own blue
+
+### Changed
+
+- **Water was one flat grey; it is nine categories now**, each a named CSS blue:
+  `midnightblue` ocean, `darkslateblue` lake, `steelblue` pond, `cadetblue` river
+  and canal, `lightslategray` stream, `darkslategray` drain and ditch, `slategray`
+  dock, `royalblue` swimming pool. The tiles carried all of this already — the
+  `water` layer has a class per body and `waterway` has one per channel — the map
+  simply painted them the same colour.
+- Anything the tiles mark as **intermittent** — a river that dries up for part of
+  the year — is drawn faint.
+- **Brightness follows how much screen each one covers.** The ocean is most of a
+  world view, so it is held to a third of `midnightblue`: drawn, that is luma 0.06,
+  the same as the grey it replaces. A swimming pool is four pixels and gets full
+  strength.
+- Honest cost: the sea is no brighter, but blue is the expensive subpixel, so the
+  power proxy over open water roughly doubles (0.06 to 0.12). Water is worth it;
+  nothing else that covers this much screen would be.
+
+---
+
 ## 2026-09-14 — Colours that mean one thing, and have a name
 
 ### Changed

@@ -96,6 +96,37 @@ disappears on black) and use t = 0.3 → 1.0:
 Whichever ramp: check that luminance rises with value on the actual background, and
 use a log scale whenever the range spans orders of magnitude.
 
+## Water is not one thing
+
+The tiles carry a class per water body, and using it costs nothing: `water` polygons
+are `ocean`, `lake`, `pond`, `river`, `dock`, `swimming_pool`; `waterway` lines are
+`river`, `canal`, `stream`, `drain`, `ditch`. Both carry `intermittent` for what
+dries up. Check what is really in a tile rather than trusting the schema - grep the
+decompressed bytes for the class names.
+
+| Water | CSS name | Hex | Drawn at |
+|---|---|---|---|
+| ocean | `midnightblue` | `#191970` | 35% |
+| lake | `darkslateblue` | `#483d8b` | 75% |
+| pond | `steelblue` | `#4682b4` | 85% |
+| river (area and line) | `cadetblue` / `steelblue` | `#5f9ea0` / `#4682b4` | 90% / 95% |
+| canal | `cadetblue` | `#5f9ea0` | 95% |
+| stream | `lightslategray` | `#778899` | 95% |
+| drain, ditch | `darkslategray` | `#2f4f4f` | 95% |
+| dock | `slategray` | `#708090` | 85% |
+| swimming pool | `royalblue` | `#4169e1` | 100% |
+
+- **Brightness by area covered, not by taste.** The ocean is most of a world view, so
+  it is held to a third: drawn it is `#0b0b32`, luma 0.06 - the same as the flat grey
+  it replaced. A swimming pool is four pixels and can be full strength.
+- **Blue is the expensive subpixel.** Same sea, same luma, and the power proxy still
+  doubles (0.06 to 0.12) simply because the light is blue. Worth it for water, not
+  worth it for anything that covers as much screen.
+- Saturated water survives the halftone's chroma test, so it keeps its hue instead of
+  being neutralised with the basemap - which is the point.
+- Dimming with opacity over black keeps the hue and cuts the power in one number;
+  picking a darker hex by hand drifts away from the named colour it is meant to be.
+
 ## A colour can only mean one thing
 
 DotWorld shipped a version where the same reversed YlOrRd ramp coloured cities *and*
