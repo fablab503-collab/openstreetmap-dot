@@ -1482,6 +1482,7 @@ function fillCountries() {
    own border takes over as you zoom in. Loaded only when a country is first
    picked: 780 KB that most visits never need. */
 let countriesReady = null;
+let COUNTRY_GEO = null;          // kept so the border trace can read its rings
 const whenStyled = () => map.getLayer('country-glow')
   ? Promise.resolve() : new Promise(res => map.once('load', res));
 
@@ -1491,6 +1492,7 @@ function ensureCountries() {
     .then(() => fetch('data/countries.geojson'))
     .then(r => r.json())
     .then(j => {
+      COUNTRY_GEO = j;
       if (map.getSource('countries')) return;
       map.addSource('countries', { type: 'geojson', data: j });
       const none = ['==', ['get', 'cc'], '\u0000'];
@@ -1508,9 +1510,93 @@ function ensureCountries() {
           // Fades out where the tiles' own, sharper border starts to work.
           'line-opacity': ['interpolate', ['linear'], ['zoom'], 4, 1, 6, 0] } },
         'country-glow');
+      /* The border trace, on top of everything. `lineMetrics` is what makes
+         `line-progress` exist; without it a line-gradient is silently ignored. */
+      map.addSource('trace', { type: 'geojson', lineMetrics: true,
+        data: { type: 'FeatureCollection', features: [] } });
+      map.addLayer({ id: 'country-trace', type: 'line', source: 'trace',
+        layout: { visibility: 'none', 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-blur': 0.5,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 2, 1.6, 5, 3, 9, 5],
+          'line-gradient': ['interpolate', ['linear'], ['line-progress'],
+            0, '#ffeda0', 1, '#ffeda0'] } });
     })
     .catch(() => { countriesReady = null; });   // let the next pick try again
   return countriesReady;
+}
+
+/* A light that runs round the border and leaves it lit behind it. The whole
+   outline is drawn in TRACE_MS however big the country is - Russia and Monaco take
+   the same time, because the head moves in line-progress (0 to 1 along each ring)
+   rather than in metres. Islands trace alongside the mainland instead of queueing
+   after it, for the same reason: each ring is its own feature with its own
+   progress. */
+const TRACE_MS = 3200;                 // the whole border, well inside five seconds
+const TRACE_RINGS = 6;                 // mainland plus the biggest islands
+let traceRAF = 0;
+
+function traceGradient(t) {
+  const head = Math.min(0.999, Math.max(0.002, t));
+  const tail = Math.max(0.001, head - 0.16);
+  const stops = ['interpolate', ['linear'], ['line-progress'], 0, '#ffeda0'];
+  if (tail > 0.001) stops.push(tail, '#ffeda0');   // behind: the border stays lit
+  stops.push(head, '#ffffff');                     // the head itself
+  const after = Math.min(1, head + 0.012);
+  if (after > head) stops.push(after, 'rgba(255,237,160,0)');
+  if (after < 1) stops.push(1, 'rgba(255,237,160,0)');   // ahead: nothing yet
+  return stops;
+}
+
+function fadeTrace() {
+  const t0 = performance.now();
+  const step = now => {
+    const k = (now - t0) / 700;
+    dirty = true;
+    if (k >= 1) {
+      map.setLayoutProperty('country-trace', 'visibility', 'none');
+      return;
+    }
+    map.setPaintProperty('country-trace', 'line-opacity', 1 - k);
+    traceRAF = requestAnimationFrame(step);
+  };
+  traceRAF = requestAnimationFrame(step);
+}
+
+function traceCountry(cc) {
+  if (!cc) return;
+  ensureCountries().then(() => {
+    const feat = ((COUNTRY_GEO && COUNTRY_GEO.features) || [])
+      .find(f => f.properties.cc === cc);
+    const src = map.getSource('trace');
+    if (!feat || !src || !map.getLayer('country-trace')) return;
+    const rings = [];
+    const outer = poly => { if (poly.length) rings.push(poly[0]); };
+    if (feat.geometry.type === 'Polygon') outer(feat.geometry.coordinates);
+    else feat.geometry.coordinates.forEach(outer);
+    rings.sort((a, b) => b.length - a.length);
+    src.setData({ type: 'FeatureCollection',
+      features: rings.slice(0, TRACE_RINGS).map(r => ({
+        type: 'Feature', properties: {},
+        geometry: { type: 'LineString', coordinates: r } })) });
+
+    cancelAnimationFrame(traceRAF);
+    map.setPaintProperty('country-trace', 'line-opacity', 1);
+    map.setLayoutProperty('country-trace', 'visibility', 'visible');
+    const t0 = performance.now();
+    const step = now => {
+      const t = (now - t0) / TRACE_MS;
+      dirty = true;
+      if (t >= 1) {
+        map.setPaintProperty('country-trace', 'line-gradient',
+          ['interpolate', ['linear'], ['line-progress'], 0, '#ffeda0', 1, '#ffeda0']);
+        fadeTrace();
+        return;
+      }
+      map.setPaintProperty('country-trace', 'line-gradient', traceGradient(t));
+      traceRAF = requestAnimationFrame(step);
+    };
+    traceRAF = requestAnimationFrame(step);
+  });
 }
 
 /* The monuments' own footprints, from OpenStreetMap. A dot at a coordinate says
@@ -1636,6 +1722,8 @@ async function frameCountry(cap) {
   } else {
     map.flyTo({ center: [cap.lon, cap.lat], zoom: 4.2, duration: 1600 });
   }
+  // Trace once the camera has stopped: a light drawn during a flight is a smear.
+  map.once('moveend', () => { if (picked === cap) traceCountry(cap.cc); });
 }
 
 async function countryPop(cap) {
@@ -1671,10 +1759,41 @@ function pickCountry(cap, frame) {
   showPicked(cap);
   if (cap) {
     countryPop(cap);
-    if (frame) { stopOrbit(); frameCountry(cap); }
+    if (frame) { stopOrbit(); frameCountry(cap); }   // which traces on arrival
+    else traceCountry(cap.cc);
+  } else {
+    cancelAnimationFrame(traceRAF);
+    if (map.getLayer('country-trace'))
+      map.setLayoutProperty('country-trace', 'visibility', 'none');
   }
   dirty = true;
 }
+
+/* Click a capital to pick its country. The capitals are drawn on the label canvas,
+   not as map features, so MapLibre has nothing to hit-test: measure in screen
+   pixels against the same list the labels are drawn from. */
+function capitalAt(point) {
+  let best = null, bestD = 24;
+  for (const cap of CAPITALS) {
+    let q;
+    try { q = map.project([cap.lon, cap.lat]); } catch (e) { continue; }
+    const d = Math.hypot(q.x - point.x, q.y - point.y);
+    if (d < bestD) { best = cap; bestD = d; }
+  }
+  return best;
+}
+
+map.on('click', e => {
+  const cap = CAPITALS.length ? capitalAt(e.point) : null;
+  if (!cap) return;
+  selCountry.value = cap.country;
+  pickCountry(cap, true);
+});
+
+map.on('mousemove', e => {
+  if (!CAPITALS.length) return;
+  map.getCanvas().style.cursor = capitalAt(e.point) ? 'pointer' : '';
+});
 
 selCountry.addEventListener('change', () => {
   pickCountry(CAPITALS.find(c => c.country === selCountry.value) || null, true);
