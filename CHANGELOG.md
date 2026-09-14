@@ -5,6 +5,35 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — Colour for everything the tiles know, and a dial for how much
+
+### Added
+
+- **Land has categories now too.** Wood and forest `darkgreen`, scrub `olivedrab`,
+  grass and meadow `darkolivegreen`, park `forestgreen`, farmland `olive`, wetland
+  `darkseagreen`, sand `darkkhaki`, ice and glacier `lightsteelblue`. What people
+  build on it gets the purple and brown families, which nothing else uses:
+  residential `dimgray`, commercial `rosybrown`, industrial `sienna`, military
+  `indigo`, cemetery `rebeccapurple`, hospital `orchid`, school and university
+  `mediumpurple`, stadium `purple`, quarry and pier `tan`, railway `thistle`.
+  All dim: these are the widest areas on the map and area is what costs.
+- **A COLOURS dial**, 0 to 6. Each step hands one group its own colours — water,
+  population, monuments, land, built land, transport — and the readout says how many
+  colours are live, from **one** (everything in the dot colour) to **43**. Turning it
+  down is not only quieter: fewer hues is fewer lit subpixels.
+- **An information meter** in the readouts: how many places are on screen and how
+  many people those dots stand for, on a bar that runs logarithmically to a
+  **milliard**. A world view is billions, a village is thousands, and nothing linear
+  shows both. Tiles hand the same city back once per tile it touches, so the index
+  each dot carries is what stops it being counted twice.
+
+### Notes
+
+- Roads stay white and grey on purpose. They are what makes a city legible at street
+  zoom, and a hue there costs power without adding anything you did not already know.
+
+---
+
 ## 2026-09-14 — Every kind of water gets its own blue
 
 ### Changed

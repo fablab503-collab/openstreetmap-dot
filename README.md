@@ -92,6 +92,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | Capitals | All 195 — 193 UN members plus Vatican and Palestine — with population and ISO country code | Wikidata |
 | The country you pick | Its outline lit over the lattice, at any zoom | Natural Earth (1:50m) |
 | Monuments — capitals | The three best-known places in each of the 195 capitals, by Wikipedia coverage | Wikidata |
+| Land | Wood, scrub, grass, farmland, wetland, sand, ice, and what people build on it — residential to stadium — each a named colour, kept dim | OpenStreetMap |
 | Monument outlines | The building's own edges from z12.5 — a contour round its foot, and round its roofline in 3D | OpenStreetMap (Overpass) |
 | Monuments — Montpellier | Top 10, ranked by number of Wikipedia language editions | Wikidata + OpenStreetMap |
 
@@ -119,6 +120,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | Control | Effect |
 | --- | --- |
 | `WHERE AM I` (bottom centre) | Marks where you are, rounded to about a kilometre, and flies there |
+| `COLOURS` | How many colours the map may use, 1 to 43. Each step hands a group its own hues — water, population, monuments, land, built land, transport — and turning it down costs less power |
 | `ZOOM` bar (bottom centre) | Drag to go from a street to the whole globe in one gesture; it follows the map too, and slides away with the panels |
 | `SEARCH A PLACE` | Search by name; countries and regions frame to their bounds |
 | `SETTINGS` | Show or hide the control panel |

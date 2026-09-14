@@ -69,6 +69,12 @@
   #hud .row { display:block; }
   #hud .sep { height:1px; background:#1e1e1e; margin:8px -12px; }
   #hud .oled { color:#7ec8a9; }
+  /* How much the screen is actually telling you, on a log scale to a milliard. */
+  #infobar { height:4px; background:#1a1a1a; margin:5px 0 2px; }
+  #infobar i { display:block; height:100%; width:0;
+    background:linear-gradient(90deg,#8b0000,#ff4500,#ffd700); transition:width .3s ease; }
+  #hud .infoends { display:flex; justify-content:space-between; color:#3e3e3e;
+    font-size:9px; letter-spacing:.03em; }
 
   #stats { flex:0 1 auto; overflow-y:auto; min-height:0; }
   #stats .row { display:block; }
@@ -266,6 +272,11 @@
   <span class="row">DOTS LIT <b id="h-dots">—</b></span>
   <span class="row">FRAME <b id="h-frame">—</b></span>
   <div class="sep"></div>
+  <span class="row">PLACES <b id="h-places">—</b></span>
+  <span class="row">PEOPLE SHOWN <b id="h-people">—</b></span>
+  <div id="infobar"><i></i></div>
+  <div class="infoends"><span>0</span><span>1 G</span></div>
+  <div class="sep"></div>
   <span class="row oled">LIT AREA <b id="h-lit" class="oled">—</b></span>
   <span class="row oled">PIXELS DARK <b id="h-dark" class="oled">—</b></span>
 </div>
@@ -311,6 +322,11 @@
   <div id="bands"></div>
   <span class="src" id="l-minband">Every city over 15,000 people — 34,091 of them,
     from GeoNames. Colour names are the CSS ones, so each is a name you can look up.</span>
+  <span class="ttl" style="margin:10px 0 5px">LAND</span>
+  <div id="land-key" class="cats"></div>
+  <span class="src">Dim on purpose: these are the widest areas on the map, and area
+    is what costs on an OLED. Roads stay white and grey — they are what makes a city
+    legible, and a hue there would buy nothing.</span>
   <span class="ttl" style="margin:10px 0 5px">WATER</span>
   <div id="water-key" class="cats"></div>
   <span class="src">Named CSS blues, dimmed by how much screen each one covers: the
@@ -349,6 +365,8 @@
   <input id="s-sun" type="range" min="0" max="359" step="1" value="210">
   <label>DOT COLOUR <span id="swatch-name">WHITE</span></label>
   <div id="pal"></div>
+  <label>COLOURS <span id="l-colours">—</span></label>
+  <input id="s-colours" type="range" min="0" max="6" step="1" value="6">
   <label>MIN POPULATION <span id="l-minpop">15 K</span></label>
   <input id="s-minpop" type="range" min="0" max="100" step="1" value="0">
   <button id="b-all" aria-pressed="true">ALL DATA</button>
@@ -625,9 +643,52 @@ const style = {
           12,['match',['get','class'], 'river', 2, 'canal', 1.4, 1],
           16,['match',['get','class'], 'river', 4, 'canal', 3, 2]] } },
 
+    /* Land, by what it is. The tiles carry a class for every patch - wood, scrub,
+       grass, farmland, wetland, sand, ice - and DotWorld painted the three it knew
+       about all the same near-black. Each gets a named CSS colour now, kept dim:
+       these are the biggest areas on the map and on an OLED area is what costs. */
     { id:'green', type:'fill', source:'ofm', 'source-layer':'landcover',
-      filter:['in','class','wood','grass','park'],
-      paint:{ 'fill-color':'#0d0d0d' } },
+      paint:{
+        'fill-color':['match',['get','class'],
+          'wood','#006400',        // darkgreen
+          'forest','#006400',
+          'scrub','#6b8e23',       // olivedrab
+          'grass','#556b2f',       // darkolivegreen
+          'meadow','#556b2f',
+          'farmland','#808000',    // olive
+          'wetland','#8fbc8f',     // darkseagreen
+          'sand','#bdb76b',        // darkkhaki
+          'ice','#b0c4de',         // lightsteelblue
+          'glacier','#b0c4de',
+          '#556b2f'],
+        'fill-opacity':['match',['get','class'],
+          'ice',0.30, 'glacier',0.30, 'sand',0.22, 'wetland',0.16,
+          'farmland',0.13, 'scrub',0.16, 0.22] } },
+    { id:'park', type:'fill', source:'ofm', 'source-layer':'park',
+      paint:{ 'fill-color':'#228b22', 'fill-opacity':0.22 } },   // forestgreen
+
+    /* What people put on the land. Purples and browns, because every other family
+       is spoken for - warm is population, blue is water, turquoise is a monument -
+       and because these are areas, they are drawn at a fraction of their colour. */
+    { id:'landuse', type:'fill', source:'ofm', 'source-layer':'landuse',
+      paint:{
+        'fill-color':['match',['get','class'],
+          'residential','#696969',   // dimgray
+          'commercial','#bc8f8f',    // rosybrown
+          'industrial','#a0522d',    // sienna
+          'military','#4b0082',      // indigo
+          'cemetery','#663399',      // rebeccapurple
+          'hospital','#da70d6',      // orchid
+          'school','#9370db',        // mediumpurple
+          'university','#9370db',
+          'kindergarten','#9370db',
+          'stadium','#800080',       // purple
+          'quarry','#d2b48c',        // tan
+          'allotments','#8fbc8f',    // darkseagreen
+          '#696969'],
+        'fill-opacity':['match',['get','class'],
+          'residential',0.10, 'commercial',0.14, 'industrial',0.16,
+          'stadium',0.35, 'hospital',0.30, 0.20] } },
 
     { id:'building', type:'fill', source:'ofm', 'source-layer':'building',
       minzoom:13, paint:{ 'fill-color':'#333333' } },
@@ -640,6 +701,20 @@ const style = {
 
     /* Roads carry most of the legibility, so they get the brightest values.
        Class drives brightness, which becomes dot size after halftoning. */
+    /* Rails and tracks, which the road layers were drawing as more road. Roads
+       themselves stay white and grey on purpose: they are what makes a city legible
+       at street zoom, and a hue there costs power for no information. */
+    { id:'rail', type:'line', source:'ofm', 'source-layer':'transportation',
+      filter:['==',['get','class'],'rail'],
+      paint:{ 'line-color':'#d8bfd8',        // thistle
+        'line-opacity':0.55,
+        'line-width':['interpolate',['linear'],['zoom'],10,0.5,16,2] } },
+    { id:'pier', type:'line', source:'ofm', 'source-layer':'transportation',
+      filter:['==',['get','class'],'pier'],
+      paint:{ 'line-color':'#d2b48c',        // tan
+        'line-opacity':0.6,
+        'line-width':['interpolate',['linear'],['zoom'],12,0.6,16,2.5] } },
+
     { id:'road-minor', type:'line', source:'ofm', 'source-layer':'transportation',
       minzoom:12, filter:['in','class','minor','service','track','path','footway'],
       paint:{ 'line-color':'#5a5a5a',
@@ -1073,7 +1148,29 @@ function countWhenStill() {
     const rows = Math.max(1, Math.ceil(dots.height / step));
     const s = measureCells(sampleCells(src, cols, rows), cols, rows, step);
     hud(zoom, pitch, s.lit, cols * rows, s.coverage);
+    countInformation();
   }, 250);
+}
+
+/* How much the screen is actually telling you: every city drawn on it, and the
+   people those dots stand for. Tiles hand the same city back once per tile it
+   touches, so the index each feature carries is what stops it being counted twice.
+   The bar is logarithmic to a milliard - a world view is billions, a village is
+   thousands, and nothing linear can show both. */
+function countInformation() {
+  if (!map.getLayer('population')) return;
+  let people = 0;
+  const seen = new Set();
+  for (const f of map.queryRenderedFeatures({ layers: ['population'] })) {
+    const i = f.properties.i;
+    if (seen.has(i)) continue;
+    seen.add(i);
+    people += f.properties.pop;
+  }
+  set('h-places', seen.size.toLocaleString('en-GB'));
+  set('h-people', fmtBig(people));
+  const frac = people > 0 ? Math.min(1, Math.log10(people) / 9) : 0;
+  document.querySelector('#infobar i').style.width = (frac * 100).toFixed(1) + '%';
 }
 
 function halftone() {
@@ -1819,6 +1916,7 @@ function ensureShapes() {
           'fill-extrusion-base': ['max', ['-', H, 2], 0],
           'fill-extrusion-height': H, 'fill-extrusion-opacity': 1 } });
       monumentVisibility();
+      applyColourLevel();          // a layer added late still obeys the colour dial
     })
     .catch(() => { shapesReady = null; });
   return shapesReady;
@@ -2067,6 +2165,61 @@ selCountry.addEventListener('change', () => {
 /* Population threshold. Logarithmic, because the distribution is: 15k to 2.1M
    is two orders of magnitude and a linear slider would spend 95% of its travel
    between the biggest two cities. */
+/* How many colours the map is allowed to use. Each step hands a group of layers
+   its own colours; below its step the group falls back to the neutral it had
+   before, which the shader then paints in the chosen dot colour. Turning colours
+   down is not only quieter - fewer hues means fewer lit subpixels, and on an OLED
+   that is the whole game.
+
+   Groups are ordered by how much they tell you per pixel they cost. */
+const COLOUR_GROUPS = [
+  { name: 'WATER', colours: 9, apply: on => {
+      paint('water', 'fill-color', on ? WATER_FILL : '#0f0f0f');
+      paint('waterway', 'line-color', on ? WATERWAY_LINE : '#2c2c2c'); } },
+  { name: 'POPULATION', colours: 8, apply: on => {
+      paint('population', 'circle-color', on ? POP_STEPS : '#9a9a9a'); } },
+  { name: 'MONUMENTS', colours: 3, apply: on => {
+      paint('capital-monuments', 'circle-color', on ? '#40e0d0' : '#9a9a9a');
+      paint('monument-shape-line', 'line-color', on ? '#afeeee' : '#bdbdbd');
+      paint('monument-base', 'fill-extrusion-color', on ? '#afeeee' : '#bdbdbd');
+      paint('monument-top', 'fill-extrusion-color', on ? '#e0ffff' : '#e8e8e8'); } },
+  { name: 'LAND', colours: 9, apply: on => {
+      paint('green', 'fill-color', on ? LAND_FILL : '#0d0d0d');
+      paint('park', 'fill-color', on ? '#228b22' : '#0d0d0d'); } },
+  { name: 'BUILT', colours: 11, apply: on => {
+      paint('landuse', 'fill-color', on ? BUILT_FILL : '#141414'); } },
+  { name: 'TRANSPORT', colours: 2, apply: on => {
+      paint('rail', 'line-color', on ? '#d8bfd8' : '#2c2c2c');
+      paint('pier', 'line-color', on ? '#d2b48c' : '#2c2c2c'); } }
+];
+const paint = (id, prop, value) => {
+  if (map.getLayer(id)) map.setPaintProperty(id, prop, value);
+};
+let WATER_FILL = null, WATERWAY_LINE = null, LAND_FILL = null, BUILT_FILL = null;
+map.once('load', () => {                 // keep the style's own expressions to put back
+  WATER_FILL = map.getPaintProperty('water', 'fill-color');
+  WATERWAY_LINE = map.getPaintProperty('waterway', 'line-color');
+  LAND_FILL = map.getPaintProperty('green', 'fill-color');
+  BUILT_FILL = map.getPaintProperty('landuse', 'fill-color');
+  applyColourLevel();
+});
+
+const sColours = document.getElementById('s-colours');
+function applyColourLevel() {
+  const level = +sColours.value;
+  let count = 1;                          // the dot colour itself is always one
+  COLOUR_GROUPS.forEach((g, i) => {
+    const on = i < level;
+    g.apply(on);
+    if (on) count += g.colours;
+  });
+  document.getElementById('l-colours').textContent =
+    level === 0 ? 'NONE — ONE COLOUR'
+                : count + ' — TO ' + COLOUR_GROUPS[level - 1].name;
+  dirty = true;
+}
+sColours.addEventListener('input', applyColourLevel);
+
 const sPop = document.getElementById('s-minpop');
 const POP_MIN = 15000, POP_MAX = 24874500;   // Shanghai, the largest in the file
 function popThreshold() {
@@ -2086,6 +2239,21 @@ const WATER_KEY = [
   ['drain / ditch', 'darkslategray', '#2f4f4f'], ['dock', 'slategray', '#708090'],
   ['swimming pool', 'royalblue', '#4169e1']
 ];
+const LAND_KEY = [
+  ['wood / forest', 'darkgreen', '#006400'], ['scrub', 'olivedrab', '#6b8e23'],
+  ['grass / meadow', 'darkolivegreen', '#556b2f'], ['park', 'forestgreen', '#228b22'],
+  ['farmland', 'olive', '#808000'], ['wetland', 'darkseagreen', '#8fbc8f'],
+  ['sand', 'darkkhaki', '#bdb76b'], ['ice / glacier', 'lightsteelblue', '#b0c4de'],
+  ['residential', 'dimgray', '#696969'], ['commercial', 'rosybrown', '#bc8f8f'],
+  ['industrial', 'sienna', '#a0522d'], ['military', 'indigo', '#4b0082'],
+  ['cemetery', 'rebeccapurple', '#663399'], ['hospital', 'orchid', '#da70d6'],
+  ['school / university', 'mediumpurple', '#9370db'], ['stadium', 'purple', '#800080'],
+  ['quarry / pier', 'tan', '#d2b48c'], ['railway', 'thistle', '#d8bfd8']
+];
+document.getElementById('land-key').innerHTML = LAND_KEY.map(([what, name, hex]) =>
+  `<span class="cat"><i style="background:${hex}"></i>${what.toUpperCase()} — ${name}</span>`
+).join('');
+
 document.getElementById('water-key').innerHTML = WATER_KEY.map(([what, name, hex]) =>
   `<span class="cat"><i style="background:${hex}"></i>${what.toUpperCase()} — ${name}</span>`
 ).join('');
