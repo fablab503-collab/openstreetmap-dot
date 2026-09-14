@@ -456,3 +456,20 @@ point — the Colosseum's ellipse, the Capitol's wings.
   Earth 0.99 AU, Mars 1.59, Jupiter 5.32, Neptune 29.96.
 - Elements are two-body Kepler: a fraction of a degree from 1800 to 2050, drifting
   outside it. Say so in the interface. Real positions: JPL Horizons.
+- **Use each body's own sheet, not the summary table.** The table rounds: the Earth's
+  year reads 365.2 days and its spin 23.9 hours. Over the twenty-six years since
+  J2000 that year is a day and a half of drift - a degree and a half of sky - and
+  that spin prints a sidereal day of 23 h 54 m against the real 23 h 56 m 04 s. The
+  per-body sheets (`earthfact.html` and the rest) carry 365.256 and 23.9345, plus
+  equatorial and polar radius, flattening, J2, solar irradiance, the surface
+  acceleration at equator *and* pole, and for the Moon its recession rate.
+- **A planet's sheet also lists its moons, under the same row labels.** Mars's sheet
+  handed over Phobos's 0.319-day orbit as the Martian year. Keep a precise figure
+  only when it agrees with the rounded one from the summary table to within a couple
+  of per cent - that is what the second source is for.
+- **Not every sheet is a table.** The Moon's is; the Earth's is preformatted text
+  with the value spaced away from the label. Parse the table, then re-read the
+  stripped text as "label, gap, number" for whatever is still missing.
+- NASA prints **two** surface accelerations for the Earth, 9.780 at the equator and
+  9.832 at the pole, and the gap is the spin plus the bulge. Interpolating between
+  them with cos²(latitude) is more honest than modelling half of it.
