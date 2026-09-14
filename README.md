@@ -179,11 +179,16 @@ Three invisible things are drawn:
   is made of its own cities, in the same population colours the map uses. The Moon
   keeps one face toward us, marked, because it turns exactly once per orbit.
 
-Distances and sizes are squashed — a square root, not a log, or Venus would be as
-wide as the gap to the Earth. Close to a body the squashing switches off, so three
-radii up looks like three radii up and the Moon sits at the sixty it really keeps.
-`TRUE SCALE` turns all of it off: the Earth becomes a speck, the gaps become the
-picture, and the view becomes unusable, which is the lesson.
+**Scale is true by default.** From three Earth radii up the Sun is 0.531° across and
+the Moon is 0.518° — which is why total eclipses work at all — while Venus is 0.010°
+and Jupiter 0.009°, points of light, because that is what they are. Squashing the
+distances to fit a screen is what made the Sun loom and put Venus next to the Moon:
+once orbits are crushed, no size mapping can put both right. `SQUASHED SCALE` brings
+that diagram back — a square root, not a log, or Venus would be as wide as the gap to
+the Earth — and the panel says which one is on.
+
+Bodies hide what is behind them: dots here are added to the frame like light, with no
+depth test, so they are drawn furthest first and each punches its own silhouette.
 
 Positions are two-body Kepler orbits from the NASA fact sheet and J2000 angles.
 Good to a fraction of a degree from 1800 to 2050 and drifting outside it. For real

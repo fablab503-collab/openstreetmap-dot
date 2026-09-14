@@ -523,7 +523,12 @@
     face is always toward us — the bright dots on it are that near side. It is not
     still: it is turning exactly as fast as it travels.</span>
   <div class="sep"></div>
+  <span class="row">SCALE <b id="sp-scale">TRUE — REAL PROPORTIONS</b></span>
   <span class="row">SHOWING <b id="sp-date">—</b></span>
+  <span class="sub">At true scale everything keeps its real proportions: the Sun is
+    half a degree wide from here, the Moon is sixty Earth radii away, and the planets
+    are points of light, because that is what they are. Squashed scale pulls the
+    distances in so the whole system fits one screen — readable, and a diagram.</span>
   <span class="sub" id="sp-src">Sizes, masses, orbits and spins from the NASA
     planetary fact sheet; the three angles that say where each planet sits on its
     orbit at J2000 from Wikipedia. Two-body orbits: good to a fraction of a degree
@@ -574,7 +579,7 @@
     <input id="sp-dof" type="range" min="0" max="6" step="0.1" value="1">
     <button id="sp-well" aria-pressed="true">GRAVITY WELL</button>
     <button id="sp-orbits" aria-pressed="true">ORBITS</button>
-    <button id="sp-true" aria-pressed="false">TRUE SCALE</button>
+    <button id="sp-true" aria-pressed="true">SQUASHED SCALE</button>
     <button id="sp-back">BACK TO EARTH</button>
   </div>
 </div>
@@ -3328,9 +3333,14 @@ const RATES = [
   { label: '1 YEAR / SEC', k: 31557600 },
 ];
 
+/* How much the terminator wraps past the geometric edge: an atmosphere scatters
+   light round the limb, an airless rock does not. Venus's thick air wraps most. */
+const AIR = { earth: 0.09, venus: 0.16, mars: 0.04, jupiter: 0.10, saturn: 0.10,
+              uranus: 0.08, neptune: 0.08 };
+
 const SP = {
   on: false, focus: 'earth', az: 0.6, el: 0.35, dist: 3 * 6.371e6,
-  dof: 1, well: true, orbits: true, trueScale: false, rate: 1, localP: 1,
+  dof: 1, well: true, orbits: true, trueScale: true, rate: 1, localP: 1,
   t: Date.now(), last: 0, raf: 0, bodies: null, ready: null, pos: {},
 };
 
@@ -3441,7 +3451,14 @@ function gravityAt(p, pos) {
 const AU_DISP = 100, POS_P = 0.5, S_RAD = 2.2, TRUE_K = 1e10;
 const asinh = x => Math.log(x + Math.sqrt(x * x + 1));
 const AU_METRES = 1.495978707e11;
-function squashRad(m) { return SP.trueScale ? m / TRUE_K : S_RAD * asinh(m / 1e6); }
+function squashRad(m, key) {
+  if (SP.trueScale) return m / TRUE_K;
+  /* The Sun is 109 Earth radii wide and 23,500 away; squashing the distance down to
+     something a screen can hold leaves it looking far too big from anywhere near a
+     planet. Its own radius is pulled in further to take the worst off that. It is
+     still the biggest thing out here by a long way, which is the true part. */
+  return S_RAD * asinh(m / 1e6) * (key === 'sun' ? 0.55 : 1);
+}
 function squashLen(m) {                                  // from the Sun
   return SP.trueScale ? m / TRUE_K : AU_DISP * Math.pow(m / AU_METRES, POS_P);
 }
@@ -3518,7 +3535,22 @@ function camera(pos) {
   const right = V.norm(V.cross(fwd, up));
   up = V.cross(right, fwd);
   return { W, H, f, pos: p, fwd, right, up, zFocus: back,
+           dpr: Math.min(window.devicePixelRatio || 1, 2),
            real: V.add(focusReal, V.mul(out, SP.dist)) };
+}
+
+/* The blur circle of a lens, with a flat middle. A lens focused on something close
+   really does soften that thing's own near edge, but on a screen it just reads as a
+   mistake, so nothing within a bit over half the focal distance blurs at all: the
+   body you are looking at is sharp all over, and everything at a plainly different
+   distance spreads and fades. That was the first version's real fault - the front
+   of the Earth went soft while its edge stayed sharp. */
+const DOF_FLAT = 0.58;
+function cocFor(z, cam) {
+  if (SP.dof <= 0) return 0;
+  const off = Math.abs(z - cam.zFocus) / Math.max(z, 1e-9);
+  if (off <= DOF_FLAT) return 0;
+  return Math.min(9, SP.dof * 9 * (off - DOF_FLAT) / (1 - DOF_FLAT));
 }
 
 /* One dot. Depth of field is the whole point of this function: a lens focused at
@@ -3534,10 +3566,7 @@ function dot3(cam, p, px, hex, alpha, batch) {
   if (sx < -20 || sy < -20 || sx > cam.W + 20 || sy > cam.H + 20) return;
   let r = px, a = alpha;
   if (SP.dof > 0) {
-    // Thin lens: the blur circle grows with how far a thing is off the focal
-    // plane, measured against its own distance - which is why the far side of a
-    // planet stays sharp while the next planet out does not.
-    const coc = Math.min(9, SP.dof * 4 * Math.abs(z - cam.zFocus) / Math.max(z, 1e-9));
+    const coc = cocFor(z, cam);
     r = px + coc;
     a = alpha / (1 + coc * coc * 0.7);
   }
@@ -3573,6 +3602,27 @@ function bodyFrame(b) {
   return { axis, e1, e2: V.cross(axis, e1) };
 }
 
+/* Lighting, from the colour a body already has. One hue, eight steps: nearly black
+   where the Sun does not reach, the body's own colour where it is fully lit, and a
+   push toward white at the very top, because sunlight is white and a fully lit face
+   that stays the same flat colour reads as paint rather than light. Eight steps and
+   not a hundred so the painter keeps batching by colour. */
+function ramp(b) {
+  if (b._ramp) return b._ramp;
+  const r = parseInt(b.hex.slice(1, 3), 16), g = parseInt(b.hex.slice(3, 5), 16),
+        bl = parseInt(b.hex.slice(5, 7), 16);
+  b._ramp = [];
+  for (let i = 0; i < 8; i++) {
+    const t = i / 7;
+    const k = 0.07 + 0.93 * Math.pow(t, 0.8);          // shade
+    const w = Math.max(0, (t - 0.72) / 0.28) * 0.38;   // sunlit toward white
+    const mix = c => Math.round(Math.min(255, c * k + 255 * w));
+    b._ramp.push('#' + [mix(r), mix(g), mix(bl)]
+      .map(v => v.toString(16).padStart(2, '0')).join(''));
+  }
+  return b._ramp;
+}
+
 function surfaceDot(fr, lat, lon) {
   const cl = Math.cos(lat), sl = Math.sin(lat);
   return { x: cl * (Math.cos(lon) * fr.e1.x + Math.sin(lon) * fr.e2.x) + sl * fr.axis.x,
@@ -3580,14 +3630,14 @@ function surfaceDot(fr, lat, lon) {
            z: cl * (Math.cos(lon) * fr.e1.z + Math.sin(lon) * fr.e2.z) + sl * fr.axis.z };
 }
 
-function emitBody(key, pos, cam, batch, t) {
+function emitBody(key, pos, cam, batch, t, pre) {
   const b = SP.bodies[key];
   const pd = dispOf(pos[key], key, pos);
   const v = V.sub(pd, cam.pos), z = V.dot(v, cam.fwd);
   if (z <= 0.001) return;
-  const rs = cam.f * squashRad(b.R) / z;
-  if (rs < 1.4) {                       // too far to be a disc: one bright point
-    dot3(cam, pd, Math.max(0.8, rs), b.hex, key === 'sun' ? 1 : 0.85, batch);
+  const rs = cam.f * squashRad(b.R, key) / z;
+  if (rs < 1.4) {                       // too far to be a disc: one point of light
+    dot3(cam, pd, Math.max(1.3, rs), b.hex, 1, batch);
     return;
   }
   const cx = cam.W / 2 + cam.f * V.dot(v, cam.right) / z;
@@ -3602,8 +3652,16 @@ function emitBody(key, pos, cam, batch, t) {
   const x0 = Math.max(-rs, -cx - 20), x1 = Math.min(rs, cam.W - cx + 20);
   const y0 = Math.max(-rs, -cy - 20), y1 = Math.min(rs, cam.H - cy + 20);
   if (x1 < x0 || y1 < y0) return;
+  /* A body hides whatever is behind it. Nothing here is depth-tested - the dots are
+     added to the frame like light - so the silhouette is punched in black first,
+     while the bodies are drawn far to near. Without it the Moon shines through the
+     Earth, which is what it did. */
+  if (pre) pre(cx, cy, rs);
+  /* The pitch is the map's own DOT SCALE, so the lattice out here matches the one
+     on the ground and the slider does something in both places. The budget below it
+     is only a floor against a planet that fills the screen. */
   const area = Math.min(Math.PI * rs * rs, (x1 - x0 + 40) * (y1 - y0 + 40));
-  const pitch = Math.max(3.5, Math.sqrt(area / 5000));
+  const pitch = Math.max(Math.max(2, 18 * scale) * cam.dpr, Math.sqrt(area / 22000));
   const fr = bodyFrame(b);
   // Spin: the Sun stands over the longitude that matches the hour, so at noon UTC
   // Greenwich faces it. The equation of time is ignored - a quarter of an hour at
@@ -3624,18 +3682,21 @@ function emitBody(key, pos, cam, batch, t) {
       const n = { x: cam.right.x * (x / rs) + cam.up.x * (-y / rs) - cam.fwd.x * nz,
                   y: cam.right.y * (x / rs) + cam.up.y * (-y / rs) - cam.fwd.y * nz,
                   z: cam.right.z * (x / rs) + cam.up.z * (-y / rs) - cam.fwd.z * nz };
-      const lit = sunDir ? Math.max(0, V.dot(n, sunDir)) : 1;
-      const bright = key === 'sun' ? 1 : 0.05 + 0.95 * lit;
-      if (bright < 0.06) continue;
-      const depth = z - nz * squashRad(b.R);
-      const coc = SP.dof > 0
-        ? Math.min(9, SP.dof * 4 * Math.abs(depth - cam.zFocus) / Math.max(depth, 1e-9)) : 0;
+      /* Lambert, with the terminator softened a little on the worlds that have air:
+         an airless body cuts from day to night in one step, and the Earth does not. */
+      let lit = sunDir ? V.dot(n, sunDir) : 1;
+      lit = AIR[key] ? Math.max(0, (lit + AIR[key]) / (1 + AIR[key])) : Math.max(0, lit);
+      const bright = key === 'sun' ? 1 : 0.04 + 0.96 * lit;
+      if (bright < 0.05) continue;
+      const depth = z - nz * squashRad(b.R, key);
+      const coc = cocFor(depth, cam);
       /* Brightness rides the dot's size, not only its alpha - the same halftone
          rule the map uses. A grid of equally small dots across a planet filling
          the screen reads as an empty screen, which is what the first build did. */
       const r = Math.max(0.7, pitch * 0.46 * Math.sqrt(bright)) + coc;
-      (batch[b.hex] || (batch[b.hex] = [])).push(cx + x, cy + y, r,
-                                                 0.92 / (1 + coc * coc * 0.7));
+      const hex = ramp(b)[Math.min(7, Math.round(bright * 7))];
+      (batch[hex] || (batch[hex] = [])).push(cx + x, cy + y, r,
+                                             0.95 / (1 + coc * coc * 0.7));
     }
   }
   if (key === 'earth') emitCities(pos, cam, batch, cx, cy, rs, fr, spin, sunDir, z, b);
@@ -3677,19 +3738,25 @@ function emitNearSide(pos, cam, batch, cx, cy, rs, fr, z, b) {
   const marks = [[0, 0], [0.30, 0.18], [-0.26, 0.30], [0.10, -0.34], [-0.34, -0.12]];
   const right = V.norm(V.cross(toEarth, fr.axis));
   const up = V.cross(right, toEarth);
+  const sunDir = V.norm(V.sub(dispOf(pos.sun, 'sun', pos), dispOf(pos.moon, 'moon', pos)));
   for (const [u, w] of marks) {
     const n = V.norm({ x: toEarth.x + right.x * u + up.x * w,
                        y: toEarth.y + right.y * u + up.y * w,
                        z: toEarth.z + right.z * u + up.z * w });
     if (V.dot(n, toCam) <= 0.05) continue;
+    // The mark is on the ground, so it is only visible where the Sun reaches. A
+    // marker glowing on the dark half looked like a spacecraft.
+    const lit = Math.max(0, V.dot(n, sunDir));
+    if (lit < 0.05) continue;
     const sx = cx + rs * V.dot(n, cam.right), sy = cy - rs * V.dot(n, cam.up);
-    (batch['#f5f5f5'] || (batch['#f5f5f5'] = [])).push(sx, sy, Math.max(1.2, rs / 9), 0.75);
+    (batch['#f5f5f5'] || (batch['#f5f5f5'] = []))
+      .push(sx, sy, Math.max(1.2, rs / 9), 0.25 + 0.6 * lit);
   }
 }
 
 function emitRings(pos, cam, batch, pd, fr, b) {
   for (let ring = 0; ring < 3; ring++) {
-    const rr = squashRad(b.R) * (1.25 + ring * 0.32);
+    const rr = squashRad(b.R, 'saturn') * (1.25 + ring * 0.32);
     for (let a = 0; a < 6.2832; a += 0.045) {
       const p = { x: pd.x + rr * (Math.cos(a) * fr.e1.x + Math.sin(a) * fr.e2.x),
                   y: pd.y + rr * (Math.cos(a) * fr.e1.y + Math.sin(a) * fr.e2.y),
@@ -3706,7 +3773,7 @@ function emitOrbits(pos, cam, batch, t) {
     const step = b.P / 150;
     for (let i = 0; i < 150; i++) {
       const p = helio(b, t + i * step);
-      dot3(cam, dispOf(p, k, pos), 0.7, b.hex, 0.16, batch);
+      dot3(cam, dispOf(p, k, pos), 0.7, b.hex, 0.3, batch);
     }
   }
   // The Moon's ring is drawn round the Earth from its own radius, since its orbit
@@ -3715,7 +3782,7 @@ function emitOrbits(pos, cam, batch, t) {
   const inc = (m.inclination || 0) * RAD, rr = squashLocal(m.a, SP.bodies.earth);
   for (let a = 0; a < 6.2832; a += 0.03) {
     dot3(cam, { x: ed.x + rr * Math.cos(a), y: ed.y + rr * Math.sin(a) * Math.cos(inc),
-                z: ed.z + rr * Math.sin(a) * Math.sin(inc) }, 0.7, m.hex, 0.2, batch);
+                z: ed.z + rr * Math.sin(a) * Math.sin(inc) }, 0.7, m.hex, 0.32, batch);
   }
 }
 
@@ -3762,6 +3829,7 @@ function labelBodies(pos, cam) {
   const d = Math.min(window.devicePixelRatio || 1, 2);
   sky.font = (11 * d).toFixed(0) + 'px "Space Mono", ui-monospace, monospace';
   sky.textBaseline = 'middle';
+  const seen = [];
   for (const k of ORDER) {
     const b = SP.bodies[k]; if (!b) continue;
     const pd = dispOf(pos[k], k, pos);
@@ -3770,9 +3838,26 @@ function labelBodies(pos, cam) {
     const sx = cam.W / 2 + cam.f * V.dot(v, cam.right) / z;
     const sy = cam.H / 2 - cam.f * V.dot(v, cam.up) / z;
     if (sx < 0 || sy < 0 || sx > cam.W || sy > cam.H) continue;
-    const rs = Math.min(cam.H * 0.4, cam.f * squashRad(b.R) / z);
-    sky.fillStyle = k === SP.focus ? '#e8e8e8' : '#6a6a6a';
-    sky.fillText(k.toUpperCase(), sx + rs + 7 * d, sy);
+    seen.push({ k, sx, sy, z, rs: Math.min(cam.H * 0.4, cam.f * squashRad(b.R, k) / z) });
+  }
+  // Nearest first, so when names collide the one in front keeps its place.
+  seen.sort((a, b) => (a.k === SP.focus ? -1 : b.k === SP.focus ? 1 : a.z - b.z));
+  const taken = [];
+  for (const it of seen) {
+    /* A name has to go when the thing it names does. The Moon behind the Earth is
+       hidden now, and its label was still sitting there in the middle of the
+       ocean - which reads as the Moon being in front of the Earth. */
+    const hidden = seen.some(o => o !== it && o.z < it.z
+      && Math.hypot(o.sx - it.sx, o.sy - it.sy) < o.rs - 2);
+    if (hidden) continue;
+    const x = it.sx + it.rs + 7 * d, y = it.sy;
+    const w = sky.measureText(it.k).width + 6 * d, h = 15 * d;
+    // At true scale the inner planets sit within a few pixels of each other from
+    // far out, and five names on one spot is worse than four names and a gap.
+    if (taken.some(t => Math.abs(t.x - x) < (t.w + w) / 2 && Math.abs(t.y - y) < h)) continue;
+    taken.push({ x, y, w });
+    sky.fillStyle = it.k === SP.focus ? '#e8e8e8' : '#6a6a6a';
+    sky.fillText(it.k.toUpperCase(), x, y);
   }
 }
 
@@ -3831,6 +3916,8 @@ function spacePanel(pos, cam) {
 
   const ph = pos.moon.phase || 0;
   set('sp-phase', PHASES[Math.round(ph * 8) % 8] + ' · ' + (ph * 29.53).toFixed(1) + ' D OLD');
+  set('sp-scale', SP.trueScale ? 'TRUE — REAL PROPORTIONS'
+                                : 'SQUASHED — A DIAGRAM, NOT THE SKY');
   set('sp-date', new Date(SP.t).toISOString().slice(0, 16).replace('T', ' ') + ' UTC'
     + ' · ' + RATES[SP.rate].label);
 }
@@ -3852,19 +3939,46 @@ function spaceFrame(now) {
 
   const fb = SP.bodies[SP.focus];
   const radii = SP.dist / (fb && fb.R ? fb.R : 1e6);
-  const k = Math.min(1, Math.max(0, (radii - 30) / 370));
+  // True distances hold until you are a long way out - 200 radii of whatever you
+  // are looking at - so the Moon sits at its real sixty while you are anywhere near
+  // the Earth instead of sliding inward as you zoom.
+  const k = Math.min(1, Math.max(0, (radii - 200) / 3800));
   SP.localP = 1 - 0.45 * k * k * (3 - 2 * k);
   const pos = positions(SP.t);
   SP.pos = pos;
   const cam = camera(pos);
   sky.fillStyle = '#000';
   sky.fillRect(0, 0, cam.W, cam.H);
-  const batch = {};
-  emitStars(cam, batch);
-  if (SP.well) emitWell(pos, cam, batch);
-  if (SP.orbits) emitOrbits(pos, cam, batch, SP.t);
-  for (const k of ORDER) if (SP.bodies[k]) emitBody(k, pos, cam, batch, SP.t);
-  paintDots(batch);
+
+  // The background first: stars, the well, the orbit rings.
+  const bg = {};
+  emitStars(cam, bg);
+  if (SP.well) emitWell(pos, cam, bg);
+  if (SP.orbits) emitOrbits(pos, cam, bg, SP.t);
+  paintDots(bg);
+
+  /* Then the bodies, furthest first, each one punching its own silhouette in black
+     before its dots go down. Dots are added to the frame like light, with no depth
+     test of any kind, so this painter's order is the only thing that stops the Moon
+     being visible straight through the Earth. */
+  const order = [];
+  for (const k of ORDER) {
+    if (!SP.bodies[k]) continue;
+    const v = V.sub(dispOf(pos[k], k, pos), cam.pos);
+    const z = V.dot(v, cam.fwd);
+    if (z > 0.001) order.push([k, z]);
+  }
+  order.sort((a, b) => b[1] - a[1]);
+  for (const [k] of order) {
+    const batch = {};
+    emitBody(k, pos, cam, batch, SP.t, (cx, cy, rs) => {
+      sky.globalCompositeOperation = 'source-over';
+      sky.globalAlpha = 1;
+      sky.fillStyle = '#000';
+      sky.beginPath(); sky.arc(cx, cy, rs, 0, 6.2832); sky.fill();
+    });
+    paintDots(batch);
+  }
   labelBodies(pos, cam);
   spacePanel(pos, cam);
 }
@@ -3969,8 +4083,10 @@ SKY.addEventListener('pointerup', e => {
 SKY.addEventListener('wheel', e => {
   e.preventDefault();
   const b = SP.bodies && SP.bodies[SP.focus];
+  // True scale means the wheel has to cross from a planet's surface to Neptune -
+  // eight orders of magnitude - so it moves in bigger steps than a map's zoom.
   SP.dist = Math.max(b ? b.R * 1.02 : 1e6,
-                     Math.min(2e13, SP.dist * Math.exp(e.deltaY * 0.0012)));
+                     Math.min(2e13, SP.dist * Math.exp(e.deltaY * 0.0026)));
 }, { passive: false });
 
 // Click a body to go to it: the same hit test the eye does, on the drawn discs.
@@ -3987,7 +4103,7 @@ function spacePick(e) {
     if (z <= 0.001) continue;
     const sx = cam.W / 2 + cam.f * V.dot(v, cam.right) / z;
     const sy = cam.H / 2 - cam.f * V.dot(v, cam.up) / z;
-    const rs = Math.max(8 * d, cam.f * squashRad(b.R) / z);
+    const rs = Math.max(8 * d, cam.f * squashRad(b.R, k) / z);
     const dist = Math.hypot(sx - px, sy - py) - rs;
     if (dist < bestD) { bestD = dist; best = k; }
   }

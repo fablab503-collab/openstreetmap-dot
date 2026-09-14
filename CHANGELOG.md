@@ -5,6 +5,53 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — Space, made honest: real proportions, real shading, real occlusion
+
+Daniel looked at the first build and said the fades, the Moon and the dot scale were
+wrong or in the wrong place, and that the lighting should be deeper and truer to the
+colours already on screen. All four were fair.
+
+### Fixed
+
+- **Things behind other things were visible through them.** Nothing out here is
+  depth-tested - every dot is added to the frame like light - so the Moon shone
+  straight through the Earth. Bodies are now drawn furthest first, each punching its
+  own silhouette in black before its dots go down, and a name disappears with the
+  body it names. The Moon behind the Earth is gone now, label and all.
+- **The blur was on the wrong things.** A lens focused close really does soften its
+  subject's own near edge, but on screen that reads as a mistake: the front of the
+  Earth went soft while its edge stayed sharp. The blur circle now has a flat middle
+  - nothing within a bit over half the focal distance blurs at all - so whatever you
+  are looking at is sharp all over and only plainly distant things spread and fade.
+- **`DOT SCALE` did nothing out here.** The space lattice is the map's own pitch now,
+  the same slider, so the dots on a planet match the dots on the ground. The
+  area-based budget is only a floor under it.
+- **The lighting was one flat colour at varying opacity.** Each body now has an
+  eight-step ramp built from the colour it already has: nearly black where the Sun
+  does not reach, its own colour where it is fully lit, and a push toward white at
+  the top, because sunlight is white and a flat lit face reads as paint. The
+  terminator wraps a little on the worlds that have air - most on Venus - and not at
+  all on the airless ones.
+
+### Changed
+
+- **True scale is the default now.** Squashed distances were the reason the Sun
+  loomed over an Earth view and Venus sat next to the Moon: once the orbits are
+  crushed to fit a screen, no size mapping can put both right. At true scale, from
+  three Earth radii up, the Sun is 0.531° across and the Moon is 0.518° - which is
+  why eclipses work - Venus is 0.010° and Jupiter 0.009°. `SQUASHED SCALE` keeps the
+  old diagram, and the panel says which one is on and that the squashed one is a
+  diagram, not the sky.
+- The wheel moves in bigger steps, since true scale spans a planet's surface to
+  Neptune; distant planets are drawn as points of light rather than fading out; and
+  labels that would land on each other are dropped rather than stacked.
+- A moon keeps its true distance until the camera is 200 radii out instead of 30, so
+  the Moon stops sliding inward while you are anywhere near the Earth.
+- The Moon's near-side marker is lit like the ground it sits on; it used to glow on
+  the dark half like a spacecraft.
+
+---
+
 ## 2026-09-14 — Leave the Earth: gravity, depth of field, and the whole solar system
 
 ### Added
