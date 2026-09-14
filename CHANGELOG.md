@@ -5,6 +5,36 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — A story line over the dials, and the whole story behind it
+
+### Added
+
+- **The headline of the year, above the zoom bar.** Move the year and the line
+  changes: *20 JUL 1969 — Apollo 11*. It comes from Wikidata — what it classes as an
+  event, ranked by how many Wikipedia editions carry it, which is Wikipedia's
+  editors' judgement of importance rather than mine.
+- **Month and day** beside the year. Setting them picks whichever event of that year
+  falls closest to the date you asked for. A Wikidata date of 1 January usually means
+  "some time that year", so it is shown as a year rather than as New Year's Day.
+- **Click the line for the whole story**: fifteen chapters from the Big Bang to
+  1500 — first stars, the Sun, Earth, the Moon, the first life, the oxygen
+  catastrophe, the Cambrian, the Permian extinction, the asteroid, the split from
+  chimpanzees, Homo sapiens, farming, writing — each a rounded consensus figure
+  **linked to its own article**, so nobody has to take my word for a number. Then the
+  events of the year the bar is on, each linked to its Wikidata item.
+- `data/events.json`, built by `skills/dotworld/scripts/fetch_events.py`.
+
+### Notes
+
+- Coverage is partial and the interface says so: an event Wikidata has not typed as
+  an event will not appear however famous it was.
+- What it took: the textbook filter (`P31/P279*` from "occurrence") times out at 60 s
+  on a single decade, so the class list is flat — and it was **derived** by asking
+  Wikidata what Apollo 11 and the Cuban Missile Crisis actually are, after a
+  hand-written list of QIDs returned a person and a time zone.
+
+---
+
 ## 2026-09-14 — A year bar: 1500 to 2050
 
 ### Added

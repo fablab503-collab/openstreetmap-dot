@@ -303,6 +303,38 @@ in thousands.
 - 243 countries x 91 years is **117 KB** stored in thousands, so it can be fetched
   the first time someone moves the year bar and never again.
 
+## The events of a year — Wikidata (CC0)
+
+`scripts/fetch_events.py`, one query per decade.
+
+```sparql
+{ ?item wdt:P585 ?date } UNION { ?item wdt:P580 ?date }   # happened on / began on
+?item wikibase:sitelinks ?links . FILTER(?links >= 30)
+?item wdt:P31 ?cls . VALUES ?cls { wd:Q198 wd:Q178561 … }  # flat list, never P279*
+```
+
+- **`wdt:P31/wdt:P279*` from "occurrence" times out at 60 s on one decade.** A flat
+  `VALUES` list answers in nine. Same lesson as the monuments: the subclass closure
+  is the expensive part of Wikidata.
+- **Derive the class list, do not remember it.** Ask Wikidata what Apollo 11, the
+  Cuban Missile Crisis, the COVID-19 pandemic and the September 11 attacks *are*:
+  `human spaceflight`, `conflict` and `political crisis`, `pandemic` and `disease
+  outbreak`, `terrorist attack` and `suicide attack`. A list written from memory
+  returned a person and a time zone instead - the QIDs were wrong and nothing
+  complained.
+- Dates live in **two** properties: `P585` for what happened on a day, `P580` for
+  what began. Query both or lose half the calendar.
+- **Every year has an article about itself**, and it out-links anything that happened
+  in it - the item labelled "1969" has 211 sitelinks. Drop labels that are only
+  digits.
+- A date of **1 January is usually "some time that year"**, not New Year's Day. Show
+  it as a year, not as a date.
+- Lower the sitelink floor for older centuries (12 before 1800, 30 after 1900) or the
+  1500s come back empty.
+- Coverage is honest but partial: an event Wikidata has not typed as an event will
+  not appear however famous it was. Say so in the interface rather than implying the
+  list is history itself.
+
 ## Historical borders — Historical Basemaps (GPL-3.0)
 
 `https://cdn.jsdelivr.net/gh/aourednik/historical-basemaps@master/geojson/world_YYYY.geojson`

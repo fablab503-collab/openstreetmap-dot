@@ -124,6 +124,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | Control | Effect |
 | --- | --- |
 | `WHERE AM I` (bottom centre) | Marks where you are, rounded to about a kilometre, and flies there |
+| The story line | The headline of whichever year the bar is on, with month and day. Click it for everything from the Big Bang to that year | Wikidata + linked articles |
 | `YEAR` bar (bottom centre) | Take the map back to 1500 or forward to 2050. Cities are scaled by their own country's trajectory, and below 1995 the borders are the ones of that era |
 | `COLOURS` | How many colours the map may use, 1 to 43. Each step hands a group its own hues — water, population, monuments, land, built land, transport — and turning it down costs less power |
 | `ZOOM` bar (bottom centre) | Drag to go from a street to the whole globe in one gesture; it follows the map too, and slides away with the panels |

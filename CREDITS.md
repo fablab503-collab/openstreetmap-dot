@@ -70,6 +70,7 @@ Requests are debounced to respect their one-per-second guidance.
 | Country outlines for the 195 | [Natural Earth](https://www.naturalearthdata.com/) 1:50m admin 0 | public domain |
 | Population by country by year, 1960–2050 | [World Bank Open Data](https://data.worldbank.org/) (estimates, and source 40 projections) | CC BY 4.0 |
 | Historical borders, 1500–1994 | [Historical Basemaps](https://github.com/aourednik/historical-basemaps), Andreas Ourednik | GPL-3.0 |
+| The events of each year, 1500 onward | [Wikidata](https://www.wikidata.org/) (P585, P580, sitelink counts) | CC0 1.0 |
 | Montpellier monuments + ranking | [Wikidata](https://www.wikidata.org/) & [OpenStreetMap](https://www.openstreetmap.org/) | CC0 1.0 / ODbL |
 | The best-known monuments of all 195 capitals | [Wikidata](https://www.wikidata.org/) (P625 + sitelink counts) | CC0 1.0 |
 | The outline of each of those monuments | [OpenStreetMap](https://www.openstreetmap.org/copyright) via [Overpass](https://overpass-api.de/) | ODbL 1.0 |
