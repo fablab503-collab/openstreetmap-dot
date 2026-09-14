@@ -1,6 +1,6 @@
 ---
 name: dotworld
-description: Use when working on DotWorld — the dot-matrix globe published from fablab503-collab/openstreetmap-dot and kept at /Volumes/Volume1/SecondBrain/dotworld — or building any map rendered as a dot lattice, halftone or pixel-dot style: OLED-friendly dark maps, Nothing-style dot aesthetics, GPU post-processing of MapLibre GL JS v6 frames, data colours that must survive a halftone, population choropleths on a black ground, city or capital labels over a dot field, or a static map on GitHub Pages with proper OpenStreetMap attribution. Also when a MapLibre frame reads back black, a dot map stutters or goes blank over the sea, or labels vanish under an overlay canvas.
+description: DotWorld, the dot-matrix globe in the openstreetmap-dot repo, and any halftone or dot-lattice map on MapLibre with an OLED-dark WebGL overlay. Use when a MapLibre frame reads back black, dots stutter or labels vanish.
 ---
 
 # DotWorld: maps drawn as dots
