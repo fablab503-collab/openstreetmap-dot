@@ -68,9 +68,17 @@ Requests are debounced to respect their one-per-second guidance.
 | Population of 644 French communes (the layer this replaced, Sep 2026) | [Wikidata](https://www.wikidata.org/) (P1082) | CC0 1.0 |
 | 195 national capitals, their populations and ISO 3166-1 alpha-2 codes | [Wikidata](https://www.wikidata.org/) (P36, P625, P1082, P297) | CC0 1.0 |
 | Country outlines for the 195 | [Natural Earth](https://www.naturalearthdata.com/) 1:50m admin 0 | public domain |
+| Population by country by year, 1960–2050 | [World Bank Open Data](https://data.worldbank.org/) (estimates, and source 40 projections) | CC BY 4.0 |
+| Historical borders, 1500–1994 | [Historical Basemaps](https://github.com/aourednik/historical-basemaps), Andreas Ourednik | GPL-3.0 |
 | Montpellier monuments + ranking | [Wikidata](https://www.wikidata.org/) & [OpenStreetMap](https://www.openstreetmap.org/) | CC0 1.0 / ODbL |
 | The best-known monuments of all 195 capitals | [Wikidata](https://www.wikidata.org/) (P625 + sitelink counts) | CC0 1.0 |
 | The outline of each of those monuments | [OpenStreetMap](https://www.openstreetmap.org/copyright) via [Overpass](https://overpass-api.de/) | ODbL 1.0 |
+
+The historical borders are **fetched from the project's own CDN at the moment you
+ask for them, never copied into this repository**: the dataset is GPL-3.0 and DotWorld's
+own code is MIT, and mixing those licences by redistribution is not something a map
+should do quietly. They are approximations drawn for illustration, not a legal record
+of any border.
 
 Monument ranking counts how many Wikipedia editions and sister projects cover each
 site — so the ordering is really the work of **Wikipedia's editors**. Montpellier's

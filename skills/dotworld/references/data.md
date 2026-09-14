@@ -283,6 +283,42 @@ ORDER BY DESC(?links) LIMIT 150
   Notre-Dame. Rome → Colosseum, St. Peter's, Sistine Chapel. Athens → Parthenon,
   Acropolis. Moscow → Red Square, Kremlin, St. Basil's.
 
+## Population through time — World Bank (CC BY 4.0)
+
+`scripts/fetch_population_by_year.py` writes one file: every country, 1960 to 2050,
+in thousands.
+
+- **Estimates and projections come from different sources.** 1960 to the present is
+  the default source; the future is `?source=40`, "Population estimates and
+  projections", which runs to 2050. Record where the estimates stop so the app can
+  say which it is showing.
+- **One request per year, not per country.** `country/all` returns every country for
+  a year in one call: 91 requests rather than 240.
+- **The world's own row has id `1W`, not `WLD`.** `WLD` is its alpha-3 code, in a
+  different field. Filtering on the wrong one drops the single series the live
+  counter needs, silently, and the file still looks complete.
+- Scale each city by **its own country**, never by a world average: 1960 to 2050,
+  France goes 47 M to 70 M, Japan 93 M to 105 M *after peaking*, Nigeria 45 M to
+  359 M. A single world factor would erase all three stories.
+- 243 countries x 91 years is **117 KB** stored in thousands, so it can be fetched
+  the first time someone moves the year bar and never again.
+
+## Historical borders — Historical Basemaps (GPL-3.0)
+
+`https://cdn.jsdelivr.net/gh/aourednik/historical-basemaps@master/geojson/world_YYYY.geojson`
+
+- 54 eras, from 123,000 BC to 2010; the useful modern ones are 1500, 1600, 1700,
+  1800, 1900, 1914, 1920, 1938, 1945, 1960, 1994. Each file is 1-2 MB, so fetch the
+  one era you need, when you need it.
+- **Do not copy them into an MIT repo.** The dataset is GPL-3.0. Fetching from the
+  project's own CDN at the moment the user asks keeps the licences apart, and the
+  credit still has to be visible.
+- They are approximations for drawing, and they are drawn over *today's* coastlines
+  and roads, because the tiles only know now. Say that in the interface.
+- What else is wrong in an old year: today's capitals, today's monuments. DotWorld
+  stops drawing both below 1995 rather than showing Berlin's monuments over the
+  borders of 1789.
+
 ## Time zones — GeoNames (CC BY 4.0)
 
 `scripts/add_capital_timezones.py` writes an IANA zone name onto each capital.

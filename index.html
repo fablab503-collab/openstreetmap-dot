@@ -247,7 +247,11 @@
   #zoombar .top { display:flex; justify-content:space-between; color:#6a6a6a;
     letter-spacing:.1em; text-transform:uppercase; font-size:10px; }
   #zoombar .top b { color:#e8e8e8; font-weight:400; letter-spacing:0; }
-  #s-zoom { width:100%; accent-color:#8a8a8a; height:16px; margin:2px 0 0; }
+  #s-zoom, #s-year { width:100%; accent-color:#8a8a8a; height:16px; margin:2px 0 0; }
+  #b-now { background:#000; color:#6a6a6a; border:1px solid #1e1e1e; font:inherit;
+    font-size:9px; letter-spacing:.08em; text-transform:uppercase; cursor:pointer;
+    padding:1px 6px; margin-left:6px; }
+  #b-now:hover { border-color:var(--lit); color:var(--lit); }
   /* Placed at the zoom each word actually means, not spread evenly: the scale is
      -2 to 22, so even spacing would put "city" at z14, which is a rooftop. */
   #zoombar .marks { position:relative; height:12px; color:#3e3e3e;
@@ -480,6 +484,13 @@
   <input id="s-zoom" type="range" min="0" max="20" step="0.1" value="5"
          aria-label="Zoom level">
   <div class="marks" id="zoom-marks"></div>
+  <div class="top" style="margin-top:7px">
+    <span id="year-kind">YEAR</span>
+    <span><b id="l-year">—</b> <button id="b-now" type="button">NOW</button></span>
+  </div>
+  <input id="s-year" type="range" min="1500" max="2050" step="1" value="2026"
+         aria-label="Year">
+  <div class="marks" id="year-marks"></div>
 </div>
 
 <div id="attr"><a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>
@@ -533,6 +544,10 @@
       <li><a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a>
         (CC BY 4.0) — the population of every city in the world over 15,000 people,
         and the time zone of each capital</li>
+      <li><a href="https://github.com/aourednik/historical-basemaps" target="_blank" rel="noopener">Historical
+        Basemaps</a> by Andreas Ourednik (GPL-3.0) — the borders of 1500 to 1994, when
+        you take the year bar back. Approximations for drawing, not a legal record.
+        Fetched from the project's own CDN, never copied into this repo</li>
       <li><a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a>
         (CC0) — the 195 capitals with their populations and country codes, the
         best-known monuments of every capital, Montpellier's monuments</li>
@@ -1551,6 +1566,7 @@ map.once('load', () => {
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [c[0], c[1]] },
       properties: { pop: c[2], i } }));
+    CITY_RAW = j.cities;
     const src = map.getSource('worldpop');
     if (src) src.setData({ type: 'FeatureCollection', features });
     applyPopFilter();
@@ -1568,6 +1584,9 @@ function angularDist(aLat, aLon, bLat, bLon) {
 
 function drawCapitals() {
   if (!CAPITALS.length) return;
+  // In a historical era the capitals on file are the wrong ones: Bonn, not Berlin;
+  // Leningrad, not St Petersburg. Draw none rather than the wrong ones.
+  if (historicalEra) return;
   const W = labels.width, H = labels.height;
   const fs = Math.max(9, Math.round(9.5 * DPR));
   lctx.font = fs + 'px "Space Mono", ui-monospace, monospace';
@@ -2023,7 +2042,7 @@ map.once('load', shapesIfClose);
    toggle, and whether the map is in 3D - flat outline or cyan volume, never both. */
 function monumentVisibility() {
   const threeD = b3d.getAttribute('aria-pressed') === 'true';
-  const on = showCapMon && dataColour;
+  const on = showCapMon && dataColour && !historicalEra;
   const set = (id, v) => {
     if (map.getLayer(id))
       map.setLayoutProperty(id, 'visibility', v ? 'visible' : 'none');
@@ -2320,6 +2339,152 @@ const fmtPop = n => n >= 1e6 ? (n / 1e6).toFixed(2) + ' M'
 // Band edges are round numbers; printing them as 1.00 M reads like a measurement.
 const fmtEdge = n => n >= 1e6 ? +(n / 1e6).toFixed(2) + ' M'
                    : n >= 1e3 ? Math.round(n / 1e3) + ' K' : String(n);
+/* ---------------------------------------------------------------------------
+   Time. The map shows now by default; the bar at the bottom takes it back to 1500
+   or forward to 2050, and two different things happen on the way.
+
+   POPULATION, 1960 to 2050. Every city is scaled by its OWN country's trajectory,
+   not by a single world figure: Japan in 2050 is smaller than Japan today while
+   Nigeria is three times larger, and a world average would hide exactly that.
+   Estimates to 2025, projections after - the readout says which. Before 1960 the
+   World Bank has nothing, so the cities come off the map rather than being invented.
+
+   BORDERS, 1500 to 1994, from the historical-basemaps project. They are drawn over
+   today's coastlines and today's roads, because the tiles only know now: what
+   changes is who claimed what. The files are fetched from the project's own CDN
+   rather than copied in here - they are GPL-3.0 and this repo is MIT.
+   --------------------------------------------------------------------------- */
+let CITY_RAW = null, POPYEARS = null, popYearsReady = null;
+let historicalEra = false;      // true below 1995: today's capitals would be a lie
+const CURRENT_YEAR = new Date().getFullYear();
+const ERAS = [1500, 1600, 1700, 1800, 1900, 1914, 1920, 1938, 1945, 1960, 1994];
+const ERA_URL = y =>
+  'https://cdn.jsdelivr.net/gh/aourednik/historical-basemaps@master/geojson/world_'
+  + y + '.geojson';
+
+function ensurePopYears() {
+  if (popYearsReady) return popYearsReady;
+  popYearsReady = fetch('data/population-by-year.json')
+    .then(r => r.json())
+    .then(j => { POPYEARS = j; return j; })
+    .catch(() => { popYearsReady = null; return null; });
+  return popYearsReady;
+}
+
+let eraLoaded = null, eraReady = null;
+function showEra(year) {
+  const era = [...ERAS].reverse().find(y => y <= year) || null;
+  if (!era || year >= 1995) {
+    if (map.getLayer('history')) map.setLayoutProperty('history', 'visibility', 'none');
+    return;
+  }
+  if (era === eraLoaded) {
+    if (map.getLayer('history')) map.setLayoutProperty('history', 'visibility', 'visible');
+    return;
+  }
+  eraLoaded = era;
+  set('l-year', sYear.value + ' · LOADING ' + era);
+  eraReady = fetch(ERA_URL(era)).then(r => r.json()).then(j => {
+    if (eraLoaded !== era) return;             // the bar moved on while it loaded
+    if (map.getSource('history')) map.getSource('history').setData(j);
+    else {
+      map.addSource('history', { type: 'geojson', data: j });
+      map.addLayer({ id: 'history', type: 'line', source: 'history',
+        paint: { 'line-color': '#c0c0c0', 'line-opacity': 0.85,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 1, 0.6, 5, 1.6, 10, 3] } });
+    }
+    map.setLayoutProperty('history', 'visibility', 'visible');
+    labelYear();
+    dirty = true;
+  }).catch(() => { eraLoaded = null; labelYear(); });
+}
+
+function labelYear() {
+  const y = +sYear.value;
+  const era = [...ERAS].reverse().find(e => e <= y);
+  const kind = y === CURRENT_YEAR ? 'YEAR — NOW'
+             : y > 2025 ? 'YEAR — PROJECTION'
+             : y >= 1960 ? 'YEAR — ESTIMATE'
+             : 'YEAR — BORDERS ONLY';
+  set('year-kind', kind);
+  set('l-year', y + (y < 1995 && era ? ' · BORDERS ' + era : ''));
+}
+
+async function applyYear() {
+  const y = +sYear.value;
+  labelYear();
+  showEra(y);
+  /* Capitals and their monuments are today's facts; showing them over 1789's
+     borders would be a lie the map tells confidently. */
+  historicalEra = y < 1995;
+  monumentVisibility();
+
+  if (y < 1960 || !CITY_RAW) {
+    if (map.getLayer('population'))
+      map.setLayoutProperty('population', 'visibility', y < 1960 ? 'none' : 'visible');
+    if (y < 1960) {
+      set('h-people', 'NO DATA');
+      set('h-places', '—');
+    }
+    return;
+  }
+  if (map.getLayer('population'))
+    map.setLayoutProperty('population', 'visibility', dataColour ? 'visible' : 'none');
+
+  const [py, names] = await Promise.all([ensurePopYears(), ensureCityNames()]);
+  if (!py || +sYear.value !== y) return;
+  const i = y - py.from, iNow = Math.min(py.to, CURRENT_YEAR) - py.from;
+  const factor = {};
+  for (const cc in py.cc) {
+    const then = py.cc[cc][i], now = py.cc[cc][iNow];
+    factor[cc] = (then > 0 && now > 0) ? then / now : 1;
+  }
+  const world = factor.WLD || 1;
+  const features = CITY_RAW.map((c, k) => {
+    const f = (names && factor[names.cc[k]]) || world;
+    return { type: 'Feature', geometry: { type: 'Point', coordinates: [c[0], c[1]] },
+             properties: { pop: Math.max(1, Math.round(c[2] * f)), i: k } };
+  });
+  const src = map.getSource('worldpop');
+  if (src) src.setData({ type: 'FeatureCollection', features });
+
+  for (const cap of CAPITALS) {
+    const f = (cap.cc && factor[cap.cc]) || world;
+    const pop = Math.max(0, Math.round((cap.pop0 || cap.pop) * f));
+    if (cap.pop0 === undefined) cap.pop0 = cap.pop;
+    cap.pop = pop;
+    cap.band = pop > 0 ? bandFor(pop) : null;
+    cap.color = pop > 0 ? bandFor(pop).hex : '#6a6a6a';
+    cap.popLabel = pop > 0 ? fmtCapPop(pop) : '';
+  }
+  yearWorld = y === CURRENT_YEAR ? null
+            : { pop: (py.cc.WLD[i] || 0) * 1000, year: y, projection: y > py.estimatesTo };
+  dirty = true;
+}
+
+const sYear = document.getElementById('s-year');
+let yearTimer = null, yearWorld = null;
+sYear.addEventListener('input', () => {
+  labelYear();
+  clearTimeout(yearTimer);
+  yearTimer = setTimeout(applyYear, 140);      // a scrub should not refetch per pixel
+});
+document.getElementById('b-now').addEventListener('click', () => {
+  sYear.value = CURRENT_YEAR;
+  applyYear();
+});
+map.once('load', () => {
+  sYear.value = CURRENT_YEAR;
+  const marks = document.getElementById('year-marks');
+  marks.innerHTML = [1500, 1800, 1900, 1960, CURRENT_YEAR, 2050].map(y => {
+    const pct = (y - 1500) / (2050 - 1500) * 100;
+    const style = pct < 8 ? 'left:0' : pct > 92 ? 'right:0' : `left:${pct.toFixed(1)}%`;
+    const t = pct < 8 || pct > 92 ? 'transform:none' : '';
+    return `<span style="${style};${t}">${y === CURRENT_YEAR ? 'NOW' : y}</span>`;
+  }).join('');
+  labelYear();
+});
+
 /* The topic strip: the column scrolls, so jumping beats hunting. */
 document.getElementById('topics').addEventListener('click', e => {
   const b = e.target.closest('button');
@@ -2781,6 +2946,16 @@ function tickClock() {
 
 function tickStats() {
   const now = Date.now();
+  if (yearWorld) {                    // the bar is not on "now": show that year instead
+    document.getElementById('s-pop').textContent =
+      Math.round(yearWorld.pop).toLocaleString('en-GB');
+    set('s-src', (yearWorld.projection ? 'PROJECTED ' : 'WORLD BANK ') + yearWorld.year);
+    document.getElementById('live-dot').classList.add('stale');
+    set('s-net', '—'); set('s-born', '—'); set('s-died', '—');
+    tickClock();
+    return;
+  }
+  document.getElementById('live-dot').classList.remove('stale');
   const pop = projectedPop(now);
   const bornPerSec = pop * (WORLD.birth / 1000) / (YEAR_MS / 1000);
   const diedPerSec = pop * (WORLD.death / 1000) / (YEAR_MS / 1000);

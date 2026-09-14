@@ -5,6 +5,37 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — A year bar: 1500 to 2050
+
+### Added
+
+- **The map can show another year.** A second bar at the bottom, from **1500 to
+  2050**, and two different things happen on the way.
+- **Population, 1960 to 2050.** Every city is scaled by **its own country's**
+  trajectory, not by one world figure — between 1960 and 2050 France goes 47 M to
+  70 M, Japan 93 M to 105 M *after peaking*, Nigeria 45 M to 359 M, and a world
+  average would erase all three. Estimates to 2025, projections after, and the
+  readout says which. The live counter switches to that year's figure and stops
+  pretending to tick.
+- **Borders, 1500 to 1994**, from the Historical Basemaps project: the map draws the
+  borders of the nearest era at or before the year you chose. They are fetched from
+  the project's own CDN when you ask for them and never copied into this repo — the
+  dataset is GPL-3.0 and this code is MIT.
+- **What the map refuses to show in an old year**: nothing before 1960 has
+  population here, so the city dots come off rather than being invented; and below
+  1995 the capitals and their monuments come off too, because the ones on file are
+  today's. Berlin's monuments over the borders of 1789 would be a lie told
+  confidently.
+- `data/population-by-year.json`: 243 countries x 91 years, 117 KB, fetched the
+  first time the year bar moves.
+
+### Notes
+
+- Historical borders are drawn over **today's** coastlines and roads: the tiles only
+  know now. What changes is who claimed what.
+
+---
+
 ## 2026-09-14 — Scroll down for the rest of it
 
 ### Added
