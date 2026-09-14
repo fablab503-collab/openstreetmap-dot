@@ -397,7 +397,7 @@
   <div class="sep"></div>
   <span class="row">MONUMENTS <b id="m-total">—</b></span>
   <span class="row">CAPITALS COVERED <b id="m-caps">—</b></span>
-  <span class="row">WITH AN OUTLINE <b id="m-shapes">—</b></span>
+  <span class="row">WITH AN OUTLINE <b id="m-shapes">ON OPENING</b></span>
   <span class="sub">Ranked by how many Wikipedia editions and sister projects cover
     each one. That ranking is Wikipedia's editors' work, not mine.</span>
 </div>
@@ -2326,6 +2326,9 @@ document.getElementById('topics').addEventListener('click', e => {
   if (!b) return;
   const el = document.getElementById(b.dataset.to);
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Opening the monuments topic is a good enough reason to fetch their outlines:
+  // it is the one number on that panel the map has not already got.
+  if (b.dataset.to === 'p-monuments') ensureShapes();
 });
 
 /* Small charts, in the one shape that fits a 240 px column: label, bar, number.
