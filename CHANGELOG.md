@@ -5,6 +5,41 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — The black when you zoom in: three faults, one symptom
+
+Daniel: "there is a black matter coming when zooming in." Three separate things
+were making it, and the third made the planet disappear outright.
+
+### Fixed
+
+- **The blur was worked out per dot, against the body's centre.** On a close planet
+  the near cap sits a long way off that plane in relative terms, so the middle of the
+  Earth smeared into soft blobs while its rim stayed sharp. A body is one object at
+  one distance now: one blur for the whole of it, taken from its centre - which also
+  means whatever you are looking at is always sharp, since its own distance *is* the
+  focal distance.
+- **Dim dots quantised to pure black.** Colours are packed to sixteen levels a channel
+  to keep the painter batching, and the packing truncated: every channel under 16 fell
+  to level zero. So the unlit half of a planet came out #000000 - invisible - and the
+  ambient floor did nothing. It rounds now, and the floor went from 0.07 to 0.16.
+- **A near-plane guard in display units, and true scale falls under it.** A display
+  unit is ten billion metres at true scale, so standing 1.4 Earth radii up puts the
+  whole planet at z = 0.0009 - under the `z > 0.001` the draw loop used to decide what
+  is in front of the camera. **Below about 1.57 radii the Earth was simply dropped
+  from the frame.** It is a named constant now, `NEAR = 1e-12`, in all five places
+  that guard depth. Coverage across the zoom, measured: 1.02 radii 100% of the screen
+  and 11,745 dots, 1.1 → 98.7%, 1.4 → 77.4%, 2 → 48.4%, 3.2 → 19.3%, 20 → 89 dots,
+  1000 → one point of light.
+
+### Added
+
+- `window.__space.dbg` - what the renderer actually did with each body last frame:
+  its distance, its screen radius, the lattice pitch and how many dots it drew. None
+  of this is reachable from outside the module, and three rounds of guessing at this
+  bug is what it cost to not have it.
+
+---
+
 ## 2026-09-14 — Out: the night lights and the hand spin
 
 Daniel called both of them bugs and asked for them out. They are out.

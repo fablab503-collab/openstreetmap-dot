@@ -3383,6 +3383,7 @@ const SP = {
   on: false, focus: 'earth', az: 0.6, el: 0.35, dist: 3 * 6.371e6,
   dof: 1, well: true, orbits: true, trueScale: true, rate: 1, localP: 1,
   realism: 1,      // 0 = the house colour, 1 = the body's own
+  dbg: {},
   t: Date.now(), last: 0, raf: 0, bodies: null, ready: null, pos: {},
 };
 
@@ -3616,6 +3617,12 @@ const STARS = (() => {
    Orbits whatever it is looking at. Its distance is real metres, so the gravity
    readout is a real figure; where it goes on screen is that distance put through
    the same squashing as everything else, or the two would disagree. */
+/* The near plane, in display units. It cannot be a round number like 0.001: at true
+   scale a display unit is ten billion metres, so standing 1.25 Earth radii up puts the
+   whole planet at z = 0.0008 and every guard written for the squashed view threw it
+   away - which is why zooming in far enough turned the screen black. */
+const NEAR = 1e-12;
+
 const V = {
   sub: (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z }),
   dot: (a, b) => a.x * b.x + a.y * b.y + a.z * b.z,
@@ -3670,7 +3677,7 @@ function cocFor(z, cam) {
 function dot3(cam, p, px, hex, alpha, batch) {
   const v = V.sub(p, cam.pos);
   const z = V.dot(v, cam.fwd);
-  if (z <= 0.001) return;
+  if (z <= NEAR) return;
   const sx = cam.W / 2 + cam.f * V.dot(v, cam.right) / z;
   const sy = cam.H / 2 - cam.f * V.dot(v, cam.up) / z;
   if (sx < -20 || sy < -20 || sx > cam.W + 20 || sy > cam.H + 20) return;
@@ -3754,11 +3761,14 @@ function shade(b, col, lit) {
   // A floor under the light, so the unlit half is a dark version of itself rather
   // than nothing at all. Real night sides are not black either - they get earthshine,
   // starlight, and their own heat.
-  const li = Math.max(lit, 0.05);
+  const li = Math.max(lit, 0.16);
   const r = (col[0] * m + house[0] * (1 - m)) * li * (SUNLIGHT[0] / 255);
   const g = (col[1] * m + house[1] * (1 - m)) * li * (SUNLIGHT[1] / 255);
   const bl = (col[2] * m + house[2] * (1 - m)) * li * (SUNLIGHT[2] / 255);
-  const q = v => Math.min(15, Math.max(0, v * 0.0627 | 0));   // 0..255 -> 0..15
+  /* Round, do not truncate. Truncating sent every channel under 16 to level zero, so
+     a dimly lit dot came out pure black and the whole unlit half of a planet simply
+     vanished - which is what "black matter when zooming in" was. */
+  const q = v => Math.min(15, Math.max(0, Math.round(v / 17)));   // 0..255 -> 0..15
   const key = (q(r) << 8) | (q(g) << 4) | q(bl);
   let hex = SHADE_CACHE.get(key);
   if (hex === undefined) {
@@ -3801,13 +3811,14 @@ function emitBody(key, pos, cam, batch, t, pre) {
   const b = SP.bodies[key];
   const pd = dispOf(pos[key], key, pos);
   const v = V.sub(pd, cam.pos), z = V.dot(v, cam.fwd);
-  if (z <= 0.001) return;
+  if (z <= NEAR) return;
   /* Clamped, because the moment the camera gets close the projected radius runs
      away - and a silhouette the size of four screens is the black oval that kept
      appearing over everything while zooming. */
   const rs = Math.min(Math.max(cam.W, cam.H) * 2, cam.f * squashRad(b.R, key) / z);
   if (rs < 1.4) {                       // too far to be a disc: one point of light
     dot3(cam, pd, Math.max(1.3, rs), b.hex, 1, batch);
+    SP.dbg[key] = { rs: +rs.toFixed(2), dots: 1 };
     return;
   }
   const cx = cam.W / 2 + cam.f * V.dot(v, cam.right) / z;
@@ -3821,7 +3832,7 @@ function emitBody(key, pos, cam, batch, t, pre) {
      which is an "Invalid array length", not a slow frame. */
   const x0 = Math.max(-rs, -cx - 20), x1 = Math.min(rs, cam.W - cx + 20);
   const y0 = Math.max(-rs, -cy - 20), y1 = Math.min(rs, cam.H - cy + 20);
-  if (x1 < x0 || y1 < y0) return;
+  if (x1 < x0 || y1 < y0) return;          // wholly off screen
   /* A body hides whatever is behind it. Nothing here is depth-tested - the dots are
      added to the frame like light - so the silhouette is punched in black first,
      while the bodies are drawn far to near. Without it the Moon shines through the
@@ -3837,6 +3848,13 @@ function emitBody(key, pos, cam, batch, t, pre) {
      is only a floor against a planet that fills the screen. */
   const area = Math.min(Math.PI * rs * rs, (x1 - x0 + 40) * (y1 - y0 + 40));
   const pitch = Math.max(Math.max(2, 18 * scale) * cam.dpr, Math.sqrt(area / 12000));
+  /* One blur for the whole body, taken from its centre - not one per dot.
+     Per dot, the near cap of a close planet sits a long way off the focal plane in
+     relative terms, so the middle of the Earth smeared into soft blobs while its rim
+     stayed sharp: the "black matter" that turned up on zooming in. A body is one
+     object at one distance, so it is sharp or soft as one thing - and whatever you
+     are looking at is always sharp, because z is its own focal distance. */
+  const bodyCoc = cocFor(z, cam);
   const map = (TEX && SP.realism > 0)
     ? TEX[key === 'earth' ? 'earth_day' : key] || null : null;
 
@@ -3849,6 +3867,7 @@ function emitBody(key, pos, cam, batch, t, pre) {
   // Start on a multiple of the pitch so the lattice sits still on the body instead
   // of crawling across it as the body moves.
   const sx0 = Math.ceil(x0 / pitch) * pitch, sy0 = Math.ceil(y0 / pitch) * pitch;
+  let drawn = 0;
   for (let y = sy0; y <= y1; y += pitch) {
     for (let x = sx0; x <= x1; x += pitch) {
       const q = (x * x + y * y) / (rs * rs);
@@ -3861,9 +3880,8 @@ function emitBody(key, pos, cam, batch, t, pre) {
          an airless body cuts from day to night in one step, and the Earth does not. */
       let lit = sunDir ? V.dot(n, sunDir) : 1;
       lit = AIR[key] ? Math.max(0, (lit + AIR[key]) / (1 + AIR[key])) : Math.max(0, lit);
-      const bright = key === 'sun' ? 1 : 0.04 + 0.96 * lit;
-      const depth = z - nz * squashRad(b.R, key);
-      const coc = cocFor(depth, cam);
+      const bright = key === 'sun' ? 1 : 0.06 + 0.94 * lit;
+      const coc = bodyCoc;
       // Real colour: where on the body this dot is, and what colour it is there.
       let col = null;
       if (map) {
@@ -3878,7 +3896,10 @@ function emitBody(key, pos, cam, batch, t, pre) {
           col = [SUNLIGHT[0] * l, SUNLIGHT[1] * l, SUNLIGHT[2] * l];
         }
       }
-      if (bright < 0.045) continue;
+      /* The unlit half has to draw. With the cut at 0.045 the floor of 0.04 fell
+         just under it, so every dot on the night side was skipped and getting close
+         to it left a black screen with a planet-shaped hole in it. */
+      if (bright < 0.03) continue;
       /* Brightness rides the dot's size, not only its alpha - the same halftone
          rule the map uses. A grid of equally small dots across a planet filling
          the screen reads as an empty screen, which is what the first build did. */
@@ -3887,8 +3908,13 @@ function emitBody(key, pos, cam, batch, t, pre) {
                       : ramp(b)[Math.min(7, Math.round(bright * 7))];
       (batch[hex] || (batch[hex] = [])).push(cx + x, cy + y, r,
                                              0.95 / (1 + coc * coc * 0.7));
+      drawn++;
     }
   }
+  // A window on what the renderer actually did, since none of this is reachable from
+  // outside the module: window.__space.dbg.earth after a frame.
+  SP.dbg[key] = { z, rs: +rs.toFixed(1), pitch: +pitch.toFixed(1), dots: drawn,
+                  cx: +cx.toFixed(0), cy: +cy.toFixed(0) };
   const onSurface = n => ({ x: cx + rs * V.dot(n, cam.right),
                             y: cy - rs * V.dot(n, cam.up) });
   if (key === 'moon') emitNearSide(pos, cam, batch, rs, fr, b, onSurface);
@@ -4045,7 +4071,7 @@ function labelBodies(pos, cam) {
     const b = SP.bodies[k]; if (!b) continue;
     const pd = dispOf(pos[k], k, pos);
     const v = V.sub(pd, cam.pos), z = V.dot(v, cam.fwd);
-    if (z <= 0.001) continue;
+    if (z <= NEAR) continue;
     const sx = cam.W / 2 + cam.f * V.dot(v, cam.right) / z;
     const sy = cam.H / 2 - cam.f * V.dot(v, cam.up) / z;
     if (sx < 0 || sy < 0 || sx > cam.W || sy > cam.H) continue;
@@ -4267,7 +4293,7 @@ function spaceFrame(now) {
     if (!SP.bodies[k]) continue;
     const v = V.sub(dispOf(pos[k], k, pos), cam.pos);
     const z = V.dot(v, cam.fwd);
-    if (z > 0.001) order.push([k, z]);
+    if (z > NEAR) order.push([k, z]);
   }
   order.sort((a, b) => b[1] - a[1]);
   for (const [k] of order) {
@@ -4406,7 +4432,7 @@ function spacePick(e) {
     const b = SP.bodies[k]; if (!b) continue;
     const pd = dispOf(SP.pos[k], k, SP.pos);
     const v = V.sub(pd, cam.pos), z = V.dot(v, cam.fwd);
-    if (z <= 0.001) continue;
+    if (z <= NEAR) continue;
     const sx = cam.W / 2 + cam.f * V.dot(v, cam.right) / z;
     const sy = cam.H / 2 - cam.f * V.dot(v, cam.up) / z;
     const rs = Math.max(8 * d, cam.f * squashRad(b.R, k) / z);
