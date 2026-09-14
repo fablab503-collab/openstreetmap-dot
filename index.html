@@ -548,21 +548,6 @@
     you pulls a little less than the figure above. It is why NASA prints two numbers
     for the Earth's surface: 9.780 m/s² at the equator, 9.832 at the pole.</span>
   <span class="row" id="sp-bulge-row">SQUASHED BY IT <b id="sp-bulge">—</b></span>
-  <div class="sep"></div>
-  <span class="ttl">SPUN BY HAND</span>
-  <span class="sub" id="sp-grabhint">Grab a planet and flick it. Nothing out there is
-    touching it, so it keeps whatever spin you give it — the only brake is the tide,
-    and the panel says how long that would take.</span>
-  <span class="row" id="sp-hand-row">NOW TURNS ONCE IN <b id="sp-handper">—</b></span>
-  <span class="row" id="sp-hand-mom">ANGULAR MOMENTUM <b id="sp-handL">—</b></span>
-  <span class="row" id="sp-hand-en">ENERGY YOU ADDED <b id="sp-handE">—</b></span>
-  <span class="row" id="sp-hand-fat">FAT FROM SPIN <b id="sp-handF">—</b></span>
-  <span class="row" id="sp-hand-brk">COMES APART AT <b id="sp-handB">—</b></span>
-  <span class="row" id="sp-hand-last">SPIN LASTS <b id="sp-handT">—</b></span>
-  <span class="sub" id="sp-handnote">A hand is far too strong for a planet: a normal
-    flick asks for ten thousand times its own spin. It is held at the rate where the
-    equator would fly off — that line is physics, not a setting. The bulge drawn is
-    the one a fluid body of that spin would take.</span>
   <span class="row" id="sp-slow-row">SLOWING DOWN <b id="sp-slow">—</b></span>
   <span class="sub" id="sp-slownote"></span>
   <div class="sep"></div>
@@ -628,21 +613,14 @@
     <div class="prow"><span>realism</span>
       <input id="sp-realism" type="range" min="0" max="100" step="1" value="100"
              aria-label="How much of each body's real colour to use"><b id="l-realism">100%</b></div>
-    <div class="prow"><span>lights</span>
-      <button id="sp-lights" class="pval" type="button">real</button></div>
     <div class="prow"><span>depth of field</span>
       <input id="sp-dof" type="range" min="0" max="6" step="0.1" value="1"><b id="l-dof">1.0</b></div>
-    <div class="prow"><span>bulge</span>
-      <input id="sp-bulge" type="range" min="0" max="100" step="1" value="100"
-             aria-label="How much of the spin's flattening to draw"><b id="l-bulge">100%</b></div>
     <div class="prow"><span>scale</span>
       <button id="sp-true" class="pval" type="button" aria-pressed="true">true</button></div>
     <div class="prow"><span>gravity well</span>
       <button id="sp-well" class="pval" type="button" aria-pressed="true">on</button></div>
     <div class="prow"><span>orbits</span>
       <button id="sp-orbits" class="pval" type="button" aria-pressed="true">on</button></div>
-    <div class="prow"><span>hand spin</span>
-      <button id="sp-unspin" class="pval" type="button">give it back</button></div>
     <button id="sp-back">BACK TO EARTH</button>
   </div>
 </div>
@@ -3404,24 +3382,16 @@ const AIR = { earth: 0.09, venus: 0.16, mars: 0.04, jupiter: 0.10, saturn: 0.10,
 const SP = {
   on: false, focus: 'earth', az: 0.6, el: 0.35, dist: 3 * 6.371e6,
   dof: 1, well: true, orbits: true, trueScale: true, rate: 1, localP: 1,
-  hand: {},        // spin given by hand, per body: { angle, w }
-  grab: null,
   realism: 1,      // 0 = the house colour, 1 = the body's own
-  lights: 'real',  // real | population | off
-  bulge: 1,        // how much of the spin's flattening to draw
   t: Date.now(), last: 0, raf: 0, bodies: null, ready: null, pos: {},
 };
 
 /* ── real colour ────────────────────────────────────────────────────────────
    Each body carries a small equirectangular map of its own true colour, sampled
-   down from the Solar System Scope texture set (CC BY 4.0) - 160x80 for the Earth
-   day side and its night lights, 64x32 for everything else. Sampling that per dot
-   is what makes the Earth read as the Earth rather than as a turquoise ball: ocean,
-   desert, forest, ice, each where it actually is.
-
-   The night side is the real lights: the same source's night map, which comes from
-   the satellite night-lights imagery. So a dot over Japan is bright because Japan is
-   bright, not because a population file says so. */
+   down from the Solar System Scope texture set (CC BY 4.0) - 224x112 for the Earth,
+   64x32 for everything else. Sampling that per dot is what makes the Earth read as
+   the Earth rather than as a turquoise ball: ocean, desert, forest, ice, each where
+   it actually is. */
 let TEX = null, texReady = null;
 function loadTextures() {
   if (texReady) return texReady;
@@ -3449,16 +3419,6 @@ function sampleMap(m, lat, lon) {
   const i = mapIndex(m, lat, lon) * 3;
   return [m.px[i], m.px[i + 1], m.px[i + 2]];
 }
-/* The night map in 0..1, with its own floor taken off. Of its 41,472 pixels, 38,433
-   sit in one low bucket - that is airglow and sensor noise over empty ground, not
-   towns - and only 0.09% get above a quarter brightness. Stretching from the floor
-   to the peak the image actually reaches is what turns a brown smear back into
-   cities. */
-function sampleNight(m, lat, lon) {
-  const v = m.px[mapIndex(m, lat, lon)];
-  return Math.pow(Math.max(0, (v - m.floor) / Math.max(1, m.peak - m.floor)), 0.7);
-}
-
 /* The colour of sunlight, from the one number that decides it: the Sun's effective
    temperature, 5772 K (NASA). Kim et al.'s cubic fit of the Planckian locus gives
    the chromaticity, and that goes through the standard sRGB matrix. It lands on
@@ -3787,19 +3747,17 @@ const HEX2 = v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStar
    Sixteen levels is invisible on a dot two pixels wide and it keeps the painter
    batching. */
 const SHADE_CACHE = new Map();
-function shade(b, col, lit, night) {
+function shade(b, col, lit) {
   const m = SP.realism, house = b._rgb || (b._rgb = [
     parseInt(b.hex.slice(1, 3), 16), parseInt(b.hex.slice(3, 5), 16),
     parseInt(b.hex.slice(5, 7), 16)]);
-  const L = 255, Lg = 214, Lb = 150;              // sodium-warm, as street light is
-  const glow = night > 0 ? Math.min(1, night * 2.4) : 0;
   // A floor under the light, so the unlit half is a dark version of itself rather
   // than nothing at all. Real night sides are not black either - they get earthshine,
   // starlight, and their own heat.
   const li = Math.max(lit, 0.05);
-  const r = (col[0] * m + house[0] * (1 - m)) * li * (SUNLIGHT[0] / 255) + L * glow;
-  const g = (col[1] * m + house[1] * (1 - m)) * li * (SUNLIGHT[1] / 255) + Lg * glow;
-  const bl = (col[2] * m + house[2] * (1 - m)) * li * (SUNLIGHT[2] / 255) + Lb * glow;
+  const r = (col[0] * m + house[0] * (1 - m)) * li * (SUNLIGHT[0] / 255);
+  const g = (col[1] * m + house[1] * (1 - m)) * li * (SUNLIGHT[1] / 255);
+  const bl = (col[2] * m + house[2] * (1 - m)) * li * (SUNLIGHT[2] / 255);
   const q = v => Math.min(15, Math.max(0, v * 0.0627 | 0));   // 0..255 -> 0..15
   const key = (q(r) << 8) | (q(g) << 4) | q(bl);
   let hex = SHADE_CACHE.get(key);
@@ -3836,7 +3794,7 @@ function spinAngle(key, b, alpha0, t) {
   } else {
     a = alpha0;
   }
-  return a + (SP.hand[key] ? SP.hand[key].angle : 0);
+  return a;
 }
 
 function emitBody(key, pos, cam, batch, t, pre) {
@@ -3869,22 +3827,11 @@ function emitBody(key, pos, cam, batch, t, pre) {
      while the bodies are drawn far to near. Without it the Moon shines through the
      Earth, which is what it did. */
   const fr = bodyFrame(b);
-  /* Spin it up and it goes fat. A fluid body's flattening follows omega squared r
-     cubed over GM; seen pole-on an oblate body is still a circle, so the squash only
-     bites as far as the axis actually leans across the view. */
-  const wTot = Math.abs(naturalW(b) + handSpin(b));
-  const fOb = flattening(b, wTot) * SP.bulge;
-  const axx = V.dot(fr.axis, cam.right), axy = -V.dot(fr.axis, cam.up);
-  const amRaw = Math.hypot(axx, axy);
-  const am = Math.min(1, amRaw);
-  const ux = amRaw > 1e-4 ? axx / amRaw : 0;
-  const uy = amRaw > 1e-4 ? axy / amRaw : 1;
-  const sq = 1 - fOb * am;
   /* The silhouette is filled with the body's own colour at its ambient level, not
      with black. Black reads as a hole punched in the sky - which is what it looked
      like on an unlit planet, where every dot is culled and only the silhouette is
      left. A dark disc of the right colour reads as an unlit planet, which it is. */
-  if (pre) pre(cx, cy, rs, ux, uy, sq, ramp(b)[0]);
+  if (pre) pre(cx, cy, rs, ramp(b)[0]);
   /* The pitch is the map's own DOT SCALE, so the lattice out here matches the one
      on the ground and the slider does something in both places. The budget below it
      is only a floor against a planet that fills the screen. */
@@ -3892,11 +3839,7 @@ function emitBody(key, pos, cam, batch, t, pre) {
   const pitch = Math.max(Math.max(2, 18 * scale) * cam.dpr, Math.sqrt(area / 12000));
   const map = (TEX && SP.realism > 0)
     ? TEX[key === 'earth' ? 'earth_day' : key] || null : null;
-  const nightMap = (key === 'earth' && TEX && SP.lights === 'real') ? TEX.earth_night : null;
-  const onBody = (px, py) => {                 // inside the (possibly fat) disc
-    const a = px * ux + py * uy, c = -px * uy + py * ux;
-    return (a * a) / (rs * sq * rs * sq) + (c * c) / (rs * rs);
-  };
+
   // Spin: the Sun stands over the longitude that matches the hour, so at noon UTC
   // Greenwich faces it. The equation of time is ignored - a quarter of an hour at
   // worst, about 4° of longitude.
@@ -3908,7 +3851,7 @@ function emitBody(key, pos, cam, batch, t, pre) {
   const sx0 = Math.ceil(x0 / pitch) * pitch, sy0 = Math.ceil(y0 / pitch) * pitch;
   for (let y = sy0; y <= y1; y += pitch) {
     for (let x = sx0; x <= x1; x += pitch) {
-      const q = onBody(x, y);
+      const q = (x * x + y * y) / (rs * rs);
       if (q > 1) continue;
       const nz = Math.sqrt(1 - q);
       const n = { x: cam.right.x * (x / rs) + cam.up.x * (-y / rs) - cam.fwd.x * nz,
@@ -3921,79 +3864,35 @@ function emitBody(key, pos, cam, batch, t, pre) {
       const bright = key === 'sun' ? 1 : 0.04 + 0.96 * lit;
       const depth = z - nz * squashRad(b.R, key);
       const coc = cocFor(depth, cam);
-      /* Real colour: where on the body this dot is, and what colour the body is
-         there. Lit by real sunlight; on the night side, lit by its own lights. */
-      let col = null, night = 0;
-      if (map || nightMap) {
+      // Real colour: where on the body this dot is, and what colour it is there.
+      let col = null;
+      if (map) {
         const la = Math.asin(Math.max(-1, Math.min(1, V.dot(n, fr.axis))));
         const lo = Math.atan2(V.dot(n, fr.e2), V.dot(n, fr.e1)) - spin;
-        if (nightMap) {
-          /* City light is a thin, bright thing: averaged down to a 160-wide map even
-             Tokyo only reaches about a quarter of full, so the value gets a gamma to
-             bring it back up. It is masked off as the Sun comes up, because that is
-             what happens. */
-          night = sampleNight(nightMap, la, lo) * Math.max(0, 1 - lit * 2.4);
-        }
-        if (map) {
-          col = sampleMap(map, la, lo);
-          /* The Sun is the one body whose picture is a convention: from space it is
-             white, because 5772 K is white. Its texture is used only for the mottling
-             - the granulation - with the colour coming from the temperature. */
-          if (key === 'sun') {
-            const l = (col[0] + col[1] + col[2]) / 560 + 0.45;
-            col = [SUNLIGHT[0] * l, SUNLIGHT[1] * l, SUNLIGHT[2] * l];
-          }
+        col = sampleMap(map, la, lo);
+        /* The Sun is the one body whose picture is a convention: from space it is
+           white, because 5772 K is white. Its texture is used only for the mottling
+           - the granulation - with the colour coming from the temperature. */
+        if (key === 'sun') {
+          const l = (col[0] + col[1] + col[2]) / 560 + 0.45;
+          col = [SUNLIGHT[0] * l, SUNLIGHT[1] * l, SUNLIGHT[2] * l];
         }
       }
-      if (bright < 0.045 && night < 0.02) continue;
+      if (bright < 0.045) continue;
       /* Brightness rides the dot's size, not only its alpha - the same halftone
          rule the map uses. A grid of equally small dots across a planet filling
          the screen reads as an empty screen, which is what the first build did. */
-      const show = Math.max(bright, Math.min(1, night * 2.2));
-      const r = Math.max(0.7, pitch * 0.46 * Math.sqrt(show)) + coc;
-      const hex = col ? shade(b, col, bright, night)
+      const r = Math.max(0.7, pitch * 0.46 * Math.sqrt(bright)) + coc;
+      const hex = col ? shade(b, col, bright)
                       : ramp(b)[Math.min(7, Math.round(bright * 7))];
       (batch[hex] || (batch[hex] = [])).push(cx + x, cy + y, r,
                                              0.95 / (1 + coc * coc * 0.7));
     }
   }
-  /* Anything drawn on the surface has to follow the same shape the surface has,
-     or the city lights end up floating off a squashed Earth - which is exactly what
-     they did the first time it was spun up. */
-  const onSurface = n => {
-    const px = rs * V.dot(n, cam.right), py = -rs * V.dot(n, cam.up);
-    const a = (px * ux + py * uy) * sq, c = -px * uy + py * ux;
-    return { x: cx + a * ux - c * uy, y: cy + a * uy + c * ux };
-  };
-  if (key === 'earth' && SP.lights === 'population')
-    emitCities(pos, cam, batch, rs, fr, spin, sunDir, b, onSurface);
+  const onSurface = n => ({ x: cx + rs * V.dot(n, cam.right),
+                            y: cy - rs * V.dot(n, cam.up) });
   if (key === 'moon') emitNearSide(pos, cam, batch, rs, fr, b, onSurface);
   if (key === 'saturn') emitRings(pos, cam, batch, pd, fr, b);
-}
-
-/* The Earth from space, made of its own cities: the same 34,091 the map draws.
-   On the night side they are city lights, in the population colours the map uses;
-   on the day side they are barely there, because that is how it looks. */
-function emitCities(pos, cam, batch, rs, fr, spin, sunDir, b, onSurface) {
-  if (!CITY_RAW) return;
-  // At most a few thousand of the 34,091 in a frame: a globe the size of a coin
-  // cannot show more, and one filling the screen does not need them all to read.
-  const want = Math.max(120, Math.min(4500, rs * rs * 0.05));
-  const stride = Math.max(1, Math.ceil(CITY_RAW.length / want));
-  const toCam = V.norm(V.mul(V.sub(dispOf(pos.earth, 'earth', pos), cam.pos), -1));
-  for (let i = 0; i < CITY_RAW.length; i += stride) {
-    const c = CITY_RAW[i];
-    const n = surfaceDot(fr, c[1] * RAD, c[0] * RAD + spin);
-    if (V.dot(n, toCam) <= 0.02) continue;                  // round the back
-    const lit = sunDir ? Math.max(0, V.dot(n, sunDir)) : 1;
-    const night = 1 - Math.min(1, lit * 2.2);
-    const a = 0.10 + 0.85 * night * Math.min(1, c[2] / 900000);
-    if (a < 0.04) continue;
-    const p = onSurface(n);
-    const hex = night > 0.3 ? bandFor(c[2]).hex : '#9fe8e2';
-    const r = Math.max(0.9, rs / 190);
-    (batch[hex] || (batch[hex] = [])).push(p.x, p.y, night > 0.3 ? r * 1.4 : r, a);
-  }
 }
 
 /* The Moon keeps one face toward us because it turns once per orbit. Marking the
@@ -4173,34 +4072,6 @@ function labelBodies(pos, cam) {
   }
 }
 
-/* ── grabbing a planet and spinning it ───────────────────────────────────────
-   In a vacuum, with no surface to rub on and no air, angular momentum is conserved:
-   a spin you give a planet does not run down. What does eventually take it back is
-   the tide - the Moon has been braking the Earth for four billion years - and the
-   panel puts a number on that with the Earth's own measured rate, +1.72 ms of day
-   length per century. It works out to hundreds of millions of years for a decent
-   flick, which is the honest answer to "how long does it keep spinning".
-
-   Spin it hard enough and it comes apart: the equator flies off when omega squared
-   times r reaches GM over r squared, which for the Earth is one turn every 1 h 24 m.
-   Short of that it just goes fat - a spinning fluid body bulges, and the bulge drawn
-   here follows the Maclaurin form, f = 1.25 omega squared r cubed over GM, which
-   gives the real Earth 0.0043 against its measured 0.0034. Close enough to show the
-   effect honestly, and labelled as a uniform body, which the Earth is not. */
-function handSpin(b) {                     // rad/s given by hand, 0 if untouched
-  return (SP.hand[b.key] && SP.hand[b.key].w) || 0;
-}
-function naturalW(b) {
-  const rotS = Math.abs(b.rotH || 0) * 3600;
-  return rotS ? 2 * Math.PI / rotS : 0;
-}
-function breakupW(b) { return Math.sqrt(b.mu / (b.R * b.R * b.R)); }
-function flattening(b, w) {
-  return Math.min(0.45, 1.25 * w * w * b.R * b.R * b.R / b.mu);
-}
-// A uniform sphere; the real Earth is 0.3307 because its iron is in the middle.
-function inertia(b) { return 0.4 * b.mass * b.R * b.R; }
-
 /* ── the readouts ───────────────────────────────────────────────────────────── */
 /* A million kilometres is 1e9 metres, not 1e6 - getting that wrong printed a camera
    3 Earth radii up as "20.1 M KM", which is past the Moon. */
@@ -4338,47 +4209,6 @@ function spinPanel(pos, cam, b) {
       + ' KM FATTER THAN TALL · 1/' + Math.round(1 / d.flattening));
   } else bulge.style.display = 'none';
 
-  // What your hand did, in the units physics uses for it.
-  const hw = handSpin(b), w0 = naturalW(b), wNow = Math.abs(w0 + hw);
-  const handRows = ['sp-hand-row', 'sp-hand-mom', 'sp-hand-en', 'sp-hand-fat',
-                    'sp-hand-brk', 'sp-hand-last'];
-  const spun = Math.abs(hw) > 1e-9;
-  for (const id of handRows) document.getElementById(id).style.display = spun ? '' : 'none';
-  document.getElementById('sp-grabhint').style.display = spun ? 'none' : '';
-  document.getElementById('sp-handnote').style.display = spun ? '' : 'none';
-  if (spun) {
-    const T = wNow ? 2 * Math.PI / wNow : Infinity;
-    const I = inertia(b);
-    const L = I * wNow, L0 = I * w0;
-    const dE = 0.5 * I * (wNow * wNow - w0 * w0);
-    const wb = breakupW(b);
-    const sci = (v, u) => Math.abs(v) >= 1e5 || Math.abs(v) < 0.01
-      ? v.toExponential(2).replace(/e\+?(-?\d+)/, ' × 10^$1') + ' ' + u
-      : v.toFixed(2) + ' ' + u;
-    set('sp-handper', T < 1e7 ? hms(T) : 'ALMOST STILL');
-    set('sp-handL', sci(L, 'KG M²/S') + ' · ' + (L0 ? (L / L0).toFixed(2) + '× ITS OWN' : ''));
-    set('sp-handE', sci(dE, 'J'));
-    const fRaw = 1.25 * wNow * wNow * b.R * b.R * b.R / b.mu;
-    set('sp-handF', (fRaw > 0.45 ? 'PAST BEING AN ELLIPSOID'
-                                 : (fRaw * 100).toFixed(2) + '% FLATTER')
-      + ' · ' + (wNow / wb * 100).toFixed(1) + '% OF BREAK-UP');
-    set('sp-handB', hms(2 * Math.PI / wb)
-      + (wNow >= wb * 0.999 ? ' · HELD THERE' : ''));
-    /* Nothing stops a spin in a vacuum. The one brake anybody has measured is the
-       tide, and the Earth's own rate is +1.72 ms of day length a century, so the
-       time for a spin to bleed back is the change in day length divided by that.
-       It comes out in hundreds of millions of years, which is the honest answer to
-       "how long does it keep going". */
-    const tid = SP.meta && SP.meta.tides
-      ? SP.meta.tides.day_lengthening_ms_per_century_observed : 1.72;
-    const perSec = (tid / 1000) / (100 * 365.25 * 86400);      // seconds of period per second
-    const dT = Math.abs((w0 ? 2 * Math.PI / w0 : 0) - T);
-    const years = perSec > 0 ? dT / perSec / (365.25 * 86400) : Infinity;
-    set('sp-handT', years > 1e9 ? (years / 1e9).toFixed(2) + ' BILLION YEARS'
-      : years > 1e6 ? (years / 1e6).toFixed(1) + ' MILLION YEARS'
-      : Math.round(years).toLocaleString('en-GB') + ' YEARS');
-  }
-
   const slow = document.getElementById('sp-slow-row');
   const T = SP.meta && SP.meta.tides;
   if (SP.focus === 'earth' && T) {
@@ -4406,16 +4236,7 @@ function spaceFrame(now) {
   if (!SP.on || !SP.bodies) return;
   const dt = SP.last ? Math.min(0.25, (now - SP.last) / 1000) : 0;
   SP.last = now;
-  const simSeconds = dt * RATES[SP.rate].k;
-  SP.t += simSeconds * 1000;
-  /* A hand-given spin runs on the same clock as everything else: pause time and it
-     holds still, run a day a second and it whips round. Nothing damps it, because
-     nothing out there is touching it. */
-  for (const k in SP.hand) {
-    const h = SP.hand[k];
-    if (SP.grab && SP.grab.key === k) continue;      // held: the pointer sets it
-    h.angle += h.w * simSeconds;
-  }
+  SP.t += dt * RATES[SP.rate].k * 1000;
 
   const fb = SP.bodies[SP.focus];
   const radii = SP.dist / (fb && fb.R ? fb.R : 1e6);
@@ -4451,13 +4272,11 @@ function spaceFrame(now) {
   order.sort((a, b) => b[1] - a[1]);
   for (const [k] of order) {
     const batch = {};
-    emitBody(k, pos, cam, batch, SP.t, (cx, cy, rs, ux, uy, sq, hex) => {
+    emitBody(k, pos, cam, batch, SP.t, (cx, cy, rs, hex) => {
       sky.globalCompositeOperation = 'source-over';
       sky.globalAlpha = 1;
       sky.fillStyle = hex;
-      sky.beginPath();
-      sky.ellipse(cx, cy, rs * sq, rs, Math.atan2(uy, ux), 0, 6.2832);
-      sky.fill();
+      sky.beginPath(); sky.arc(cx, cy, rs, 0, 6.2832); sky.fill();
     });
     paintDots(batch);
   }
@@ -4523,11 +4342,6 @@ document.getElementById('b-space').addEventListener('click', () => {
   SP.on ? leaveSpace() : enterSpace();
 });
 document.getElementById('sp-back').addEventListener('click', leaveSpace);
-document.getElementById('sp-unspin').addEventListener('click', () => {
-  // Nothing in space would ever undo a spin. This is the one button that is a
-  // confession rather than a physical process.
-  SP.hand = {}; SP.grab = null;
-});
 document.getElementById('sp-body').addEventListener('change', e => focusOn(e.target.value));
 document.getElementById('sp-rate').addEventListener('input', e => {
   SP.rate = +e.target.value;
@@ -4540,15 +4354,6 @@ document.getElementById('sp-dof').addEventListener('input', e => {
 document.getElementById('sp-realism').addEventListener('input', e => {
   SP.realism = +e.target.value / 100;
   set('l-realism', e.target.value + '%');
-});
-document.getElementById('sp-bulge').addEventListener('input', e => {
-  SP.bulge = +e.target.value / 100;
-  set('l-bulge', e.target.value + '%');
-});
-const LIGHT_MODES = ['real', 'population', 'off'];
-document.getElementById('sp-lights').addEventListener('click', e => {
-  SP.lights = LIGHT_MODES[(LIGHT_MODES.indexOf(SP.lights) + 1) % LIGHT_MODES.length];
-  e.target.textContent = SP.lights;
 });
 const spaceToggle = (id, key, on, off) => {
   const el = document.getElementById(id);
@@ -4567,90 +4372,20 @@ spaceToggle('sp-true', 'trueScale', 'true', 'squashed');
    the square of it. */
 let spDrag = null;
 SKY.addEventListener('pointerdown', e => {
-  const hit = bodyUnder(e);
-  spDrag = { x: e.clientX, y: e.clientY, az: SP.az, el: SP.el, moved: 0, hit };
-  if (hit) {
-    // Grab it. The angle follows the pointer while held; how fast it was moving at
-    // the moment you let go becomes the spin it keeps.
-    const h = SP.hand[hit.key] || (SP.hand[hit.key] = { angle: 0, w: 0 });
-    SP.grab = { key: hit.key, rs: hit.rs, angle0: h.angle, lastA: h.angle,
-                lastT: e.timeStamp, w: 0 };
-    h.w = 0;
-  }
+  spDrag = { x: e.clientX, y: e.clientY, az: SP.az, el: SP.el, moved: 0 };
   SKY.setPointerCapture(e.pointerId);
 });
 SKY.addEventListener('pointermove', e => {
   if (!spDrag) return;
   const dx = e.clientX - spDrag.x, dy = e.clientY - spDrag.y;
   spDrag.moved += Math.abs(dx) + Math.abs(dy);
-  if (SP.grab) {
-    const g = SP.grab, h = SP.hand[g.key];
-    const d = Math.min(window.devicePixelRatio || 1, 2);
-    // Dragging the width of the disc turns it about a radian: the same feel as
-    // rolling a ball under your finger.
-    h.angle = g.angle0 - dx * d / Math.max(20, g.rs);
-    const dtms = Math.max(8, e.timeStamp - g.lastT);
-    g.w = (h.angle - g.lastA) / (dtms / 1000);
-    g.lastA = h.angle; g.lastT = e.timeStamp;
-    return;
-  }
   SP.az = spDrag.az - dx * 0.006;
   SP.el = Math.max(-1.45, Math.min(1.45, spDrag.el + dy * 0.006));
 });
 SKY.addEventListener('pointerup', e => {
-  if (SP.grab) {
-    const g = SP.grab, h = SP.hand[g.key];
-    /* Let go and it keeps the rate your hand had - there is nothing out there to
-       slow it down. The release speed is in screen radians per real second; the
-       clock may be running faster than real time, so divide by the rate or a flick
-       at "a day a second" would come out a thousand turns a second. */
-    const k = Math.max(1e-6, RATES[SP.rate].k);
-    /* The release speed is in screen radians per real second, and the clock may be
-       running faster than real time, so it is divided by the rate - otherwise a flick
-       at "a day a second" would read as a thousand turns a second.
-
-       Then it is held at the break-up rate, which is not an arbitrary cap: past
-       omega squared r equals GM over r squared the equator is in orbit and the body
-       comes apart. For the Earth that is one turn every 1 h 24 m. A hand is far too
-       strong for a planet - a normal flick asks for ten thousand times its own spin -
-       so this is the line physics draws, not one I chose. */
-    const bg = SP.bodies[g.key];
-    const wb = breakupW(bg), w0 = naturalW(bg);
-    /* A hand is about ten thousand times too strong for a planet: taken literally,
-       every flick pins it at break-up, and a planet held at break-up is a squashed
-       lozenge - which is real physics and looks broken. So the flick is geared: how
-       hard you threw it, in multiples of the spin it already has. A gentle drag lands
-       near its own rate, a hard one at about thirty times, and break-up is still the
-       ceiling. The panel prints the true numbers either way. */
-    const turns = Math.min(20, Math.abs(g.w / k) * 0.9);
-    const raw = Math.sign(g.w) * turns * (w0 || 1e-5);
-    h.w = Math.abs(g.w) < 0.05 ? h.w
-        : Math.max(-wb - w0, Math.min(wb - w0, h.w + raw));
-    SP.grab = null;
-  } else if (spDrag && spDrag.moved < 5) spacePick(e);
+  if (spDrag && spDrag.moved < 5) spacePick(e);
   spDrag = null;
 });
-
-// Which body's disc is under the pointer, if any.
-function bodyUnder(e) {
-  if (!SP.pos.earth) return null;
-  const cam = camera(SP.pos);
-  const d = Math.min(window.devicePixelRatio || 1, 2);
-  const px = e.clientX * d, py = e.clientY * d;
-  let best = null, bestZ = Infinity;
-  for (const k of ORDER) {
-    const b = SP.bodies[k]; if (!b) continue;
-    const pd = dispOf(SP.pos[k], k, SP.pos);
-    const v = V.sub(pd, cam.pos), z = V.dot(v, cam.fwd);
-    if (z <= 0.001) continue;
-    const rs = cam.f * squashRad(b.R, k) / z;
-    if (rs < 10 * d) continue;                 // too small to grab: let it be a click
-    const sx = cam.W / 2 + cam.f * V.dot(v, cam.right) / z;
-    const sy = cam.H / 2 - cam.f * V.dot(v, cam.up) / z;
-    if (Math.hypot(sx - px, sy - py) <= rs && z < bestZ) { bestZ = z; best = { key: k, rs }; }
-  }
-  return best;
-}
 SKY.addEventListener('wheel', e => {
   e.preventDefault();
   const b = SP.bodies && SP.bodies[SP.focus];

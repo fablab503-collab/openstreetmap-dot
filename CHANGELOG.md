@@ -5,6 +5,37 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — Out: the night lights and the hand spin
+
+Daniel called both of them bugs and asked for them out. They are out.
+
+### Removed
+
+- **The night lights.** The whole night-side illumination: the real night-lights
+  map, the `lights` parameter and the population-dot alternative with it. The dark
+  half of a planet is now just its own colour at an ambient floor, which is what the
+  rest of the bodies always did. `data/planet-colours.json` lost its 288x144 night
+  map with them and is 169 KB instead of 224.
+- **Grabbing a planet to spin it.** The hand spin, the flattening it drew, the
+  `bulge` parameter, the SPUN BY HAND readouts and `GIVE THE SPINS BACK`. Dragging
+  turns the camera again, wherever you start it, and a body is a circle again.
+
+### Kept
+
+- Real colour per body, real sunlight at 5772 K, and the `realism` parameter.
+- Every body still turns at its own rate, and THE SPIN still reads out the facts:
+  the sidereal day against the solar one and why they differ, where the Sun stands
+  overhead, the ground speed by latitude, what the spin cancels of the pull, the
+  21.4 km bulge and the day lengthening by 1.72 ms a century. Those are measurements,
+  not the interaction that was removed.
+
+### Fixed on the way
+
+- Cutting the hand-spin block took the tidal rows out with it, so the panel threw on
+  every frame. They are back where they belong.
+
+---
+
 ## 2026-09-14 — The black ovals, and four times the speed
 
 Daniel: something is off with the spin, and zooming makes black spots and oval

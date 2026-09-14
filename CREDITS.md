@@ -73,7 +73,7 @@ Requests are debounced to respect their one-per-second guidance.
 | The events of each year, 1500 onward | [Wikidata](https://www.wikidata.org/) (P585, P580, P619, sitelink counts) | CC0 1.0 |
 | Sizes, masses, spins, tilts, orbits and temperatures of the Sun, the eight planets, the Moon and Pluto | [NASA NSSDC Planetary Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/) | public domain |
 | Each body's precise figures — sidereal year and rotation, equatorial and polar radius, flattening, surface acceleration at equator and pole, J2, solar irradiance, the Moon's recession rate | [NASA NSSDC](https://nssdc.gsfc.nasa.gov/planetary/factsheet/) per-body sheets (`earthfact.html` and the rest) | public domain |
-| What each body actually looks like — the colour maps the space view samples per dot, including the Earth's night lights | [Solar System Scope textures](https://www.solarsystemscope.com/textures/), heavily downsampled | CC BY 4.0 |
+| What each body actually looks like — the colour maps the space view samples per dot | [Solar System Scope textures](https://www.solarsystemscope.com/textures/), heavily downsampled | CC BY 4.0 |
 | The colour of sunlight — the Sun's effective temperature, 5772 K | [NASA NSSDC Sun fact sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/sunfact.html) | public domain |
 | Turning that temperature into a colour — the cubic fit of the Planckian locus | Kim et al. 2002, via [English Wikipedia, "Planckian locus"](https://en.wikipedia.org/wiki/Planckian_locus) | CC BY-SA 4.0 |
 | How fast the day is lengthening: +2.4 ms/century from the Moon's orbit, +1.72 ± 0.03 observed over 2,700 years | [English Wikipedia, "Tidal acceleration"](https://en.wikipedia.org/wiki/Tidal_acceleration) | CC BY-SA 4.0 |
@@ -91,8 +91,7 @@ of any border.
 
 **Solar System Scope's textures are CC BY 4.0**, which asks for attribution and allows
 everything else: `data/planet-colours.json` is a downsample of them - 224x112 for the
-Earth's day side, 288x144 of single-byte brightness for its night lights, 64x32 for the
-rest - and it carries that credit in the file itself. Their maps are in turn built from
+Earth, 64x32 for the rest - and it carries that credit in the file itself. Their maps are in turn built from
 NASA elevation and imagery. The Sun is the exception: its texture is used only for the
 mottling, because the real colour of the Sun is what 5772 K looks like, which is white.
 

@@ -100,7 +100,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | Monument outlines | The building's own edges from z12.5 — a contour round its foot, and round its roofline in 3D | OpenStreetMap (Overpass) |
 | Monuments — Montpellier | Top 10, ranked by number of Wikipedia language editions | Wikidata + OpenStreetMap |
 | The solar system | The Sun, eight planets, the Moon and Pluto: size, mass, spin, tilt, orbit, moons and temperature, with gravity worked out from the masses | NASA NSSDC fact sheet + Wikipedia J2000 angles |
-| What each body looks like | A colour map per body, sampled per dot — ocean, desert, forest and ice where they actually are — and the Earth's night lights | Solar System Scope textures (CC BY 4.0), downsampled |
+| What each body looks like | A colour map per body, sampled per dot — ocean, desert, forest and ice where they actually are | Solar System Scope textures (CC BY 4.0), downsampled |
 
 **Colour follows the job.**
 
@@ -153,6 +153,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | `LEAVE EARTH` | Step off the map into the solar system: the Sun, the eight planets, the Moon and Pluto, all drawn as dots |
 | In space: `LOOKING AT` | Fly to any of them — or click one |
 | In space: `TIME` | Paused, real time, or up to a year a second. The year bar still works: set 20 July 1969 and the Earth and Moon stand where Apollo 11 found them |
+| In space: `realism` | 0 for the flat house colour, 100% for the body's own |
 | In space: `DEPTH OF FIELD` | How much a lens blurs what is off the plane you are looking at. 0 turns it off |
 | In space: `GRAVITY WELL` | The pull, drawn as the pit it makes |
 | In space: `TRUE SCALE` | Stop squashing distances and sizes. Worth doing once |
@@ -175,26 +176,14 @@ Three invisible things are drawn:
 - **Depth of field**, because a lens has one: anything off the plane you are
   looking at spreads into a bigger, fainter disc. On a screen with no parallax it
   is the only thing that says which of two dots is further away.
-- **Grab a planet and spin it.** Drag the body itself rather than the empty sky and
-  it turns under your finger; let go and it keeps the rate you gave it, because
-  nothing out there is touching it. The panel then reads the consequences: the new
-  day length, the angular momentum as a multiple of its own, the energy you put in,
-  how fat the spin makes it, and — since the only brake anyone has measured is the
-  tide — how long the spin would take to bleed off, which comes out in billions of
-  years. A hand is far too strong for a planet, so the spin is held at the rate where
-  the equator would fly off (one turn every 1 h 24 m for the Earth); that line is
-  physics, not a setting. `GIVE THE SPINS BACK` undoes it, which nothing in space
-  would.
 - **Real colour, and real light.** Every body carries a small map of its own true
   colour and the dots sample it: the Earth comes out with blue ocean, sand where the
-  Sahara is, green where the forests are, white ice. The night side is the real
-  night-lights imagery, so a dot over Tokyo is bright because Tokyo is bright.
+  Sahara is, green where the forests are, white ice.
   Sunlight is the colour of a 5772 K body — `(255, 240, 234)`, white with the
   faintest warm cast, worked out from the Sun's own temperature through the
   Planckian locus. The orange Sun everyone draws is what our air does to it; from
   out here it is white. `realism` mixes between the flat house colour and the real
-  one; `lights` switches the night side between the real imagery, the map's own
-  population dots, and off.
+  one.
 - **Spin**, with the numbers under it. The Earth turns once a sidereal day —
   **23 h 56 m 04.2 s** — under a Sun that stands over the longitude matching the
   hour, so at noon UTC Greenwich faces it. The panel reads out, live: how far it has
