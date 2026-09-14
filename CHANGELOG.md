@@ -5,6 +5,21 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — Coming back from a past year says the right year again
+
+### Fixed
+
+- **The source line kept the year you left.** Drag the bar to 1969 and the counter
+  correctly reads `WORLD BANK 1969`; drag it back to now and the counter starts
+  ticking again, but the line under it still said 1969 - a live 2026 figure
+  labelled with a year from half a century ago. Only the "not now" branch wrote
+  that label, so nothing ever wrote it back. The live branch sets it too now,
+  `WORLD BANK <estimate year>`, or `CACHED <year>` when the World Bank call failed
+  and the baked-in baseline is in use. Seen on the live site while looking at the
+  map with Daniel, not in a test.
+
+---
+
 ## 2026-09-14 — A story line over the dials, and the whole story behind it
 
 ### Added

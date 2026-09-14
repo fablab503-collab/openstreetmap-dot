@@ -3127,6 +3127,7 @@ function tickStats() {
     return;
   }
   document.getElementById('live-dot').classList.remove('stale');
+  set('s-src', (WORLD.live ? 'WORLD BANK ' : 'CACHED ') + WORLD.popYear);
   const pop = projectedPop(now);
   const bornPerSec = pop * (WORLD.birth / 1000) / (YEAR_MS / 1000);
   const diedPerSec = pop * (WORLD.death / 1000) / (YEAR_MS / 1000);
