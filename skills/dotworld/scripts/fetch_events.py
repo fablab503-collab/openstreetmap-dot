@@ -14,8 +14,10 @@ What the shape of the query has to avoid:
     use the classes that come back - `human spaceflight`, `conflict`, `political
     crisis`, `pandemic`, `terrorist attack`. Guessing the QIDs by hand gave a list
     that quietly returned a person and a time zone.
-  * Dates hide in two properties: `P585` (point in time) for things that happened on
-    a day, `P580` (start time) for things that began. Ask for both.
+  * Dates hide in three properties: `P585` (point in time) for things that happened
+    on a day, `P580` (start time) for things that began, and `P619` (time of
+    spacecraft launch). Apollo 11 carries neither of the first two - a date query
+    without P619 returns a 1969 with no Moon landing in it, and nothing complains.
   * Every year has an article about itself - the item labelled "1969" has more
     sitelinks than anything that happened in 1969 - so drop labels that are only
     digits.
@@ -47,6 +49,7 @@ CLASSES = ("wd:Q198 wd:Q178561 wd:Q131569 wd:Q40231 wd:Q3839081 wd:Q8065 wd:Q794
 QUERY = """
 SELECT ?item ?itemLabel ?date ?links WHERE {
   { ?item wdt:P585 ?date } UNION { ?item wdt:P580 ?date }
+  UNION { ?item wdt:P619 ?date }
   FILTER(YEAR(?date) >= %d && YEAR(?date) <= %d)
   ?item wikibase:sitelinks ?links . FILTER(?links >= %d)
   ?item wdt:P31 ?cls . VALUES ?cls { %s }

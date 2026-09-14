@@ -28,6 +28,10 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 - Coverage is partial and the interface says so: an event Wikidata has not typed as
   an event will not appear however famous it was.
+- **Apollo 11 carries neither `P585` nor `P580`** — a spaceflight stores its launch
+  under `P619`. The first build produced a 1969 with no Moon landing in it and
+  nothing complained; the query asks for all three properties now, which also brings
+  in Sputnik, Vostok 1 and the Shuttle.
 - What it took: the textbook filter (`P31/P279*` from "occurrence") times out at 60 s
   on a single decade, so the class list is flat — and it was **derived** by asking
   Wikidata what Apollo 11 and the Cuban Missile Crisis actually are, after a
