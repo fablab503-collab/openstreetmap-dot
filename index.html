@@ -3844,7 +3844,10 @@ function emitBody(key, pos, cam, batch, t, pre) {
   const pd = dispOf(pos[key], key, pos);
   const v = V.sub(pd, cam.pos), z = V.dot(v, cam.fwd);
   if (z <= 0.001) return;
-  const rs = cam.f * squashRad(b.R, key) / z;
+  /* Clamped, because the moment the camera gets close the projected radius runs
+     away - and a silhouette the size of four screens is the black oval that kept
+     appearing over everything while zooming. */
+  const rs = Math.min(Math.max(cam.W, cam.H) * 2, cam.f * squashRad(b.R, key) / z);
   if (rs < 1.4) {                       // too far to be a disc: one point of light
     dot3(cam, pd, Math.max(1.3, rs), b.hex, 1, batch);
     return;
@@ -3877,12 +3880,16 @@ function emitBody(key, pos, cam, batch, t, pre) {
   const ux = amRaw > 1e-4 ? axx / amRaw : 0;
   const uy = amRaw > 1e-4 ? axy / amRaw : 1;
   const sq = 1 - fOb * am;
-  if (pre) pre(cx, cy, rs, ux, uy, sq);
+  /* The silhouette is filled with the body's own colour at its ambient level, not
+     with black. Black reads as a hole punched in the sky - which is what it looked
+     like on an unlit planet, where every dot is culled and only the silhouette is
+     left. A dark disc of the right colour reads as an unlit planet, which it is. */
+  if (pre) pre(cx, cy, rs, ux, uy, sq, ramp(b)[0]);
   /* The pitch is the map's own DOT SCALE, so the lattice out here matches the one
      on the ground and the slider does something in both places. The budget below it
      is only a floor against a planet that fills the screen. */
   const area = Math.min(Math.PI * rs * rs, (x1 - x0 + 40) * (y1 - y0 + 40));
-  const pitch = Math.max(Math.max(2, 18 * scale) * cam.dpr, Math.sqrt(area / 22000));
+  const pitch = Math.max(Math.max(2, 18 * scale) * cam.dpr, Math.sqrt(area / 12000));
   const map = (TEX && SP.realism > 0)
     ? TEX[key === 'earth' ? 'earth_day' : key] || null : null;
   const nightMap = (key === 'earth' && TEX && SP.lights === 'real') ? TEX.earth_night : null;
@@ -4026,23 +4033,53 @@ function emitRings(pos, cam, batch, pd, fr, b) {
   }
 }
 
-function emitOrbits(pos, cam, batch, t) {
+/* An orbit is a fixed ellipse. It does not change from one frame to the next, so
+   solving Kepler 1,500 times a frame to redraw the same rings was most of the work
+   this view was doing. They are worked out once and kept, and only the projection
+   runs per frame. Same for the well: the planets move it, but not within half a
+   second of real time. */
+let ORBIT_CACHE = null, WELL_CACHE = null;
+function orbitRings(pos) {
+  const key = (SP.trueScale ? 'T' : 'S') + '|' + SP.localP.toFixed(2);
+  if (ORBIT_CACHE && ORBIT_CACHE.key === key) return ORBIT_CACHE.rings;
+  const rings = [];
   for (const k of ORDER) {
     const b = SP.bodies[k];
     if (!b || !b.P || k === 'moon') continue;
-    const step = b.P / 150;
+    const pts = new Float64Array(150 * 3), step = b.P / 150;
     for (let i = 0; i < 150; i++) {
-      const p = helio(b, t + i * step);
-      dot3(cam, dispOf(p, k, pos), 0.7, b.hex, 0.3, batch);
+      const d = dispOf(helio(b, J2000 + i * step), k, pos);
+      pts[i*3] = d.x; pts[i*3+1] = d.y; pts[i*3+2] = d.z;
     }
+    rings.push({ hex: b.hex, pts, around: null });
   }
-  // The Moon's ring is drawn round the Earth from its own radius, since its orbit
-  // is not a Kepler ellipse in this model - only its phase is tracked.
-  const m = SP.bodies.moon, ed = dispOf(pos.earth, 'earth', pos);
-  const inc = (m.inclination || 0) * RAD, rr = squashLocal(m.a, SP.bodies.earth);
-  for (let a = 0; a < 6.2832; a += 0.03) {
-    dot3(cam, { x: ed.x + rr * Math.cos(a), y: ed.y + rr * Math.sin(a) * Math.cos(inc),
-                z: ed.z + rr * Math.sin(a) * Math.sin(inc) }, 0.7, m.hex, 0.32, batch);
+  // The Moon's ring is kept as offsets from the Earth, since that is where it hangs.
+  const m = SP.bodies.moon;
+  if (m) {
+    const inc = (m.inclination || 0) * RAD, rr = squashLocal(m.a, SP.bodies.earth);
+    const n = 140, pts = new Float64Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const a = i / n * 6.2832;
+      pts[i*3] = rr * Math.cos(a);
+      pts[i*3+1] = rr * Math.sin(a) * Math.cos(inc);
+      pts[i*3+2] = rr * Math.sin(a) * Math.sin(inc);
+    }
+    rings.push({ hex: m.hex, pts, around: 'earth' });
+  }
+  ORBIT_CACHE = { key, rings };
+  return rings;
+}
+
+function emitOrbits(pos, cam, batch) {
+  const p = { x: 0, y: 0, z: 0 };
+  for (const ring of orbitRings(pos)) {
+    const o = ring.around ? dispOf(pos[ring.around], ring.around, pos) : null;
+    const a = ring.pts;
+    for (let i = 0; i < a.length; i += 3) {
+      p.x = a[i]; p.y = a[i+1]; p.z = a[i+2];
+      if (o) { p.x += o.x; p.y += o.y; p.z += o.z; }
+      dot3(cam, p, 0.7, ring.hex, ring.around ? 0.32 : 0.3, batch);
+    }
   }
 }
 
@@ -4050,25 +4087,40 @@ function emitOrbits(pos, cam, batch, t) {
    pushed downward and squashed logarithmically so the Sun's pit and the Earth's
    dimple fit in one picture. It is not a picture of bent space: it is the number
    the panel prints, given a shape. */
-function emitWell(pos, cam, batch) {
-  const rings = 46, spokes = 72;
-  const phi0 = 3.2e8;
+function wellGrid(pos, now) {
+  const key = SP.trueScale ? 'T' : 'S';
+  if (WELL_CACHE && WELL_CACHE.key === key && now - WELL_CACHE.at < 500) return WELL_CACHE.g;
+  const rings = 36, spokes = 60, phi0 = 3.2e8;
+  const g = { pts: new Float64Array(rings * spokes * 3),
+              a: new Float32Array(rings * spokes) };
+  let n = 0;
   for (let i = 1; i <= rings; i++) {
     const rr = Math.pow(i / rings, 2.1) * 5.2e12;
     for (let s = 0; s < spokes; s++) {
       const th = s / spokes * 6.2832;
-      const p = { x: rr * Math.cos(th), y: rr * Math.sin(th), z: 0 };
+      const px = rr * Math.cos(th), py = rr * Math.sin(th);
       let phi = 0;
       for (const k of ORDER) {
         const b = SP.bodies[k]; if (!b || !b.mu) continue;
         const q = pos[k];
-        phi += b.mu / Math.max(b.R, Math.hypot(q.x - p.x, q.y - p.y, q.z - p.z));
+        phi += b.mu / Math.max(b.R, Math.hypot(q.x - px, q.y - py, q.z));
       }
       const depth = 26 * Math.log10(1 + phi / phi0);
-      const d = dispOf(p, null, pos);
-      d.z -= depth;
-      dot3(cam, d, 0.75, '#6a7ba2', Math.min(0.75, 0.16 + depth / 55), batch);
+      const d = dispOf({ x: px, y: py, z: 0 }, null, pos);
+      g.pts[n*3] = d.x; g.pts[n*3+1] = d.y; g.pts[n*3+2] = d.z - depth;
+      g.a[n] = Math.min(0.75, 0.16 + depth / 55);
+      n++;
     }
+  }
+  WELL_CACHE = { key, at: now, g };
+  return g;
+}
+
+function emitWell(pos, cam, batch, now) {
+  const g = wellGrid(pos, now), p = { x: 0, y: 0, z: 0 };
+  for (let i = 0; i < g.a.length; i++) {
+    p.x = g.pts[i*3]; p.y = g.pts[i*3+1]; p.z = g.pts[i*3+2];
+    dot3(cam, p, 0.75, '#6a7ba2', g.a[i], batch);
   }
 }
 
@@ -4381,8 +4433,8 @@ function spaceFrame(now) {
   // The background first: stars, the well, the orbit rings.
   const bg = {};
   emitStars(cam, bg);
-  if (SP.well) emitWell(pos, cam, bg);
-  if (SP.orbits) emitOrbits(pos, cam, bg, SP.t);
+  if (SP.well) emitWell(pos, cam, bg, now);
+  if (SP.orbits) emitOrbits(pos, cam, bg);
   paintDots(bg);
 
   /* Then the bodies, furthest first, each one punching its own silhouette in black
@@ -4399,10 +4451,10 @@ function spaceFrame(now) {
   order.sort((a, b) => b[1] - a[1]);
   for (const [k] of order) {
     const batch = {};
-    emitBody(k, pos, cam, batch, SP.t, (cx, cy, rs, ux, uy, sq) => {
+    emitBody(k, pos, cam, batch, SP.t, (cx, cy, rs, ux, uy, sq, hex) => {
       sky.globalCompositeOperation = 'source-over';
       sky.globalAlpha = 1;
-      sky.fillStyle = '#000';
+      sky.fillStyle = hex;
       sky.beginPath();
       sky.ellipse(cx, cy, rs * sq, rs, Math.atan2(uy, ux), 0, 6.2832);
       sky.fill();

@@ -5,6 +5,39 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — The black ovals, and four times the speed
+
+Daniel: something is off with the spin, and zooming makes black spots and oval
+shapes — check the code, make it lighter and simpler.
+
+### Fixed
+
+- **The black ovals were the silhouettes.** Each body punches its own outline before
+  its dots go down, so it can hide what is behind it. Two things made that read as a
+  hole in the sky rather than a planet: it was filled in pure **black**, so an unlit
+  body — where every dot is culled — left nothing but the hole; and the projected
+  radius was **unclamped**, so the moment the camera came close it ran to several
+  screens wide and swallowed everything. The fill is now the body's own darkest
+  shade, which reads as a planet with its lights out, and the radius is held to twice
+  the screen.
+
+### Changed — four times faster, and less code doing it
+
+- **An orbit is a fixed ellipse and was being solved from scratch sixty times a
+  second.** Ten bodies × 150 points × six Newton iterations, every frame, to redraw
+  exactly the same rings. They are worked out once now and only projected per frame;
+  the Moon's ring is kept as offsets from the Earth.
+- **The gravity well was summing eleven bodies at 3,312 lattice points every frame**
+  — 36,000 distances. It is rebuilt at most twice a second, which is finer than the
+  planets can move, and the grid is 36 × 60 rather than 46 × 72.
+- The per-body dot budget came down from 22,000 to 12,000, which is still finer than
+  the lattice a screen can show.
+- Measured, median frame time on the same machine: **33 ms before, 8.3 ms after** —
+  and now the same at the Earth, across the whole system, squashed, or with the
+  camera nearly on the surface, where it used to be worst.
+
+---
+
 ## 2026-09-14 — Real colour, real lights, real sunlight, and a panel that is a config
 
 ### Added
