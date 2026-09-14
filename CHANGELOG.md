@@ -5,6 +5,50 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — Real colour, real lights, real sunlight, and a panel that is a config
+
+### Added
+
+- **Every body is its own colour now, sampled per dot.** `data/planet-colours.json`
+  carries a small map for each: the Earth at 224x112 in colour, its night lights at
+  288x144 in single-byte brightness, everything else at 64x32. The Earth comes out
+  with blue ocean, sand across the Sahara, green through the tropics and white ice -
+  read off a real map rather than painted. Source: the Solar System Scope texture
+  set, CC BY 4.0, heavily downsampled; `skills/dotworld/scripts/fetch_planet_colours.py`
+  rebuilds it.
+- **The night side is the real lights.** A dot over Tokyo is bright because Tokyo is
+  bright. The `lights` parameter switches between that, the map's own 34,091
+  population dots, and off.
+- **Sunlight is the colour of 5772 K**, the Sun's effective temperature from NASA,
+  put through Kim et al.'s fit of the Planckian locus and the sRGB matrix:
+  `(255, 240, 234)` - white with the faintest warm cast. Every lit dot is multiplied
+  by it. The Sun itself is drawn white for the same reason; its texture is used only
+  for the mottling. The orange Sun everybody paints is what our air does on the way
+  down.
+- **`realism`, a parameter from 0 to 100%**, mixing the flat house colour against the
+  body's own. It ships at 100.
+- **The space controls are one small block of parameters** rather than a stack of
+  shouting buttons: `look at`, `time`, `realism`, `lights`, `depth of field`,
+  `bulge`, `scale`, `gravity well`, `orbits`, `hand spin`. Name on the left, the
+  thing that changes it on the right. It reads like a config, which is what it is.
+
+### Fixed
+
+- **A flick spun a planet to break-up every time**, and a planet at break-up is a
+  squashed lozenge - real physics, but it reads as a bug. The gearing is gentler now:
+  a moderate flick lands around four times its own spin, which is a 5% bulge and
+  clearly turning; a hard one reaches twenty. Break-up is still the ceiling, and
+  `bulge` turns the drawn flattening down without touching the figures.
+- **The night map lit the whole dark side like a lamp.** Of its 41,472 pixels, 38,433
+  sit in one low bucket - airglow over empty ground, not towns - and the brightest
+  city only reaches 150 of 255. Stretching from that floor to that peak is what turns
+  a brown smear back into cities.
+- **Ten thousand colours a frame cost more than drawing them.** The first pass built
+  a colour string per dot. It is quantised to sixteen levels a channel, packed into
+  an integer and cached, which is invisible on a two-pixel dot.
+
+---
+
 ## 2026-09-14 — Grab a planet and spin it
 
 ### Added

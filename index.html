@@ -53,6 +53,21 @@
   #p-space .gbar { height:3px; background:#141414; margin:3px 0 7px; }
   #p-space .gbar i { display:block; height:100%; background:var(--lit); }
 
+  /* The space controls are one small block of parameters rather than a stack of
+     buttons: name on the left, the thing that changes it on the right, nothing
+     shouting. It reads like a config, which is what it is. */
+  #sp-params .prow { display:flex; align-items:center; gap:6px; margin:5px 0;
+    font-size:10px; letter-spacing:.08em; color:#6a6a6a; }
+  #sp-params .prow > span { flex:0 0 86px; text-transform:lowercase; }
+  #sp-params .prow > b { flex:0 0 62px; text-align:right; color:var(--lit);
+    font-weight:400; text-transform:lowercase; }
+  #sp-params .prow input[type=range] { flex:1 1 auto; margin:0; min-width:0; }
+  #sp-params .prow select, #sp-params .pval { flex:1 1 auto; background:#000;
+    color:var(--lit); border:1px solid #1e1e1e; font:inherit; letter-spacing:.08em;
+    padding:3px 5px; cursor:pointer; text-transform:lowercase; text-align:left; }
+  #sp-params .pval:hover, #sp-params .prow select:hover { border-color:#4a4a4a; }
+  #sp-params #sp-back { margin-top:9px; }
+
   /* One panel width for everything, and two columns that lay their panels out
      in flow — so nothing can overlap or run off the page however the content
      grows, and both slide away together. */
@@ -604,18 +619,30 @@
   <button id="b-north" aria-pressed="false">RESET NORTH</button>
   <button id="b-sun" aria-pressed="true">SUNLIGHT</button>
   <button id="b-space" aria-pressed="false">LEAVE EARTH</button>
-  <div class="space-only">
-    <label>LOOKING AT</label>
-    <select id="sp-body" aria-label="Body to look at"></select>
-    <label>TIME <span id="l-rate">REAL TIME</span></label>
-    <input id="sp-rate" type="range" min="0" max="6" step="1" value="1"
-           aria-label="How fast time runs">
-    <label>DEPTH OF FIELD <span id="l-dof">1.0</span></label>
-    <input id="sp-dof" type="range" min="0" max="6" step="0.1" value="1">
-    <button id="sp-well" aria-pressed="true">GRAVITY WELL</button>
-    <button id="sp-orbits" aria-pressed="true">ORBITS</button>
-    <button id="sp-true" aria-pressed="true">SQUASHED SCALE</button>
-    <button id="sp-unspin">GIVE THE SPINS BACK</button>
+  <div class="space-only" id="sp-params">
+    <div class="prow"><span>look at</span>
+      <select id="sp-body" aria-label="Body to look at"></select></div>
+    <div class="prow"><span>time</span>
+      <input id="sp-rate" type="range" min="0" max="6" step="1" value="1"
+             aria-label="How fast time runs"><b id="l-rate">real time</b></div>
+    <div class="prow"><span>realism</span>
+      <input id="sp-realism" type="range" min="0" max="100" step="1" value="100"
+             aria-label="How much of each body's real colour to use"><b id="l-realism">100%</b></div>
+    <div class="prow"><span>lights</span>
+      <button id="sp-lights" class="pval" type="button">real</button></div>
+    <div class="prow"><span>depth of field</span>
+      <input id="sp-dof" type="range" min="0" max="6" step="0.1" value="1"><b id="l-dof">1.0</b></div>
+    <div class="prow"><span>bulge</span>
+      <input id="sp-bulge" type="range" min="0" max="100" step="1" value="100"
+             aria-label="How much of the spin's flattening to draw"><b id="l-bulge">100%</b></div>
+    <div class="prow"><span>scale</span>
+      <button id="sp-true" class="pval" type="button" aria-pressed="true">true</button></div>
+    <div class="prow"><span>gravity well</span>
+      <button id="sp-well" class="pval" type="button" aria-pressed="true">on</button></div>
+    <div class="prow"><span>orbits</span>
+      <button id="sp-orbits" class="pval" type="button" aria-pressed="true">on</button></div>
+    <div class="prow"><span>hand spin</span>
+      <button id="sp-unspin" class="pval" type="button">give it back</button></div>
     <button id="sp-back">BACK TO EARTH</button>
   </div>
 </div>
@@ -3379,8 +3406,86 @@ const SP = {
   dof: 1, well: true, orbits: true, trueScale: true, rate: 1, localP: 1,
   hand: {},        // spin given by hand, per body: { angle, w }
   grab: null,
+  realism: 1,      // 0 = the house colour, 1 = the body's own
+  lights: 'real',  // real | population | off
+  bulge: 1,        // how much of the spin's flattening to draw
   t: Date.now(), last: 0, raf: 0, bodies: null, ready: null, pos: {},
 };
+
+/* ── real colour ────────────────────────────────────────────────────────────
+   Each body carries a small equirectangular map of its own true colour, sampled
+   down from the Solar System Scope texture set (CC BY 4.0) - 160x80 for the Earth
+   day side and its night lights, 64x32 for everything else. Sampling that per dot
+   is what makes the Earth read as the Earth rather than as a turquoise ball: ocean,
+   desert, forest, ice, each where it actually is.
+
+   The night side is the real lights: the same source's night map, which comes from
+   the satellite night-lights imagery. So a dot over Japan is bright because Japan is
+   bright, not because a population file says so. */
+let TEX = null, texReady = null;
+function loadTextures() {
+  if (texReady) return texReady;
+  texReady = fetch('data/planet-colours.json').then(r => r.json()).then(j => {
+    TEX = {};
+    for (const k in j.maps) {
+      const m = j.maps[k], bin = atob(m.rgb || m.lum), a = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+      TEX[k] = { w: m.w, h: m.h, px: a, mean: m.mean,
+                 lum: !!m.lum, floor: m.floor || 0, peak: m.peak || 255 };
+    }
+    TEX.src = j.source;
+    return TEX;
+  }).catch(() => { texReady = null; return null; });
+  return texReady;
+}
+/* lat and lon in radians -> the three bytes at that point. Row 0 is the north pole
+   and column 0 is longitude -180, which is how the source images are laid out. */
+function mapIndex(m, lat, lon) {
+  const u = ((lon / Math.PI + 1) / 2 % 1 + 1) % 1;
+  const v = Math.min(0.9999, Math.max(0, 0.5 - lat / Math.PI));
+  return (v * m.h | 0) * m.w + (u * m.w | 0);
+}
+function sampleMap(m, lat, lon) {
+  const i = mapIndex(m, lat, lon) * 3;
+  return [m.px[i], m.px[i + 1], m.px[i + 2]];
+}
+/* The night map in 0..1, with its own floor taken off. Of its 41,472 pixels, 38,433
+   sit in one low bucket - that is airglow and sensor noise over empty ground, not
+   towns - and only 0.09% get above a quarter brightness. Stretching from the floor
+   to the peak the image actually reaches is what turns a brown smear back into
+   cities. */
+function sampleNight(m, lat, lon) {
+  const v = m.px[mapIndex(m, lat, lon)];
+  return Math.pow(Math.max(0, (v - m.floor) / Math.max(1, m.peak - m.floor)), 0.7);
+}
+
+/* The colour of sunlight, from the one number that decides it: the Sun's effective
+   temperature, 5772 K (NASA). Kim et al.'s cubic fit of the Planckian locus gives
+   the chromaticity, and that goes through the standard sRGB matrix. It lands on
+   (255, 240, 234) - white with the faintest warm cast. Sunlight in space *is* white;
+   the orange Sun everybody draws is what our air does to it on the way down. */
+function blackbodyRGB(T) {
+  const t = Math.min(25000, Math.max(1667, T));
+  const x = t <= 4000
+    ? -0.2661239e9 / (t*t*t) - 0.2343589e6 / (t*t) + 0.8776956e3 / t + 0.179910
+    : -3.0258469e9 / (t*t*t) + 2.1070379e6 / (t*t) + 0.2226347e3 / t + 0.240390;
+  const y = t <= 2222
+    ? -1.1063814*x*x*x - 1.34811020*x*x + 2.18555832*x - 0.20219683
+    : t <= 4000
+      ? -0.9549476*x*x*x - 1.37418593*x*x + 2.09137015*x - 0.16748867
+      : 3.0817580*x*x*x - 5.87338670*x*x + 3.75112997*x - 0.37001483;
+  const X = x / y, Z = (1 - x - y) / y;
+  let r = 3.2406*X - 1.5372 - 0.4986*Z;
+  let g = -0.9689*X + 1.8758 + 0.0415*Z;
+  let b = 0.0557*X - 0.2040 + 1.0570*Z;
+  const mx = Math.max(r, g, b) || 1;
+  const enc = c => {
+    c = Math.max(0, c / mx);
+    return Math.round(255 * (c <= 0.0031308 ? 12.92*c : 1.055*Math.pow(c, 1/2.4) - 0.055));
+  };
+  return [enc(r), enc(g), enc(b)];
+}
+const SUNLIGHT = blackbodyRGB(5772);
 
 function loadSolar() {
   if (SP.ready) return SP.ready;
@@ -3668,6 +3773,43 @@ function ramp(b) {
   return b._ramp;
 }
 
+/* A dot's final colour. The surface colour is what the body really is there; it is
+   multiplied by sunlight (which is white, very slightly warm) and by how much of it
+   lands - that product is what a camera would record. REALISM mixes it against the
+   flat house colour, so 0% is the old stylised planet and 100% is the real one.
+   Night lights are added on top in their own warm sodium-ish tone, which is what
+   most of the world's street lighting actually is. */
+const HEX2 = v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+/* Ten thousand dots a frame means ten thousand colours a frame, and building that
+   many strings costs more than drawing them did - the first version fell from 120
+   frames a second to 31. So the colour is quantised to sixteen levels a channel,
+   packed into one integer, and the string is made once per distinct colour and kept.
+   Sixteen levels is invisible on a dot two pixels wide and it keeps the painter
+   batching. */
+const SHADE_CACHE = new Map();
+function shade(b, col, lit, night) {
+  const m = SP.realism, house = b._rgb || (b._rgb = [
+    parseInt(b.hex.slice(1, 3), 16), parseInt(b.hex.slice(3, 5), 16),
+    parseInt(b.hex.slice(5, 7), 16)]);
+  const L = 255, Lg = 214, Lb = 150;              // sodium-warm, as street light is
+  const glow = night > 0 ? Math.min(1, night * 2.4) : 0;
+  // A floor under the light, so the unlit half is a dark version of itself rather
+  // than nothing at all. Real night sides are not black either - they get earthshine,
+  // starlight, and their own heat.
+  const li = Math.max(lit, 0.05);
+  const r = (col[0] * m + house[0] * (1 - m)) * li * (SUNLIGHT[0] / 255) + L * glow;
+  const g = (col[1] * m + house[1] * (1 - m)) * li * (SUNLIGHT[1] / 255) + Lg * glow;
+  const bl = (col[2] * m + house[2] * (1 - m)) * li * (SUNLIGHT[2] / 255) + Lb * glow;
+  const q = v => Math.min(15, Math.max(0, v * 0.0627 | 0));   // 0..255 -> 0..15
+  const key = (q(r) << 8) | (q(g) << 4) | q(bl);
+  let hex = SHADE_CACHE.get(key);
+  if (hex === undefined) {
+    hex = '#' + HEX2((key >> 8 & 15) * 17) + HEX2((key >> 4 & 15) * 17) + HEX2((key & 15) * 17);
+    SHADE_CACHE.set(key, hex);
+  }
+  return hex;
+}
+
 function surfaceDot(fr, lat, lon) {
   const cl = Math.cos(lat), sl = Math.sin(lat);
   return { x: cl * (Math.cos(lon) * fr.e1.x + Math.sin(lon) * fr.e2.x) + sl * fr.axis.x,
@@ -3728,7 +3870,7 @@ function emitBody(key, pos, cam, batch, t, pre) {
      cubed over GM; seen pole-on an oblate body is still a circle, so the squash only
      bites as far as the axis actually leans across the view. */
   const wTot = Math.abs(naturalW(b) + handSpin(b));
-  const fOb = flattening(b, wTot);
+  const fOb = flattening(b, wTot) * SP.bulge;
   const axx = V.dot(fr.axis, cam.right), axy = -V.dot(fr.axis, cam.up);
   const amRaw = Math.hypot(axx, axy);
   const am = Math.min(1, amRaw);
@@ -3741,6 +3883,9 @@ function emitBody(key, pos, cam, batch, t, pre) {
      is only a floor against a planet that fills the screen. */
   const area = Math.min(Math.PI * rs * rs, (x1 - x0 + 40) * (y1 - y0 + 40));
   const pitch = Math.max(Math.max(2, 18 * scale) * cam.dpr, Math.sqrt(area / 22000));
+  const map = (TEX && SP.realism > 0)
+    ? TEX[key === 'earth' ? 'earth_day' : key] || null : null;
+  const nightMap = (key === 'earth' && TEX && SP.lights === 'real') ? TEX.earth_night : null;
   const onBody = (px, py) => {                 // inside the (possibly fat) disc
     const a = px * ux + py * uy, c = -px * uy + py * ux;
     return (a * a) / (rs * sq * rs * sq) + (c * c) / (rs * rs);
@@ -3767,14 +3912,40 @@ function emitBody(key, pos, cam, batch, t, pre) {
       let lit = sunDir ? V.dot(n, sunDir) : 1;
       lit = AIR[key] ? Math.max(0, (lit + AIR[key]) / (1 + AIR[key])) : Math.max(0, lit);
       const bright = key === 'sun' ? 1 : 0.04 + 0.96 * lit;
-      if (bright < 0.05) continue;
       const depth = z - nz * squashRad(b.R, key);
       const coc = cocFor(depth, cam);
+      /* Real colour: where on the body this dot is, and what colour the body is
+         there. Lit by real sunlight; on the night side, lit by its own lights. */
+      let col = null, night = 0;
+      if (map || nightMap) {
+        const la = Math.asin(Math.max(-1, Math.min(1, V.dot(n, fr.axis))));
+        const lo = Math.atan2(V.dot(n, fr.e2), V.dot(n, fr.e1)) - spin;
+        if (nightMap) {
+          /* City light is a thin, bright thing: averaged down to a 160-wide map even
+             Tokyo only reaches about a quarter of full, so the value gets a gamma to
+             bring it back up. It is masked off as the Sun comes up, because that is
+             what happens. */
+          night = sampleNight(nightMap, la, lo) * Math.max(0, 1 - lit * 2.4);
+        }
+        if (map) {
+          col = sampleMap(map, la, lo);
+          /* The Sun is the one body whose picture is a convention: from space it is
+             white, because 5772 K is white. Its texture is used only for the mottling
+             - the granulation - with the colour coming from the temperature. */
+          if (key === 'sun') {
+            const l = (col[0] + col[1] + col[2]) / 560 + 0.45;
+            col = [SUNLIGHT[0] * l, SUNLIGHT[1] * l, SUNLIGHT[2] * l];
+          }
+        }
+      }
+      if (bright < 0.045 && night < 0.02) continue;
       /* Brightness rides the dot's size, not only its alpha - the same halftone
          rule the map uses. A grid of equally small dots across a planet filling
          the screen reads as an empty screen, which is what the first build did. */
-      const r = Math.max(0.7, pitch * 0.46 * Math.sqrt(bright)) + coc;
-      const hex = ramp(b)[Math.min(7, Math.round(bright * 7))];
+      const show = Math.max(bright, Math.min(1, night * 2.2));
+      const r = Math.max(0.7, pitch * 0.46 * Math.sqrt(show)) + coc;
+      const hex = col ? shade(b, col, bright, night)
+                      : ramp(b)[Math.min(7, Math.round(bright * 7))];
       (batch[hex] || (batch[hex] = [])).push(cx + x, cy + y, r,
                                              0.95 / (1 + coc * coc * 0.7));
     }
@@ -3787,7 +3958,8 @@ function emitBody(key, pos, cam, batch, t, pre) {
     const a = (px * ux + py * uy) * sq, c = -px * uy + py * ux;
     return { x: cx + a * ux - c * uy, y: cy + a * uy + c * ux };
   };
-  if (key === 'earth') emitCities(pos, cam, batch, rs, fr, spin, sunDir, b, onSurface);
+  if (key === 'earth' && SP.lights === 'population')
+    emitCities(pos, cam, batch, rs, fr, spin, sunDir, b, onSurface);
   if (key === 'moon') emitNearSide(pos, cam, batch, rs, fr, b, onSurface);
   if (key === 'saturn') emitRings(pos, cam, batch, pd, fr, b);
 }
@@ -4249,6 +4421,7 @@ const showTopic = id => {
 
 async function enterSpace() {
   if (!await loadSolar()) return;
+  loadTextures();                       // real colour, in the background
   SP.on = true;
   SP.last = 0;
   SP.t = spaceDateFromBar();
@@ -4306,11 +4479,24 @@ document.getElementById('sp-unspin').addEventListener('click', () => {
 document.getElementById('sp-body').addEventListener('change', e => focusOn(e.target.value));
 document.getElementById('sp-rate').addEventListener('input', e => {
   SP.rate = +e.target.value;
-  set('l-rate', RATES[SP.rate].label);
+  set('l-rate', RATES[SP.rate].label.toLowerCase());
 });
 document.getElementById('sp-dof').addEventListener('input', e => {
   SP.dof = +e.target.value;
   set('l-dof', SP.dof.toFixed(1));
+});
+document.getElementById('sp-realism').addEventListener('input', e => {
+  SP.realism = +e.target.value / 100;
+  set('l-realism', e.target.value + '%');
+});
+document.getElementById('sp-bulge').addEventListener('input', e => {
+  SP.bulge = +e.target.value / 100;
+  set('l-bulge', e.target.value + '%');
+});
+const LIGHT_MODES = ['real', 'population', 'off'];
+document.getElementById('sp-lights').addEventListener('click', e => {
+  SP.lights = LIGHT_MODES[(LIGHT_MODES.indexOf(SP.lights) + 1) % LIGHT_MODES.length];
+  e.target.textContent = SP.lights;
 });
 const spaceToggle = (id, key, on, off) => {
   const el = document.getElementById(id);
@@ -4320,9 +4506,9 @@ const spaceToggle = (id, key, on, off) => {
     el.textContent = SP[key] ? on : off;
   });
 };
-spaceToggle('sp-well', 'well', 'GRAVITY WELL', 'NO WELL');
-spaceToggle('sp-orbits', 'orbits', 'ORBITS', 'NO ORBITS');
-spaceToggle('sp-true', 'trueScale', 'SQUASHED SCALE', 'TRUE SCALE');
+spaceToggle('sp-well', 'well', 'on', 'off');
+spaceToggle('sp-orbits', 'orbits', 'on', 'off');
+spaceToggle('sp-true', 'trueScale', 'true', 'squashed');
 
 /* Drag turns the camera, the wheel changes how far away it is. The distance is
    real metres, so the wheel is really a lever on gravity: the readout falls with
@@ -4378,11 +4564,16 @@ SKY.addEventListener('pointerup', e => {
        so this is the line physics draws, not one I chose. */
     const bg = SP.bodies[g.key];
     const wb = breakupW(bg), w0 = naturalW(bg);
-    const raw = g.w / k;
-    // The limit is on what the body ends up doing, not on what your hand added, so
-    // its own spin counts toward it.
+    /* A hand is about ten thousand times too strong for a planet: taken literally,
+       every flick pins it at break-up, and a planet held at break-up is a squashed
+       lozenge - which is real physics and looks broken. So the flick is geared: how
+       hard you threw it, in multiples of the spin it already has. A gentle drag lands
+       near its own rate, a hard one at about thirty times, and break-up is still the
+       ceiling. The panel prints the true numbers either way. */
+    const turns = Math.min(20, Math.abs(g.w / k) * 0.9);
+    const raw = Math.sign(g.w) * turns * (w0 || 1e-5);
     h.w = Math.abs(g.w) < 0.05 ? h.w
-        : Math.max(-wb - w0, Math.min(wb - w0, raw));
+        : Math.max(-wb - w0, Math.min(wb - w0, h.w + raw));
     SP.grab = null;
   } else if (spDrag && spDrag.moved < 5) spacePick(e);
   spDrag = null;
@@ -4446,7 +4637,7 @@ for (const id of ['s-year', 's-month', 's-day']) {
     if (SP.on) SP.t = spaceDateFromBar();
   });
 }
-loadSolar().then(b => { if (b) { spaceBodyList(); set('l-rate', RATES[SP.rate].label); } });
+loadSolar().then(b => { if (b) { spaceBodyList(); set('l-rate', RATES[SP.rate].label.toLowerCase()); } });
 
 /* The module keeps its own scope, which makes it impossible to check a number from
    outside without printing it. This handle is the same affordance `window.__renderer`

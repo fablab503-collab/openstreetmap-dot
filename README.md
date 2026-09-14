@@ -100,6 +100,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | Monument outlines | The building's own edges from z12.5 — a contour round its foot, and round its roofline in 3D | OpenStreetMap (Overpass) |
 | Monuments — Montpellier | Top 10, ranked by number of Wikipedia language editions | Wikidata + OpenStreetMap |
 | The solar system | The Sun, eight planets, the Moon and Pluto: size, mass, spin, tilt, orbit, moons and temperature, with gravity worked out from the masses | NASA NSSDC fact sheet + Wikipedia J2000 angles |
+| What each body looks like | A colour map per body, sampled per dot — ocean, desert, forest and ice where they actually are — and the Earth's night lights | Solar System Scope textures (CC BY 4.0), downsampled |
 
 **Colour follows the job.**
 
@@ -184,6 +185,16 @@ Three invisible things are drawn:
   the equator would fly off (one turn every 1 h 24 m for the Earth); that line is
   physics, not a setting. `GIVE THE SPINS BACK` undoes it, which nothing in space
   would.
+- **Real colour, and real light.** Every body carries a small map of its own true
+  colour and the dots sample it: the Earth comes out with blue ocean, sand where the
+  Sahara is, green where the forests are, white ice. The night side is the real
+  night-lights imagery, so a dot over Tokyo is bright because Tokyo is bright.
+  Sunlight is the colour of a 5772 K body — `(255, 240, 234)`, white with the
+  faintest warm cast, worked out from the Sun's own temperature through the
+  Planckian locus. The orange Sun everyone draws is what our air does to it; from
+  out here it is white. `realism` mixes between the flat house colour and the real
+  one; `lights` switches the night side between the real imagery, the map's own
+  population dots, and off.
 - **Spin**, with the numbers under it. The Earth turns once a sidereal day —
   **23 h 56 m 04.2 s** — under a Sun that stands over the longitude matching the
   hour, so at noon UTC Greenwich faces it. The panel reads out, live: how far it has
