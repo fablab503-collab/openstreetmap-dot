@@ -5,6 +5,34 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — Scroll down for the rest of it
+
+### Added
+
+- **The readouts column scrolls, with a topic strip that stays put at the top**:
+  View, Live, World, Cities, Capitals, Monuments, Colours. There is more to say
+  than fits a screen, so jumping beats hunting.
+- **THE WORLD, ON AVERAGE** — density per square kilometre of land, life expectancy,
+  children per woman, GDP per person, the age split (under 15 / 15–64 / 65 and over)
+  and town against country. Six more indicators from World Bank Open Data, each
+  carrying the year it is from: "life expectancy" with no year is not a fact.
+- **CITIES BY SIZE** — how all 34,091 cities fall across the eight bands, drawn in
+  the band colours, with the count, the **median** city and the mean. The median is
+  the middle city rather than the average, because a handful of megacities pull the
+  mean well above where most people actually live.
+- **THE 195 CAPITALS** — biggest, smallest, how many are over a million, the median,
+  and a chart of **which hour of the world each capital keeps**, which moves with
+  daylight saving.
+- **BEST KNOWN PLACES** — the ten monuments with the widest Wikipedia coverage of
+  all 195 capitals, plus how many have an OpenStreetMap outline.
+
+### Notes
+
+- Every chart is computed in the page from files the map already holds — no second
+  fetch, no server doing sums, nothing new on the wire.
+
+---
+
 ## 2026-09-14 — Colour for everything the tiles know, and a dial for how much
 
 ### Added

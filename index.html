@@ -64,6 +64,30 @@
     letter-spacing:.1em; text-transform:uppercase; }
   #ui-toggle:hover { border-color:var(--lit); color:var(--lit); }
 
+  /* The left column scrolls now: there is more to say than fits a screen, and the
+     topic strip stays put at the top of it so you can jump rather than hunt. */
+  #ui-left { overflow-y:auto; overflow-x:hidden; scroll-behavior:smooth;
+    scrollbar-width:thin; scrollbar-color:#2a2a2a transparent; padding-bottom:40px; }
+  #ui-left::-webkit-scrollbar { width:6px; }
+  #ui-left::-webkit-scrollbar-thumb { background:#2a2a2a; }
+  #topics { position:sticky; top:0; z-index:14; display:flex; flex-wrap:wrap; gap:3px;
+    padding:6px; background:rgba(0,0,0,.92); border:1px solid #1e1e1e; }
+  #topics button { flex:1 1 auto; padding:4px 5px; cursor:pointer; background:#000;
+    color:#6a6a6a; border:1px solid #1e1e1e; font:inherit; font-size:9px;
+    letter-spacing:.08em; text-transform:uppercase; }
+  #topics button:hover { border-color:#4a4a4a; color:#e8e8e8; }
+
+  /* Charts: a label, a bar, a number. No axes - at this width they would cost more
+     room than they explain. */
+  .chart { display:grid; gap:3px; margin:5px 0 2px; }
+  .chart .crow { display:grid; grid-template-columns:1fr auto; gap:6px;
+    align-items:center; font-size:9px; letter-spacing:.03em; color:#8a8a8a; }
+  .chart .cbar { grid-column:1 / -1; height:6px; background:#141414; }
+  .chart .cbar i { display:block; height:100%; }
+  .chart b { color:#e8e8e8; font-weight:400; letter-spacing:0; }
+  .panel .sub { display:block; color:#4a4a4a; font-size:9px; line-height:1.45;
+    letter-spacing:.03em; text-transform:none; margin-top:7px; }
+
   #hud { flex:0 0 auto; }
   #hud b { color:#e8e8e8; font-weight:500; float:right; letter-spacing:0; }
   #hud .row { display:block; }
@@ -266,6 +290,16 @@
 <div id="ui-left" class="col">
   <div id="brand">DOTWORLD<span class="r">(R)</span></div>
 
+<div id="topics">
+  <button type="button" data-to="hud">View</button>
+  <button type="button" data-to="stats">Live</button>
+  <button type="button" data-to="p-world">World</button>
+  <button type="button" data-to="p-cities">Cities</button>
+  <button type="button" data-to="p-capitals">Capitals</button>
+  <button type="button" data-to="p-monuments">Monuments</button>
+  <button type="button" data-to="legend">Colours</button>
+</div>
+
 <div id="hud" class="panel">
   <span class="row">ZOOM <b id="h-zoom">—</b></span>
   <span class="row">DOT PITCH <b id="h-pitch">—</b></span>
@@ -315,6 +349,57 @@
   <span class="row">LAND AREA <b id="s-land">—</b></span>
   <span class="note" id="s-note">Projected from a periodic estimate. Nobody counts
     people in real time.</span>
+</div>
+
+<div id="p-world" class="panel">
+  <span class="ttl">THE WORLD, ON AVERAGE</span>
+  <span class="row">DENSITY <b id="w-density">—</b></span>
+  <span class="row">LIFE EXPECTANCY <b id="w-life">—</b></span>
+  <span class="row">CHILDREN PER WOMAN <b id="w-fert">—</b></span>
+  <span class="row">GDP PER PERSON <b id="w-gdp">—</b></span>
+  <div class="sep"></div>
+  <span class="ttl">AGE</span>
+  <div class="chart" id="c-age"></div>
+  <span class="ttl" style="margin-top:8px">WHERE PEOPLE LIVE</span>
+  <div class="chart" id="c-urban"></div>
+  <span class="sub" id="w-note">World Bank Open Data, world aggregate.</span>
+</div>
+
+<div id="p-cities" class="panel">
+  <span class="ttl">CITIES BY SIZE</span>
+  <div class="chart" id="c-sizes"></div>
+  <div class="sep"></div>
+  <span class="row">CITIES COUNTED <b id="c-total">—</b></span>
+  <span class="row">MEDIAN CITY <b id="c-median">—</b></span>
+  <span class="row">MEAN CITY <b id="c-mean">—</b></span>
+  <span class="row">IN CITIES ≥ 15 K <b id="c-sum">—</b></span>
+  <span class="sub">Every settlement over 15,000 people, from GeoNames. The median is
+    the middle city of the 34,091, not the average — a handful of megacities pull the
+    mean well above where most people actually live.</span>
+</div>
+
+<div id="p-capitals" class="panel">
+  <span class="ttl">THE 195 CAPITALS</span>
+  <span class="row">BIGGEST <b id="k-big">—</b></span>
+  <span class="row">SMALLEST <b id="k-small">—</b></span>
+  <span class="row">OVER A MILLION <b id="k-mil">—</b></span>
+  <span class="row">MEDIAN CAPITAL <b id="k-median">—</b></span>
+  <div class="sep"></div>
+  <span class="ttl">CAPITALS BY CLOCK</span>
+  <div class="chart" id="c-zones"></div>
+  <span class="sub">Which hour of the world each capital keeps, right now — the
+    spread moves with daylight saving.</span>
+</div>
+
+<div id="p-monuments" class="panel">
+  <span class="ttl">BEST KNOWN PLACES</span>
+  <div class="chart" id="c-monuments"></div>
+  <div class="sep"></div>
+  <span class="row">MONUMENTS <b id="m-total">—</b></span>
+  <span class="row">CAPITALS COVERED <b id="m-caps">—</b></span>
+  <span class="row">WITH AN OUTLINE <b id="m-shapes">—</b></span>
+  <span class="sub">Ranked by how many Wikipedia editions and sister projects cover
+    each one. That ranking is Wikipedia's editors' work, not mine.</span>
 </div>
 
 <div id="legend" class="panel">
@@ -1437,6 +1522,7 @@ fetch('data/world-capitals.geojson').then(r => r.json()).then(j => {
   CAPITALS.sort((a, b) => b.pop - a.pop);   // when space is tight, biggest wins
   fillCountries();
   refreshExtremes();
+  buildCapitalCharts();
   dirty = true;
 }).catch(() => {});
 
@@ -1448,6 +1534,7 @@ fetch('data/capital-monuments.geojson').then(r => r.json()).then(j => {
     rank: f.properties.rank, wikis: f.properties.wikis,
     lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] }));
   CAPMON.sort((a, b) => b.wikis - a.wikis);
+  buildMonumentCharts();
   dirty = true;
 }).catch(() => {});
 
@@ -1467,6 +1554,7 @@ map.once('load', () => {
     const src = map.getSource('worldpop');
     if (src) src.setData({ type: 'FeatureCollection', features });
     applyPopFilter();
+    buildCityCharts(j.cities);
     dirty = true;
   }).catch(() => {});
 });
@@ -1884,6 +1972,7 @@ function ensureShapes() {
     .then(j => {
       if (map.getSource('monshapes')) return;
       map.addSource('monshapes', { type: 'geojson', data: j });
+      set('m-shapes', j.features.length + ' OF ' + (CAPMON.length || 491));
       /* The monument is drawn as its edges, not as a solid: a bright contour round
          the foot of the building and another round the top, leaving the building
          itself to the lattice. On top of everything, with no beforeId - under the
@@ -2231,6 +2320,27 @@ const fmtPop = n => n >= 1e6 ? (n / 1e6).toFixed(2) + ' M'
 // Band edges are round numbers; printing them as 1.00 M reads like a measurement.
 const fmtEdge = n => n >= 1e6 ? +(n / 1e6).toFixed(2) + ' M'
                    : n >= 1e3 ? Math.round(n / 1e3) + ' K' : String(n);
+/* The topic strip: the column scrolls, so jumping beats hunting. */
+document.getElementById('topics').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  const el = document.getElementById(b.dataset.to);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+/* Small charts, in the one shape that fits a 240 px column: label, bar, number.
+   `max` is passed in rather than taken per chart, so bars from the same data are
+   comparable between rows and never rescale under you. */
+function chart(id, rows, max) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const top = max || Math.max(1, ...rows.map(r => r.value));
+  el.innerHTML = rows.map(r =>
+    `<div class="crow"><span>${r.label}</span><b>${r.text}</b></div>`
+    + `<div class="cbar"><i style="width:${(r.value / top * 100).toFixed(1)}%;`
+    + `background:${r.hex || '#8a8a8a'}"></i></div>`).join('');
+}
+
 /* Water, in the same words the style uses. */
 const WATER_KEY = [
   ['ocean', 'midnightblue', '#191970'], ['lake', 'darkslateblue', '#483d8b'],
@@ -2257,6 +2367,63 @@ document.getElementById('land-key').innerHTML = LAND_KEY.map(([what, name, hex])
 document.getElementById('water-key').innerHTML = WATER_KEY.map(([what, name, hex]) =>
   `<span class="cat"><i style="background:${hex}"></i>${what.toUpperCase()} — ${name}</span>`
 ).join('');
+
+/* Everything in the CITIES panel comes out of the file the map already holds - no
+   second fetch, no server doing sums. The cities arrive sorted by population, which
+   is what makes the median the middle element rather than a calculation. */
+function buildCityCharts(cities) {
+  const counts = POP_BANDS.map(() => 0);
+  let sum = 0;
+  for (const c of cities) {
+    sum += c[2];
+    counts[POP_BANDS.indexOf(bandFor(c[2]))]++;
+  }
+  chart('c-sizes', POP_BANDS.map((b, i) => {
+    const from = i === 0 ? 15000 : POP_BANDS[i - 1].to;
+    return { label: b.to === Infinity ? fmtEdge(from) + '+' : fmtEdge(from) + '–' + fmtEdge(b.to),
+             text: counts[i].toLocaleString('en-GB'), value: counts[i], hex: b.hex };
+  }));
+  const mid = cities[Math.floor(cities.length / 2)][2];
+  set('c-total', cities.length.toLocaleString('en-GB'));
+  set('c-median', fmtPop(mid));
+  set('c-mean', fmtPop(Math.round(sum / cities.length)));
+  set('c-sum', fmtBig(sum));
+}
+
+/* Capitals: the extremes, and which hour of the world each one keeps. */
+function buildCapitalCharts() {
+  const withPop = CAPITALS.filter(c => c.pop > 0).sort((a, b) => a.pop - b.pop);
+  if (!withPop.length) return;
+  const big = withPop[withPop.length - 1], small = withPop[0];
+  set('k-big', big.name.toUpperCase() + ' ' + fmtPop(big.pop));
+  set('k-small', small.name.toUpperCase() + ' ' + fmtPop(small.pop));
+  set('k-mil', CAPITALS.filter(c => c.pop >= 1e6).length + ' OF 195');
+  set('k-median', fmtPop(withPop[Math.floor(withPop.length / 2)].pop));
+
+  const now = new Date(), byOffset = new Map();
+  for (const c of CAPITALS) {
+    if (!c.tz) continue;
+    const off = Math.round(tzOffsetMinutes(c.tz, now) / 60);
+    byOffset.set(off, (byOffset.get(off) || 0) + 1);
+  }
+  const offsets = [...byOffset.entries()].sort((a, b) => a[0] - b[0]);
+  chart('c-zones', offsets.map(([off, n]) => ({
+    label: 'UTC' + (off < 0 ? '' : '+') + off,
+    text: String(n), value: n,
+    // the same warm ramp: more capitals on that hour, brighter
+    hex: POP_BANDS[Math.min(POP_BANDS.length - 1, Math.round(n / 3))].hex })));
+}
+
+/* Monuments: the ten the world writes about most, out of all 195 capitals. */
+function buildMonumentCharts() {
+  if (!CAPMON.length) return;
+  const top = CAPMON.slice().sort((a, b) => b.wikis - a.wikis).slice(0, 10);
+  chart('c-monuments', top.map(m => ({
+    label: m.name.length > 22 ? m.name.slice(0, 21) + '…' : m.name,
+    text: m.wikis + ' WIKIS', value: m.wikis, hex: '#40e0d0' })));
+  set('m-total', CAPMON.length.toLocaleString('en-GB'));
+  set('m-caps', new Set(CAPMON.map(m => m.city)).size + ' OF 195');
+}
 
 /* The legend is written from POP_BANDS, so it cannot describe a colour the map is
    not actually drawing. */
@@ -2461,6 +2628,45 @@ async function wbIndicator(id) {
   return { value: row.value, year: +row.date };
 }
 
+/* The averages panel. Six more indicators from the same free source the counter
+   uses; each one carries the year it is from, because "life expectancy" with no
+   year is not a fact. */
+async function loadWorldAverages() {
+  const want = { life: 'SP.DYN.LE00.IN', fert: 'SP.DYN.TFRT.IN',
+                 old: 'SP.POP.65UP.TO.ZS', young: 'SP.POP.0014.TO.ZS',
+                 gdp: 'NY.GDP.PCAP.CD', rural: 'SP.RUR.TOTL.ZS' };
+  const got = {};
+  await Promise.all(Object.entries(want).map(async ([k, id]) => {
+    try { got[k] = await wbIndicator(id); } catch (e) { got[k] = null; }
+  }));
+  const density = WORLD.pop / WORLD.land;
+  set('w-density', density.toFixed(1) + ' /KM²');
+  if (got.life) set('w-life', got.life.value.toFixed(1) + ' YEARS');
+  if (got.fert) set('w-fert', got.fert.value.toFixed(2));
+  if (got.gdp) set('w-gdp', '$' + Math.round(got.gdp.value).toLocaleString('en-GB'));
+  if (got.young && got.old) {
+    const young = got.young.value, old = got.old.value;
+    chart('c-age', [
+      { label: 'UNDER 15', text: young.toFixed(1) + '%', value: young, hex: '#ff8c00' },
+      { label: '15 TO 64', text: (100 - young - old).toFixed(1) + '%',
+        value: 100 - young - old, hex: '#ffa500' },
+      { label: '65 AND OVER', text: old.toFixed(1) + '%', value: old, hex: '#ffd700' }
+    ], 100);
+  }
+  if (got.rural) {
+    chart('c-urban', [
+      { label: 'IN TOWNS AND CITIES', text: (100 - got.rural.value).toFixed(1) + '%',
+        value: 100 - got.rural.value, hex: '#dc143c' },
+      { label: 'IN THE COUNTRY', text: got.rural.value.toFixed(1) + '%',
+        value: got.rural.value, hex: '#556b2f' }
+    ], 100);
+  }
+  const years = [...new Set(Object.values(got).filter(Boolean).map(v => v.year))].sort();
+  document.getElementById('w-note').textContent =
+    'World Bank Open Data, world aggregate, ' + years.join(' and ') + '. Density is'
+    + ' people per square kilometre of land, ocean excluded.';
+}
+
 async function loadWorldStats() {
   try {
     const [p, b, d, u, l] = await Promise.all([
@@ -2486,6 +2692,7 @@ async function loadWorldStats() {
   document.getElementById('s-note').textContent =
     'Projected from the ' + WORLD.popYear + ' estimate at the ' + WORLD.ratesYear
     + ' net rate. Nobody counts people in real time.';
+  loadWorldAverages();
 }
 
 // World Bank annual figures are mid-year estimates, so anchor to 1 July.
