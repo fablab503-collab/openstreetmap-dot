@@ -309,6 +309,7 @@ in thousands.
 
 ```sparql
 { ?item wdt:P585 ?date } UNION { ?item wdt:P580 ?date }   # happened on / began on
+UNION { ?item wdt:P619 ?date }                            # launched on (spaceflights)
 ?item wikibase:sitelinks ?links . FILTER(?links >= 30)
 ?item wdt:P31 ?cls . VALUES ?cls { wd:Q198 wd:Q178561 … }  # flat list, never P279*
 ```
