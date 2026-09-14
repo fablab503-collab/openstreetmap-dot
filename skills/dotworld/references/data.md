@@ -425,3 +425,34 @@ point — the Colosseum's ellipse, the Capitol's wings.
 {"type":"Feature","geometry":{"type":"Point","coordinates":[3.88019,43.61174]},
  "properties":{"name":"musée Fabre","cat":"museum","rank":1,"wikis":25}}
 ```
+
+## The solar system — NASA (public domain) + Wikipedia (CC BY-SA 4.0)
+
+`scripts/fetch_solar_system.py` → `data/solar-system.json`, 5 KB, 11 bodies.
+
+- **Two sources, because neither has it all.** The NASA NSSDC planetary fact sheet
+  has mass, diameter, gravity, spin, distance, period, inclination, eccentricity,
+  obliquity, moons and rings for all of them in one table. It has nothing that says
+  *where on the orbit* a planet is. Those three angles — mean anomaly, argument of
+  perihelion, longitude of the ascending node, all at J2000 — come from the English
+  Wikipedia infoboxes.
+- **Parse the fact sheet by row, not by line.** Its rows put every cell on its own
+  source line, and the row labels carry `<sub>`/`<sup>`. Replacing tags with
+  newlines turns "Mass (10^24 kg)" into four lines and finds nothing. Drop the
+  source newlines first, then mark `</tr>` and `</td>` yourself.
+- **Python's TLS fails through this machine's proxy; curl does not.** Same lesson as
+  `gh api`. Shell out.
+- **Infobox values are templates.** `{{val|358.617|u=°}}`, sometimes with a `<ref>`
+  after them. Take the whole line, strip the refs, read the first number.
+- **The Moon has no angles to look up, and honestly so:** its node regresses once in
+  18.61 years and its perigee runs round in 8.85. What can be pinned is the phase —
+  Wikipedia's "Lunar phase" gives a cited anchor (the new moon of 11 August 1999)
+  and the mean synodic month, 29.53059 days (Seidelmann 1992, p. 577). That is a
+  date without a time, so the phase can be half a day out. Checked against Meeus's
+  mean-new-moon series for September 2026: 3.6 days old against 3.2, inside that.
+- **Sanity checks that catch a broken build**: G·M⊕/R⊕² must land on 9.8; Earth's
+  heliocentric longitude plus 180° must equal the Sun's ecliptic longitude for the
+  date (213.8° on 24 Oct 2026, the Sun entering Scorpio at 210° on the 23rd);
+  Earth 0.99 AU, Mars 1.59, Jupiter 5.32, Neptune 29.96.
+- Elements are two-body Kepler: a fraction of a degree from 1800 to 2050, drifting
+  outside it. Say so in the interface. Real positions: JPL Horizons.

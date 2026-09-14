@@ -99,6 +99,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | Land | Wood, scrub, grass, farmland, wetland, sand, ice, and what people build on it — residential to stadium — each a named colour, kept dim | OpenStreetMap |
 | Monument outlines | The building's own edges from z12.5 — a contour round its foot, and round its roofline in 3D | OpenStreetMap (Overpass) |
 | Monuments — Montpellier | Top 10, ranked by number of Wikipedia language editions | Wikidata + OpenStreetMap |
+| The solar system | The Sun, eight planets, the Moon and Pluto: size, mass, spin, tilt, orbit, moons and temperature, with gravity worked out from the masses | NASA NSSDC fact sheet + Wikipedia J2000 angles |
 
 **Colour follows the job.**
 
@@ -148,9 +149,45 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | `3D DOT VIEW` | Buildings as extrusions |
 | `ORBIT` | Turn the camera, one revolution a minute |
 | `RESET NORTH` | Ease back to north |
+| `LEAVE EARTH` | Step off the map into the solar system: the Sun, the eight planets, the Moon and Pluto, all drawn as dots |
+| In space: `LOOKING AT` | Fly to any of them — or click one |
+| In space: `TIME` | Paused, real time, or up to a year a second. The year bar still works: set 20 July 1969 and the Earth and Moon stand where Apollo 11 found them |
+| In space: `DEPTH OF FIELD` | How much a lens blurs what is off the plane you are looking at. 0 turns it off |
+| In space: `GRAVITY WELL` | The pull, drawn as the pit it makes |
+| In space: `TRUE SCALE` | Stop squashing distances and sizes. Worth doing once |
 
 Drag to pan, scroll to zoom, right-drag to turn and tilt. A drag takes over from an
 orbit. Defaults are calibrated by eye: `DOT SCALE 0.65`, `GAIN 2.05`, `CUTOFF 0.03`.
+
+## Space
+
+`LEAVE EARTH` puts the camera three Earth radii up and hands it the rest of the
+solar system. Everything is still dots.
+
+Three invisible things are drawn:
+
+- **Gravity**, as a real number: the sum of GM/r² from every body at wherever the
+  camera is. It starts at the Earth, where it reads 9.8 m/s² on the surface, and
+  falls with the square of the distance as you pull back — 2.45 at two radii out,
+  1.09 at three. The sheet under the planets is the same sum drawn as a potential
+  well; it is not a picture of bent space.
+- **Depth of field**, because a lens has one: anything off the plane you are
+  looking at spreads into a bigger, fainter disc. On a screen with no parallax it
+  is the only thing that says which of two dots is further away.
+- **Spin.** The Earth turns once a sidereal day under a Sun that stands over the
+  longitude matching the hour, so at noon UTC Greenwich faces it; the night side
+  is made of its own cities, in the same population colours the map uses. The Moon
+  keeps one face toward us, marked, because it turns exactly once per orbit.
+
+Distances and sizes are squashed — a square root, not a log, or Venus would be as
+wide as the gap to the Earth. Close to a body the squashing switches off, so three
+radii up looks like three radii up and the Moon sits at the sixty it really keeps.
+`TRUE SCALE` turns all of it off: the Earth becomes a speck, the gaps become the
+picture, and the view becomes unusable, which is the lesson.
+
+Positions are two-body Kepler orbits from the NASA fact sheet and J2000 angles.
+Good to a fraction of a degree from 1800 to 2050 and drifting outside it. For real
+positions, use [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/).
 
 ## Readouts
 

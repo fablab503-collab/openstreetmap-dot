@@ -70,7 +70,10 @@ Requests are debounced to respect their one-per-second guidance.
 | Country outlines for the 195 | [Natural Earth](https://www.naturalearthdata.com/) 1:50m admin 0 | public domain |
 | Population by country by year, 1960–2050 | [World Bank Open Data](https://data.worldbank.org/) (estimates, and source 40 projections) | CC BY 4.0 |
 | Historical borders, 1500–1994 | [Historical Basemaps](https://github.com/aourednik/historical-basemaps), Andreas Ourednik | GPL-3.0 |
-| The events of each year, 1500 onward | [Wikidata](https://www.wikidata.org/) (P585, P580, sitelink counts) | CC0 1.0 |
+| The events of each year, 1500 onward | [Wikidata](https://www.wikidata.org/) (P585, P580, P619, sitelink counts) | CC0 1.0 |
+| Sizes, masses, spins, tilts, orbits and temperatures of the Sun, the eight planets, the Moon and Pluto | [NASA NSSDC Planetary Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/) | public domain |
+| Where each planet sits on its orbit at J2000 — mean anomaly, argument of perihelion, longitude of the ascending node | [English Wikipedia](https://en.wikipedia.org/) infoboxes | CC BY-SA 4.0 |
+| The Moon's phase — days since the new moon of 11 August 1999, modulo a mean synodic month of 29.53059 days | [English Wikipedia, "Lunar phase"](https://en.wikipedia.org/wiki/Lunar_phase), citing Seidelmann 1992 | CC BY-SA 4.0 |
 | Montpellier monuments + ranking | [Wikidata](https://www.wikidata.org/) & [OpenStreetMap](https://www.openstreetmap.org/) | CC0 1.0 / ODbL |
 | The best-known monuments of all 195 capitals | [Wikidata](https://www.wikidata.org/) (P625 + sitelink counts) | CC0 1.0 |
 | The outline of each of those monuments | [OpenStreetMap](https://www.openstreetmap.org/copyright) via [Overpass](https://overpass-api.de/) | ODbL 1.0 |
@@ -80,6 +83,14 @@ ask for them, never copied into this repository**: the dataset is GPL-3.0 and Do
 own code is MIT, and mixing those licences by redistribution is not something a map
 should do quietly. They are approximations drawn for illustration, not a legal record
 of any border.
+
+The solar system is drawn from **two-body Kepler orbits**. That is the standard
+approximation and it is good to a fraction of a degree from 1800 to 2050; outside
+that it drifts, and the panel says so rather than letting the picture imply a
+precision it does not have. Nothing is perturbed by anything else, so the Moon is
+the roughest of them - its node and its perigee really do move, and here they do
+not. **This is a picture to think with, not an ephemeris.** For real positions use
+[JPL Horizons](https://ssd.jpl.nasa.gov/horizons/).
 
 Monument ranking counts how many Wikipedia editions and sister projects cover each
 site — so the ordering is really the work of **Wikipedia's editors**. Montpellier's

@@ -5,6 +5,83 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — Leave the Earth: gravity, depth of field, and the whole solar system
+
+### Added
+
+- **`LEAVE EARTH`.** The camera steps off the map to three Earth radii up and the
+  rest of the solar system comes with it: the Sun, all eight planets, the Moon and
+  Pluto, every one of them drawn as dots on its own canvas. Click a body or pick
+  it from `LOOKING AT` to fly to it; drag turns the camera, the wheel changes how
+  far away it is.
+- **Gravity as a number, not a mood.** The panel sums GM/r² from every body at
+  wherever the camera is: 9.8 m/s² on the Earth's surface, 2.45 two radii out,
+  1.09 at three, 1.1 × 10⁻⁴ out by Jupiter's orbit. It also prints what fraction
+  of that comes from which body, the speed needed to stay in orbit there, and the
+  speed needed to leave. G is CODATA's 6.674 30 × 10⁻¹¹ and the masses are NASA's,
+  so G·M⊕/R⊕² lands on 9.82 - a check that the fact sheet was read correctly.
+- **Gravity as a shape.** A lattice on the plane of the planets, pushed down by
+  the potential and squashed logarithmically so the Sun's pit and a planet's
+  dimple fit in one picture. The interface says what it is: the number given a
+  shape, not a picture of bent space.
+- **Depth of field.** A thin-lens blur circle: the further a dot is off the plane
+  you are looking at, the bigger and fainter it goes. On a flat screen with no
+  parallax it is the only cue that says which of two points of light is further
+  away. `DEPTH OF FIELD 0` turns it off.
+- **The Earth turning, and made of its own cities.** The Sun stands over the
+  longitude that matches the hour, so at noon UTC Greenwich faces it, and the
+  terminator is real. The night side is the 34,091 cities the map already carries,
+  lit in the same population colours - city lights from orbit.
+- **The Moon, and why it never turns away.** Real distance, real 27.3-day period,
+  with the middle of its near side marked: it keeps one face toward us because it
+  turns exactly once per orbit, and an unmarked grey ball cannot show that.
+- **Saturn has rings**, drawn as dots in its own tilted equatorial plane.
+- **The year bar drives the sky.** Set 20 July 1969 and the Earth and the Moon
+  stand where Apollo 11 found them. `TIME` runs from paused to a year a second.
+- **`data/solar-system.json`**, 5,104 bytes, built by
+  `skills/dotworld/scripts/fetch_solar_system.py` from the NASA NSSDC planetary
+  fact sheet (public domain) and English Wikipedia infoboxes (CC BY-SA 4.0).
+
+### Why it looks the way it does
+
+- **Square root, not logarithm.** A log fits Mercury and Neptune on one screen and
+  then crushes them together: in log units the whole run from Mercury to Neptune is
+  shorter than a planet is wide, and the first build had a Venus as wide as the gap
+  to the Earth. A square root keeps the order and the spread - Mercury 62 units,
+  Earth 100, Jupiter 228, Neptune 548 - with a flatter curve for sizes so the Sun
+  stays biggest without swallowing the inner orbits.
+- **Close in, the squashing switches off.** Inside about 30 radii of whatever you
+  are looking at, distances are exact: three radii up looks like three radii up and
+  the Moon sits at the sixty Earth radii it really keeps. Back off and the exponent
+  eases to 0.55 and pulls a moon inward, because at true proportions the Moon's
+  orbit is wider than the Earth's own squashed orbit. `TRUE SCALE` turns the lot
+  off and shows why nobody draws it that way.
+- **Brightness rides the dot's size**, the same halftone rule the map uses. The
+  first build varied only alpha, and a planet filling the screen came out as an
+  empty screen.
+
+### Honest limits
+
+- Two-body Kepler orbits: good to a fraction of a degree from 1800 to 2050, and
+  drifting outside that. Nothing perturbs anything, so the Moon is the roughest -
+  its node really does come round in 18.61 years and here it does not move at all.
+  Its phase is anchored to a cited new moon and a mean synodic month, which is a
+  date without a time, so the phase can be half a day out.
+- The day/night line ignores the equation of time: a quarter of an hour at worst,
+  about 4° of longitude.
+- This is a picture to think with. For real positions use JPL Horizons.
+
+### Fixed on the way
+
+- A body filling the screen asked for a lattice millions of dots wide and threw
+  `RangeError: Invalid array length`. The lattice is now only walked where it can
+  land on screen, and its pitch opens up as the body grows, so a planet you are
+  standing on costs the same few thousand dots as one the size of a coin.
+- A million kilometres is 10⁹ metres, not 10⁶. The readout called a camera three
+  Earth radii up "20.1 M KM", which is past the Moon.
+
+---
+
 ## 2026-09-14 — Coming back from a past year says the right year again
 
 ### Fixed
