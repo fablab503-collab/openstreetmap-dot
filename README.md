@@ -174,6 +174,16 @@ Three invisible things are drawn:
 - **Depth of field**, because a lens has one: anything off the plane you are
   looking at spreads into a bigger, fainter disc. On a screen with no parallax it
   is the only thing that says which of two dots is further away.
+- **Grab a planet and spin it.** Drag the body itself rather than the empty sky and
+  it turns under your finger; let go and it keeps the rate you gave it, because
+  nothing out there is touching it. The panel then reads the consequences: the new
+  day length, the angular momentum as a multiple of its own, the energy you put in,
+  how fat the spin makes it, and — since the only brake anyone has measured is the
+  tide — how long the spin would take to bleed off, which comes out in billions of
+  years. A hand is far too strong for a planet, so the spin is held at the rate where
+  the equator would fly off (one turn every 1 h 24 m for the Earth); that line is
+  physics, not a setting. `GIVE THE SPINS BACK` undoes it, which nothing in space
+  would.
 - **Spin**, with the numbers under it. The Earth turns once a sidereal day —
   **23 h 56 m 04.2 s** — under a Sun that stands over the longitude matching the
   hour, so at noon UTC Greenwich faces it. The panel reads out, live: how far it has

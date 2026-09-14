@@ -5,6 +5,35 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — Grab a planet and spin it
+
+### Added
+
+- **Drag a body and it turns under your hand; let go and it keeps going.** There is
+  nothing out there to rub against, so angular momentum is conserved and the spin
+  simply continues - on the same clock as everything else, so at "a day a second" it
+  whips round and paused it holds still. Drag the empty sky instead and you still
+  turn the camera.
+- **What the panel says once you have spun something:** the new day length, the
+  angular momentum in kg·m²/s and as a multiple of its own, the energy you added in
+  joules, how flat the spin makes it, how close that is to break-up, and **how long
+  the spin lasts** - the change in day length divided by the only measured brake
+  there is, the tide, at the Earth's own +1.72 ms per century. A good flick comes out
+  at billions of years, which is the honest answer to "does it keep spinning".
+- **It goes fat as it spins.** The drawn body is squashed along its axis by the
+  Maclaurin flattening, 1.25 ω²r³/GM - which gives the real Earth 0.0043 against its
+  measured 0.0034 - so spinning it up visibly bulges it, and seen pole-on it stays a
+  circle, as an oblate body does. The city lights and the Moon's near-side marker are
+  placed on that same shape; the first build left them floating off a squashed Earth.
+- **The spin is held at break-up.** Past ω²r = GM/r² the equator is in orbit and the
+  body comes apart: one turn every 1 h 24 m for the Earth. A hand is far too strong
+  for a planet - a normal flick asks for ten thousand times its own spin - so that
+  limit is where it stops. `GIVE THE SPINS BACK` resets, which nothing in space would.
+- Every body now turns at its own rate rather than sitting still: Jupiter goes round
+  in 9 h 55 m, Venus backwards in 5,832 h.
+
+---
+
 ## 2026-09-14 — The spin, with the physics on the panel
 
 ### Added
