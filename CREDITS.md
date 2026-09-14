@@ -72,6 +72,8 @@ Requests are debounced to respect their one-per-second guidance.
 | Historical borders, 1500–1994 | [Historical Basemaps](https://github.com/aourednik/historical-basemaps), Andreas Ourednik | GPL-3.0 |
 | The events of each year, 1500 onward | [Wikidata](https://www.wikidata.org/) (P585, P580, P619, sitelink counts) | CC0 1.0 |
 | Sizes, masses, spins, tilts, orbits and temperatures of the Sun, the eight planets, the Moon and Pluto | [NASA NSSDC Planetary Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/) | public domain |
+| Each body's precise figures — sidereal year and rotation, equatorial and polar radius, flattening, surface acceleration at equator and pole, J2, solar irradiance, the Moon's recession rate | [NASA NSSDC](https://nssdc.gsfc.nasa.gov/planetary/factsheet/) per-body sheets (`earthfact.html` and the rest) | public domain |
+| How fast the day is lengthening: +2.4 ms/century from the Moon's orbit, +1.72 ± 0.03 observed over 2,700 years | [English Wikipedia, "Tidal acceleration"](https://en.wikipedia.org/wiki/Tidal_acceleration) | CC BY-SA 4.0 |
 | Where each planet sits on its orbit at J2000 — mean anomaly, argument of perihelion, longitude of the ascending node | [English Wikipedia](https://en.wikipedia.org/) infoboxes | CC BY-SA 4.0 |
 | The Moon's phase — days since the new moon of 11 August 1999, modulo a mean synodic month of 29.53059 days | [English Wikipedia, "Lunar phase"](https://en.wikipedia.org/wiki/Lunar_phase), citing Seidelmann 1992 | CC BY-SA 4.0 |
 | Montpellier monuments + ranking | [Wikidata](https://www.wikidata.org/) & [OpenStreetMap](https://www.openstreetmap.org/) | CC0 1.0 / ODbL |

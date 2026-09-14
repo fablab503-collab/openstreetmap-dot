@@ -5,6 +5,42 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-14 — The spin, with the physics on the panel
+
+### Added
+
+- **THE SPIN**, a block of the space panel that works the Earth's rotation out live
+  rather than quoting it. It turns once in **23 h 56 m 04.2 s** but a day lasts
+  24 h 00 m, and the panel says why: by the time it has turned all the way round it
+  has moved along its orbit, so it has to turn a little further to bring the Sun
+  back overhead. Then, live: how far it has turned since midnight (of 360.9856°,
+  a solar day's worth of turning); **where the Sun is overhead**, longitude from the
+  clock and latitude from the tilt — 3.1° N today, the same declination that gives
+  us summer; the **ground speed at the equator, 1,674 km/h**, and under wherever the
+  camera is (cos of the latitude); how much of the pull the spin cancels there —
+  **0.0339 m/s², 0.34%**, at the equator and nothing at the poles; what you would
+  weigh standing on that spot; how much the spin has squashed the planet, **21.4 km
+  fatter than tall, 1/298**; and that the day is lengthening by **+1.72 ms a
+  century** while the Moon backs off **3.8 cm a year**, which is the same handshake.
+- Every body's own NASA sheet is fetched now, not just the summary table, so the
+  spin rows work for Mars and Jupiter too — and Venus turns out to have ground that
+  moves at 6.5 km/h, slower than walking.
+
+### Fixed
+
+- **The summary table rounds, and it mattered.** It prints the Earth's year as 365.2
+  days and its spin as 23.9 hours. Over the twenty-six years since J2000 a year
+  rounded like that is a day and a half of drift — a degree and a half of sky — and
+  the rounded spin printed a sidereal day of 23 h 54 m, two minutes out. The
+  per-body sheets carry 365.256 and 23.9345, and using them moved the computed
+  solar declination from 2.5° to 3.1° against a real 3.2°.
+- **A planet's sheet also lists its moons, with the same row labels.** Mars's sheet
+  handed over Phobos's 0.319-day orbit as the Martian year. A precise figure is now
+  kept only when it agrees with the rounded one from the summary table to within 2%,
+  which is what a second source is for.
+
+---
+
 ## 2026-09-14 — Space, made honest: real proportions, real shading, real occlusion
 
 Daniel looked at the first build and said the fades, the Moon and the dot scale were

@@ -174,10 +174,20 @@ Three invisible things are drawn:
 - **Depth of field**, because a lens has one: anything off the plane you are
   looking at spreads into a bigger, fainter disc. On a screen with no parallax it
   is the only thing that says which of two dots is further away.
-- **Spin.** The Earth turns once a sidereal day under a Sun that stands over the
-  longitude matching the hour, so at noon UTC Greenwich faces it; the night side
-  is made of its own cities, in the same population colours the map uses. The Moon
-  keeps one face toward us, marked, because it turns exactly once per orbit.
+- **Spin**, with the numbers under it. The Earth turns once a sidereal day —
+  **23 h 56 m 04.2 s** — under a Sun that stands over the longitude matching the
+  hour, so at noon UTC Greenwich faces it. The panel reads out, live: how far it has
+  turned since midnight, where the Sun is overhead (longitude from the clock,
+  latitude from the tilt — that one is the declination that gives us summer), the
+  ground speed at the equator (**1,674 km/h**) and under wherever the camera is,
+  how much of the pull the spin cancels there (0.0339 m/s² at the equator, 0.34% —
+  nothing at the poles), what you would actually weigh on that spot from NASA's own
+  measured ends (9.780 m/s² at the equator, 9.832 at the pole), how far the spin has
+  squashed the planet (21.4 km fatter than tall, 1/298), and that the day is getting
+  longer by +1.72 ms a century while the Moon backs away 3.8 cm a year. The night
+  side is made of the Earth's own cities, in the same population colours the map
+  uses. The Moon keeps one face toward us, marked, because it turns exactly once
+  per orbit.
 
 **Scale is true by default.** From three Earth radii up the Sun is 0.531° across and
 the Moon is 0.518° — which is why total eclipses work at all — while Venus is 0.010°

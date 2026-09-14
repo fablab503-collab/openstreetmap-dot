@@ -129,6 +129,74 @@ def fact_sheet():
     return out
 
 
+# Every body's own sheet, not just the Earth's. The summary table rounds - it prints
+# the Earth's year as 365.2 days and its spin as 23.9 hours - and over twenty-six
+# years a rounded year is a day and a half of drift, which is a degree and a half of
+# sky. The per-body sheets carry 365.256 and 23.9345.
+SHEETS = {'sun': 'sunfact.html', 'mercury': 'mercuryfact.html', 'venus': 'venusfact.html',
+          'earth': 'earthfact.html', 'moon': 'moonfact.html', 'mars': 'marsfact.html',
+          'jupiter': 'jupiterfact.html', 'saturn': 'saturnfact.html',
+          'uranus': 'uranusfact.html', 'neptune': 'neptunefact.html',
+          'pluto': 'plutofact.html'}
+
+# Rows worth having from a body's own sheet, which the summary table does not carry.
+SHEET_ROWS = {
+    'Equatorial radius (km)':            'eq_radius_km',
+    'Polar radius (km)':                 'polar_radius_km',
+    'Ellipticity (Flattening)':          'flattening',
+    'Sidereal rotation period (hrs)':    'sidereal_rotation_h',
+    'Length of day (hrs)':               'solar_day_h',
+    'Surface gravity (mean) (m/s2)':     'g_mean',
+    'Surface acceleration (eq) (m/s2)':  'a_equator',
+    'Surface acceleration (pole) (m/s2)': 'a_pole',
+    'Mean orbital velocity (km/s)':      'orbital_speed_kms',
+    'Recession rate from Earth (cm/yr)': 'recession_cm_yr',
+    'Synodic period (days)':             'synodic_d',
+    'Inclination to ecliptic (deg)':     'inclination_ecliptic',
+    'Solar irradiance (W/m2)':           'solar_irradiance',
+    'Sidereal orbit period (days)':      'sidereal_orbit_d',
+    'Sidereal rotation period (Earth days)': 'sidereal_rotation_d',
+    'Mean radius (km)':                  'mean_radius_km',
+    'Volumetric mean radius (km)':       'mean_radius_km',
+    'Sidereal orbit period (Earth days)': 'sidereal_orbit_d',
+    'J2 (x 10-6)':                       'j2_1e6',
+}
+
+
+def body_sheet(slug):
+    """One body's own NSSDC sheet.
+
+    These sheets are not all built the same way: the Moon's is a table, the Earth's
+    is preformatted text with the value simply spaced away from the label. The table
+    parse is tried first, and whatever it misses is picked up by reading the stripped
+    text as "label, gap, number" - which is how the Earth sheet reads to a human too.
+    """
+    raw = get('https://nssdc.gsfc.nasa.gov/planetary/factsheet/' + slug)
+    html = re.sub(r'</tr\s*>', '\n', raw.replace('\n', ' '), flags=re.I)
+    html = re.sub(r'</t[dh]\s*>', '\t', html, flags=re.I)
+    html = re.sub(r'<[^>]*>', '', html).replace('&nbsp;', ' ')
+    out = {}
+    for line in html.split('\n'):
+        cells = [c.strip() for c in line.split('\t') if c.strip()]
+        if len(cells) < 2:
+            continue
+        key = SHEET_ROWS.get(re.sub(r'\s+', ' ', cells[0]).strip())
+        n = number(cells[1]) if key else None
+        if key and n is not None:
+            out[key] = n
+
+    text = re.sub(r'<[^>]*>', '', raw).replace('&nbsp;', ' ')
+    for line in text.split('\n'):
+        m = re.match(r'^\s*([A-Za-z][^\t]*?)[\t ]{2,}(-?[\d.,]+)\s*$', line)
+        if not m:
+            continue
+        key = SHEET_ROWS.get(re.sub(r'\s+', ' ', m.group(1)).strip())
+        n = number(m.group(2)) if key else None
+        if key and n is not None and key not in out:
+            out[key] = n
+    return out
+
+
 def wiki_angles(title):
     """Mean anomaly, argument of perihelion and ascending node at J2000."""
     url = WIKI + '?' + urllib.parse.urlencode({
@@ -191,6 +259,41 @@ def main():
         'temp_c': 5504.0, 'moons': 0, 'rings': 'No',
     }
 
+    for body, slug in SHEETS.items():
+        print('  NASA sheet:', slug)
+        detail = body_sheet(slug)
+        # A planet's own sheet also lists its moons, and those rows carry the same
+        # labels: Mars's sheet gave Phobos's 0.319-day orbit as Mars's year. Keep a
+        # precise figure only when it agrees with the rounded one from the summary
+        # table; that is what it is for.
+        for fine, coarse in (('sidereal_orbit_d', 'period_d'),
+                             ('sidereal_rotation_h', 'rotation_h')):
+            a, b_ = detail.get(fine), bodies[body].get(coarse)
+            if a is None or b_ in (None, 0):
+                continue
+            if abs(abs(a) - abs(b_)) / abs(b_) > 0.02:
+                print('    dropped', fine, a, 'against', coarse, b_, file=sys.stderr)
+                detail.pop(fine)
+        bodies[body]['detail'] = detail
+
+    # Why the spin is slowing and the Moon is leaving: the same handshake. The
+    # recession rate is NASA's own (Moon fact sheet, measured by bouncing lasers off
+    # the retroreflectors Apollo left). The two day-lengthening rates come from
+    # English Wikipedia's "Tidal acceleration" and disagree on purpose - one is what
+    # the Moon's orbit implies, the other is what 2,700 years of eclipse records
+    # actually show, and the gap is the rest of the Earth's business (ice ages
+    # letting the crust rebound, mostly).
+    doc_tides = {
+        'recession_cm_yr': bodies['moon'].get('detail', {}).get('recession_cm_yr'),
+        'day_lengthening_ms_per_century_from_orbit': 2.4,
+        'day_lengthening_ms_per_century_observed': 1.72,
+        'observed_uncertainty': 0.03,
+        'source': 'Recession: NASA NSSDC Moon fact sheet. Day lengthening: English '
+                  'Wikipedia, "Tidal acceleration" (CC BY-SA 4.0) - +2.4 ms/d/century '
+                  'from the change in the Moon\'s orbit, +1.72 +/- 0.03 observed over '
+                  'the past 2,700 years.',
+    }
+
     # The Moon's infobox carries no fixed angles, and honestly so: its node regresses
     # once in 18.61 years and its perigee runs round in 8.85, so there is nothing to
     # put there. What does pin the Moon down for a picture is its phase, and English
@@ -219,6 +322,7 @@ def main():
                 'year bar is outside it. No perturbations, so the Moon is the '
                 'roughest of them.',
         'bodies': bodies,
+        'tides': doc_tides,
     }
     with open(out_path, 'w') as fh:
         json.dump(doc, fh, separators=(',', ':'), sort_keys=True)

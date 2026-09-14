@@ -516,6 +516,26 @@
   <span class="row">FROM EARTH <b id="sp-fromearth">—</b></span>
   <span class="row">LIGHT TAKES <b id="sp-light">—</b></span>
   <div class="sep"></div>
+  <span class="ttl">THE SPIN</span>
+  <span class="row">TURNS ONCE IN <b id="sp-sid">—</b></span>
+  <span class="row">BUT A DAY LASTS <b id="sp-solar">—</b></span>
+  <span class="sub" id="sp-spinwhy">A turn is not a day: by the time it has turned
+    all the way round, it has moved along its orbit, so it has to turn a little
+    further to bring the Sun back overhead.</span>
+  <span class="row">TURNED SINCE MIDNIGHT <b id="sp-turned">—</b></span>
+  <span class="row">SUN OVERHEAD AT <b id="sp-subsolar">—</b></span>
+  <div class="sep"></div>
+  <span class="row">GROUND AT THE EQUATOR <b id="sp-eqspeed">—</b></span>
+  <span class="row">UNDER YOU <b id="sp-under">—</b></span>
+  <span class="row">SPIN CANCELS <b id="sp-centri">—</b></span>
+  <span class="row">STANDING THERE <b id="sp-standg">—</b></span>
+  <span class="sub" id="sp-spinnote">Spinning throws you outward, so the ground under
+    you pulls a little less than the figure above. It is why NASA prints two numbers
+    for the Earth's surface: 9.780 m/s² at the equator, 9.832 at the pole.</span>
+  <span class="row" id="sp-bulge-row">SQUASHED BY IT <b id="sp-bulge">—</b></span>
+  <span class="row" id="sp-slow-row">SLOWING DOWN <b id="sp-slow">—</b></span>
+  <span class="sub" id="sp-slownote"></span>
+  <div class="sep"></div>
   <span class="ttl">THE MOON</span>
   <span class="row">PHASE <b id="sp-phase">—</b></span>
   <span class="row">SPIN / ORBIT <b id="sp-lock">27.3 D / 27.3 D</b></span>
@@ -3353,12 +3373,19 @@ function loadSolar() {
       const b = SP.bodies[k];
       if (!b) continue;
       b.key = k;
+      const d = b.detail || {};
       b.mass = (b.mass_1e24kg || 0) * 1e24;
       b.mu = G * b.mass;                       // GM, what gravity actually needs
-      b.R = (b.diameter_km || 1) * 500;        // metres, radius not diameter
+      /* The summary table rounds; each body's own sheet does not. Twenty-six years
+         of a year rounded to 365.2 instead of 365.256 is a day and a half of drift,
+         which is a degree and a half of sky - and a spin of "23.9 hours" prints a
+         sidereal day of 23 h 54 m, two minutes out. Prefer the sheet, always. */
+      b.R = (d.mean_radius_km ? d.mean_radius_km * 1000 : (b.diameter_km || 1) * 500);
+      b.Req = d.eq_radius_km ? d.eq_radius_km * 1000 : b.R;
       b.a = k === 'moon' ? b.distance_km * 1000 : (b.a_1e6km || 0) * 1e9;
-      b.P = (b.period_d || 0) * DAY_MS;
-      b.spin = (b.rotation_h || 0) * 3600000;  // negative = turns the other way
+      b.P = (d.sidereal_orbit_d || b.period_d || 0) * DAY_MS;
+      b.rotH = d.sidereal_rotation_h !== undefined ? d.sidereal_rotation_h : b.rotation_h;
+      b.spin = (b.rotH || 0) * 3600000;        // negative = turns the other way
     }
     return SP.bodies;
   }).catch(() => { SP.ready = null; return null; });
@@ -3901,11 +3928,14 @@ function spacePanel(pos, cam) {
   set('sp-dia', Math.round(b.diameter_km).toLocaleString('en-GB') + ' KM ACROSS');
   set('sp-mass', b.mass_1e24kg >= 1 ? b.mass_1e24kg.toLocaleString('en-GB') + ' × 10²⁴ KG'
                                     : (b.mass_1e24kg * 1000).toFixed(1) + ' × 10²¹ KG');
-  set('sp-day', b.day_h ? Math.abs(b.day_h).toFixed(1) + ' H'
-    + (b.rotation_h < 0 ? ' · TURNS BACKWARDS' : '') : '—');
-  set('sp-year', b.period_d ? (b.period_d > 900
-    ? (b.period_d / 365.25).toFixed(1) + ' EARTH YEARS'
-    : b.period_d.toLocaleString('en-GB') + ' DAYS') : '—');
+  const dd = b.detail || {};
+  const dayH = dd.solar_day_h || b.day_h;
+  set('sp-day', dayH ? Math.abs(dayH).toFixed(1) + ' H'
+    + (b.rotH < 0 ? ' · TURNS BACKWARDS' : '') : '—');
+  const yearD = dd.sidereal_orbit_d || b.period_d;
+  set('sp-year', yearD ? (yearD > 900
+    ? (yearD / 365.25).toFixed(1) + ' EARTH YEARS'
+    : yearD.toLocaleString('en-GB') + ' DAYS') : '—');
   set('sp-tilt', b.obliquity !== undefined ? b.obliquity.toFixed(1) + '°' : '—');
   set('sp-moons', b.moons !== undefined ? b.moons : '—');
 
@@ -3914,12 +3944,99 @@ function spacePanel(pos, cam) {
   set('sp-fromearth', fmtDist(de));
   set('sp-light', fmtTime(de / C_LIGHT));
 
+  spinPanel(pos, cam, b);
+
   const ph = pos.moon.phase || 0;
   set('sp-phase', PHASES[Math.round(ph * 8) % 8] + ' · ' + (ph * 29.53).toFixed(1) + ' D OLD');
   set('sp-scale', SP.trueScale ? 'TRUE — REAL PROPORTIONS'
                                 : 'SQUASHED — A DIAGRAM, NOT THE SKY');
   set('sp-date', new Date(SP.t).toISOString().slice(0, 16).replace('T', ' ') + ' UTC'
     + ' · ' + RATES[SP.rate].label);
+}
+
+/* The spin, worked out rather than quoted. Everything here comes from two numbers
+   the fact sheet gives - how long the body takes to turn, and how wide it is - and
+   one the camera gives: which latitude it is over. */
+const SIDEREAL_DEG_PER_DAY = 360.9856;     // a solar day's worth of turning, vs the stars
+function spinPanel(pos, cam, b) {
+  const rot = Math.abs(b.rotH || 0) * 3600;               // seconds for one full turn
+  const w = rot ? 2 * Math.PI / rot : 0;                   // rad/s
+  const eq = b.Req || b.R;
+  const hms = sec => {
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+    return h + ' H ' + String(m).padStart(2, '0') + ' M '
+         + (sec % 60).toFixed(1).padStart(4, '0') + ' S';
+  };
+  set('sp-sid', rot ? hms(rot) + (b.rotH < 0 ? ' · BACKWARDS' : '') : '—');
+  const solarH = (b.detail && b.detail.solar_day_h) || b.day_h;
+  set('sp-solar', solarH ? hms(Math.abs(solarH) * 3600) : '—');
+
+  // Where the camera stands over the body, and how fast that ground is moving.
+  const fr = bodyFrame(b);
+  const rel = V.sub(cam.real, pos[SP.focus]);
+  const n = V.norm(rel);
+  const lat = Math.asin(Math.max(-1, Math.min(1, V.dot(n, fr.axis))));
+  const vEq = w * eq;                                      // m/s at the equator
+  const vHere = vEq * Math.cos(lat);
+  const kmh = v => (v * 3.6).toLocaleString('en-GB', { maximumFractionDigits: 0 }) + ' KM/H';
+  set('sp-eqspeed', rot ? kmh(vEq) : '—');
+  set('sp-under', (Math.abs(lat / RAD).toFixed(1)) + '° ' + (lat >= 0 ? 'N' : 'S')
+    + ' · ' + kmh(vHere));
+
+  /* Spinning throws you outward: at that latitude it cancels omega squared r cos
+     squared lat of the pull. On Earth that is 0.034 m/s2 at the equator and none at
+     the poles, which is most of the gap between NASA's two printed figures - the
+     rest is the bulge, being further from the middle out there. */
+  const centri = w * w * eq * Math.cos(lat) * Math.cos(lat);
+  const d0 = b.detail || {};
+  const gSurf = d0.g_mean || b.mu / (b.R * b.R);
+  set('sp-centri', rot ? centri.toFixed(4) + ' M/S² · '
+    + (centri / gSurf * 100).toFixed(2) + '% OF THE PULL' : '—');
+  /* Where NASA prints both ends - equator and pole - use them: that curve carries
+     the spin and the bulge together, measured, rather than my half of it. */
+  const standing = (d0.a_pole && d0.a_equator)
+    ? d0.a_pole - (d0.a_pole - d0.a_equator) * Math.cos(lat) * Math.cos(lat)
+    : gSurf - centri;
+  set('sp-standg', standing.toFixed(3) + ' M/S²'
+    + (d0.a_pole ? ' · MEASURED' : ' · WORKED OUT'));
+
+  const ms = ((SP.t % DAY_MS) + DAY_MS) % DAY_MS;
+  set('sp-turned', (ms / DAY_MS * SIDEREAL_DEG_PER_DAY).toFixed(1) + '° OF '
+    + SIDEREAL_DEG_PER_DAY + '°');
+
+  /* Where the Sun stands overhead: the longitude follows the hour, and the latitude
+     is the tilt projected onto where the Earth is in its year - zero at an equinox,
+     23.4° at a solstice. It is the same declination that gives us summer. */
+  const earth = pos.earth;
+  const sunLon = Math.atan2(-earth.y, -earth.x);
+  const dec = Math.asin(Math.sin((SP.bodies.earth.obliquity || 23.44) * RAD)
+                        * Math.sin(sunLon)) / RAD;
+  const utcH = ms / 3600000;
+  let sl = 180 - utcH * 15;
+  sl = ((sl + 180) % 360 + 360) % 360 - 180;
+  set('sp-subsolar', Math.abs(sl).toFixed(1) + '° ' + (sl >= 0 ? 'E' : 'W') + ' · '
+    + Math.abs(dec).toFixed(1) + '° ' + (dec >= 0 ? 'N' : 'S'));
+
+  const d = b.detail || {};
+  const bulge = document.getElementById('sp-bulge-row');
+  if (d.eq_radius_km && d.polar_radius_km) {
+    bulge.style.display = '';
+    set('sp-bulge', ((d.eq_radius_km - d.polar_radius_km)).toFixed(1)
+      + ' KM FATTER THAN TALL · 1/' + Math.round(1 / d.flattening));
+  } else bulge.style.display = 'none';
+
+  const slow = document.getElementById('sp-slow-row');
+  const T = SP.meta && SP.meta.tides;
+  if (SP.focus === 'earth' && T) {
+    slow.style.display = '';
+    set('sp-slow', '+' + T.day_lengthening_ms_per_century_observed + ' MS A CENTURY');
+    set('sp-slownote', 'The Moon is pulling the spin down and taking the energy with '
+      + 'it: it moves ' + T.recession_cm_yr + ' cm further away every year. Records '
+      + 'over 2,700 years give +' + T.day_lengthening_ms_per_century_observed + ' ms a '
+      + 'century; the Moon\'s own orbit implies +'
+      + T.day_lengthening_ms_per_century_from_orbit + '. The gap is the rest of the '
+      + 'Earth answering back - ice sheets gone, the crust still rising.');
+  } else { slow.style.display = 'none'; set('sp-slownote', ''); }
 }
 
 /* ── the loop ───────────────────────────────────────────────────────────────── */
