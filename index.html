@@ -1824,8 +1824,12 @@ function countInformation() {
    cell instead. Checked by reading the dot canvas back at both ratios: at a pitch of
    5.2 CSS px, 0 of 540,000 pixels differed, mean difference 0.00. At 1.6 px, still 0
    above threshold. A fine dot scale asks for the pixels back and gets them. */
-let mapRatio = -1;
+/* Declared here rather than beside the render loop below: a `let` read before its own
+   line has run throws, and that temporal dead zone has already cost this file four
+   separate crashes. `fitPixelRatio` reads `mapRendering`, so it is declared above it. */
+let mapRatio = -1, ready = false, mapRendering = false;
 function fitPixelRatio(pitch) {
+  if (mapRendering) return;                // resizing its canvas mid-render is not allowed
   if (typeof map.setPixelRatio !== 'function') return;
   const want = Math.max(1, Math.min(window.devicePixelRatio || 1, 2 / Math.max(pitch, 0.05)));
   const r = Math.round(want * 4) / 4;      // quarter steps, so a slow zoom cannot thrash it
@@ -1966,9 +1970,25 @@ function hud(zoom, pitch, lit, cells, coverage) {
 }
 const set = (id, v) => { document.getElementById(id).textContent = v; };
 
-// Redraw only when MapLibre actually produced a new frame, so a stationary
-// map costs nothing — which is also the point of the tile-streaming design.
-map.on('render', () => { dirty = true; });
+/* Redraw when MapLibre produces a new frame, so a stationary map costs nothing — and
+   redraw inside that frame, not on the next one.
+
+   This used to set a flag and let the next requestAnimationFrame do the work, which put
+   the dots and every label exactly one frame behind the map they belong to. Measured
+   over a 1.6-second pan: 418 label repaints, **none of them in the same frame as a map
+   render**, median 7.3 ms late and worst 40.8. That is what made the little figure look
+   like it was being dragged along behind the city rather than walking through it — at a
+   fast pan it and the ground it stands on disagree by ten pixels.
+
+   `mapRendering` is the re-entrancy guard: changing the map's pixel ratio resizes its
+   canvas, which cannot happen in the middle of its own render, so that one job is left
+   to the loop below. */
+map.on('render', () => {
+  if (!ready) { dirty = true; return; }       // not until the module has finished loading
+  dirty = false;
+  mapRendering = true;
+  try { halftone(); } finally { mapRendering = false; }
+});
 /* The first frame waits for a frame. This used to run its body immediately, which meant
    halftone() - and everything paintLabels() reaches for - ran while this file was still
    being evaluated, so any state declared below this line was in its temporal dead zone
@@ -1977,6 +1997,7 @@ map.on('render', () => { dirty = true; });
 requestAnimationFrame(function loop() {
   // Re-arm first: an exception inside halftone() must not stop rendering for good.
   requestAnimationFrame(loop);
+  ready = true;
   if (dirty) { dirty = false; halftone(); }
 });
 
@@ -4245,13 +4266,31 @@ function driveMarker(now) {
 /* The camera sits on it. Not a pen it is kept inside - centred, so the city moves under
    it and it does not have to be looked for. Only while it is being moved: a marker
    dropped by a search should not drag the map away from what you were looking at. */
+/* With slack in the middle. It used to put the figure back on the exact centre of the
+   screen every single frame, which meant the figure never moved at all: the whole of
+   walking was the city sliding underneath a picture that was standing still. At street
+   zoom that reads as slow whatever the speed is - measured at zoom 20.68, one CSS pixel
+   is 6 cm and the view is 84 m across, and over two seconds of walking the figure moved
+   0 px on screen while the map moved 746.
+
+   So there is a box in the middle, 30% of the way out, and inside it the figure walks
+   across the screen like something walking. Only when it reaches the edge of the box
+   does the map start moving, and then by the overshoot alone, so it stays on that edge
+   rather than snapping back to the middle. */
+/* Wider across than up and down: with the map tilted, up the screen is away from the
+   camera, and a figure that walks too far up gets small before it gets anywhere. */
+const FOLLOW_SLACK_X = 0.45, FOLLOW_SLACK_Y = 0.35;
 function followCam() {
   if (!markerAt) return;
   let p;
   try { p = map.project([markerAt.lon, markerAt.lat]); } catch (e) { return; }
-  const W = labels.width / DPR, H = labels.height / DPR;
-  if (Math.hypot(p.x - W / 2, p.y - H / 2) < 1) return;
-  map.panBy([p.x - W / 2, p.y - H / 2], { duration: 0 });
+  const cx = labels.width / DPR / 2, cy = labels.height / DPR / 2;
+  const sx = cx * FOLLOW_SLACK_X, sy = cy * FOLLOW_SLACK_Y;
+  let dx = 0, dy = 0;
+  if (p.x < cx - sx) dx = p.x - (cx - sx); else if (p.x > cx + sx) dx = p.x - (cx + sx);
+  if (p.y < cy - sy) dy = p.y - (cy - sy); else if (p.y > cy + sy) dy = p.y - (cy + sy);
+  if (!dx && !dy) return;
+  map.panBy([dx, dy], { duration: 0 });
 }
 
 /* Every panel gets its name and a red dot, put there rather than written out ten
@@ -4708,7 +4747,10 @@ function tickMarker() {
   const now = performance.now();
   driveMarker(now);
   stepGame(now);
-  paintLabels();
+  /* Ask for a redraw rather than painting here. Walking moves the map, which makes
+     MapLibre render, which repaints the labels in that same frame — painting here as
+     well drew them twice a frame, and the second one was always the stale one. */
+  dirty = true;
   markerRAF = requestAnimationFrame(tickMarker);
 }
 

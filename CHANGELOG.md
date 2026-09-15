@@ -5,6 +5,49 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — Why the little man looked slow
+
+Daniel, with a recording at zoom 20.68, tilt 58–79°, buildings at full height: "could you
+check again the following or moving? To drag a place and move there is no lag, but if I
+move smoothly the little man is slow."
+
+Two separate things, both measured at his own settings, both now fixed.
+
+### Fixed
+
+- **The figure was drawn one frame behind the map it stands on.** The redraw set a flag
+  and let the next `requestAnimationFrame` do the work, so the dots and every label
+  always belonged to the previous frame. Measured over a 1.6-second pan: **418 label
+  repaints, not one of them in the same frame as a map render**, median **7.3 ms** late,
+  worst **40.8**. At a fast drag the figure and the ground under it disagree by about ten
+  pixels — which is exactly what "slow when I move smoothly" looks like. The redraw
+  happens inside the map's own frame now: **221 of 228 paints land within 2 ms of a map
+  render, median 0.3 ms.**
+- **It was also being painted twice a frame**, once by the walker's loop and once by the
+  map's, and the second one was always the stale one. **1.03 paints per render now, was
+  2.0.**
+- **The camera pinned the figure to the exact centre of the screen, every frame.** So the
+  figure never moved at all — walking was the city sliding under a picture that was
+  standing still. Measured at zoom 20.68, where one CSS pixel is **6 cm** and the view is
+  **84 m** across: over two seconds of walking the figure moved **0 px** on screen while
+  the map moved **746**.
+- **There is slack in the middle now** — a box 45% of the way out across and 35% up,
+  wider than tall because with the map tilted, up the screen is away from the camera. The
+  figure walks across that box like something walking, and only at its edge does the map
+  start moving, by the overshoot alone so it stays on the edge rather than snapping back.
+  Measured again: walking sideways the figure travels **309 px** on screen before the
+  camera takes over, was 0.
+
+### Not the problem
+
+- **The frame rate.** Dragging and walking both held **8.3 ms median, 120 fps**, at zoom
+  20.68 with 3D buildings and 58° of tilt. Walking does cost **7 `queryRenderedFeatures`
+  calls a frame** — the roof under it, the walls around it, what is in front of it — but
+  that measured **0.2 ms a frame** here. It was never the frame rate; it was that nothing
+  on screen was moving.
+
+---
+
 ## 2026-09-15 — The globe never stopped turning
 
 Daniel: "again."
