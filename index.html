@@ -126,6 +126,12 @@
 
   /* Charts: a label, a bar, a number. No axes - at this width they would cost more
      room than they explain. */
+  #n-cats { display:flex; flex-wrap:wrap; gap:3px; margin:3px 0 5px; }
+  #n-cats button { flex:1 1 auto; padding:2px 4px; cursor:pointer; background:#000;
+    color:#4a4a4a; border:1px solid #1e1e1e; font:inherit; font-size:8px;
+    letter-spacing:.08em; }
+  #n-cats button[aria-pressed="true"] { color:#e8e8e8; border-color:#4a4a4a; }
+
   .moodbar { display:flex; height:7px; margin:3px 0 6px; background:#141414; }
   .moodbar i { display:block; height:100%; }
   #n-bar-bad { background:#ff6b6b; } #n-bar-flat { background:#3e3e3e; }
@@ -458,9 +464,18 @@
   <span class="row">ON THE GLOBE <b id="n-placed">—</b></span>
   <span class="row">LOOKED AT <b id="n-when">—</b></span>
   <span class="row">NEXT LOOK <b id="n-next">—</b></span>
+  <span class="ttl">ONLY THESE</span>
+  <div id="n-cats"></div>
+  <button id="b-cats-all" type="button">EVERYTHING</button>
   <button id="b-news-now" type="button">LOOK AGAIN NOW</button>
   <div id="n-list"></div>
-  <span class="note">Good or bad is guessed here in the page, from a word list of about
+  <span class="note">Every story starts with the country and the place: the country so you
+    know which part of the world it is, the place so you know where the mark is standing.
+    A story that named a country and not a town is pinned at that country's capital, and
+    the second name is the capital rather than the scene. What it is about is guessed the
+    same way as the mood, from words — switch the kinds you want and it is remembered, so
+    the next time you open it the world arrives already filtered.
+    Good or bad is guessed here in the page, from a word list of about
     three hundred words a news line actually uses. Every free sentiment service refuses a
     browser, so there is no API to call. It cannot read irony and it counts a rescue after
     a disaster twice; it is good for the shape of a day, not for one story.
@@ -2186,8 +2201,83 @@ function placeOf(text) {
   for (const d in DEMONYM) {
     offer(at(d), CAPITALS.find(x => x.country === DEMONYM[d]), DEMONYM[d], 2);
   }
-  return best ? { cap: best.cap, why: best.why } : null;
+  if (!best) return null;
+  /* Both names, always: the country so you know which part of the world it is, and the
+     city so you know where the mark is standing. When the story named a country and not a
+     town, the city is its capital and the mark is a stand-in - which the panel says. */
+  return { cap: best.cap, country: best.cap.country, city: best.cap.name,
+           named: best.rank === 0 ? 'city' : 'country' };
 }
+
+/* ── what a story is about ───────────────────────────────────────────────────────
+   The same answer as the mood: there is no free classifier a browser may call, so it is
+   keywords, read here. Ten kinds, chosen by what a day of world news is actually made of
+   rather than by what a taxonomy would like. A story can be two things at once - a strike
+   at a chip factory is work and tech - and it is kept under both, so a filter never
+   quietly loses it.
+
+   What you switch on is remembered, so the next time you open it the world arrives
+   already filtered the way you left it. */
+const CATS = {
+  war:      ['war','troops','missile','strike','strikes','military','army','navy','warship',
+             'drone','ceasefire','truce','invasion','border','nato','airspace','soldiers',
+             'shelling','bombing','front','offensive','weapons','arms','conflict','fighters'],
+  politics: ['president','minister','ministers','parliament','election','elections','vote',
+             'votes','voted','party','coalition','senate','congress','governor','mayor',
+             'bill','law','laws','court','judge','ruling','constitution','referendum',
+             'cabinet','resign','impeached','summit','treaty','sanctions','diplomat',
+             'embassy','talks','policy'],
+  disaster: ['earthquake','quake','flood','flooding','wildfire','fire','storm','hurricane',
+             'cyclone','typhoon','tsunami','eruption','volcano','landslide','drought',
+             'crash','collision','derailed','capsized','rescue','evacuated','emergency',
+             'disaster','casualties','collapse'],
+  tech:     ['ai','artificial','software','chip','chips','semiconductor','satellite',
+             'rocket','spacecraft','launch','space','nasa','robot','data','cyber','hack',
+             'hacked','internet','app','platform','startup','quantum','algorithm'],
+  science:  ['study','research','researchers','scientists','discovery','discovered',
+             'species','fossil','climate','carbon','emissions','telescope','experiment',
+             'genome','physics','biology'],
+  money:    ['market','markets','shares','stock','bank','banks','inflation','economy',
+             'economic','trade','tariff','tariffs','company','firm','merger','profit',
+             'bankruptcy','investment','currency','budget','tax','jobs','layoffs','growth'],
+  health:   ['health','hospital','doctors','nurses','virus','outbreak','epidemic',
+             'pandemic','vaccine','disease','infection','patients','cancer','who',
+             'medicine','surgery','mental'],
+  society:  ['protest','protests','strike','march','rights','migrants','refugees','school',
+             'schools','university','students','police','prison','housing','poverty',
+             'inquiry','abuse','women','children','religious','church','court'],
+  food:     ['food','farm','farmers','farming','harvest','crops','wheat','rice','grain',
+             'fishing','livestock','restaurant','chef','cooking','hunger','famine',
+             'agriculture'],
+  culture:  ['film','movie','music','album','festival','museum','artist','book','author',
+             'award','prize','theatre','cup','match','league','olympic','champion','team',
+             'player','tournament'],
+};
+const CAT_NAME = { war: 'WAR', politics: 'POLITICS', disaster: 'DISASTER', tech: 'TECH',
+                   science: 'SCIENCE', money: 'MONEY', health: 'HEALTH', society: 'SOCIETY',
+                   food: 'FOOD', culture: 'CULTURE', other: 'OTHER' };
+const CAT_KEYS = [...Object.keys(CATS), 'other'];
+const CAT_STORE = 'dotworld.news.cats.v1';
+
+function catsOf(text) {
+  const words = new Set(String(text).toLowerCase().split(/[^a-z']+/));
+  const out = [];
+  for (const k in CATS) if (CATS[k].some(w => words.has(w))) out.push(k);
+  return out.length ? out : ['other'];
+}
+
+function loadCats() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(CAT_STORE) || 'null');
+    if (Array.isArray(raw) && raw.length) return new Set(raw);
+  } catch (e) { /* fall through to everything */ }
+  return new Set(CAT_KEYS);
+}
+function saveCats(set) {
+  try { localStorage.setItem(CAT_STORE, JSON.stringify([...set])); } catch (e) { /* ignore */ }
+}
+let catsOn = loadCats();
+const passes = it => (it.cats || ['other']).some(c => catsOn.has(c));
 
 /* ── good news or bad news ───────────────────────────────────────────────────────
    Every free sentiment service refuses a browser. text-processing.com and sentim both
@@ -2273,7 +2363,8 @@ function loadArchive() {
     /* Stored as arrays rather than objects: a thousand stories of {text,url,lon,lat,t}
        is a lot of repeated key names, and this is a browser's storage, not a database. */
     return raw.map(a => ({ t: a[0], lon: a[1], lat: a[2], text: a[3], url: a[4], where: a[5],
-                           kind: a[6], mood: a[7] || moodOf(a[3]).kind }));
+                           kind: a[6], mood: a[7] || moodOf(a[3]).kind,
+                           cats: a[8] || catsOf(a[3]) }));
   } catch (e) { return []; }
 }
 function saveArchive(items) {
@@ -2282,7 +2373,7 @@ function saveArchive(items) {
     const keep = items.filter(i => i.t >= cut).slice(0, 400);
     localStorage.setItem(NEWS_STORE, JSON.stringify(
       keep.map(i => [i.t, +i.lon.toFixed(3), +i.lat.toFixed(3), i.text, i.url, i.where,
-                     i.kind, i.mood])));
+                     i.kind, i.mood, i.cats])));
   } catch (e) { /* a full or private-mode storage is not worth an error */ }
 }
 
@@ -2306,8 +2397,10 @@ async function fetchWikiDay(d) {
     const p = placeOf(text);
     if (!p) continue;                                   // nowhere to put it on a globe
     out.push({ t: Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12),
-               lon: p.cap.lon, lat: p.cap.lat, where: p.why.toUpperCase(),
-               text: text.slice(0, 160), url, kind: 'news', mood: moodOf(text).kind });
+               lon: p.cap.lon, lat: p.cap.lat,
+               where: (p.country + ' · ' + p.city).toUpperCase(),
+               text: text.slice(0, 200), url, kind: 'news',
+               mood: moodOf(text).kind, cats: catsOf(text) });
   }
   return out;
 }
@@ -2315,13 +2408,19 @@ async function fetchWikiDay(d) {
 async function fetchQuakes() {
   const j = await (await fetch(
     'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson')).json();
-  return (j.features || []).map(f => ({
+  return (j.features || []).map(f => {
+    const place = String(f.properties.place || '');
+    const bits = place.split(',');
+    const country = (bits.length > 1 ? bits.pop() : '').trim();
+    const spot = bits.join(',').trim();
+    return {
     t: f.properties.time, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1],
-    where: String(f.properties.place || '').toUpperCase().slice(0, 40),
+    where: ((country || 'AT SEA') + (spot ? ' · ' + spot : '')).toUpperCase().slice(0, 52),
     text: 'M' + (+f.properties.mag).toFixed(1) + ' earthquake, ' + f.properties.place,
     url: f.properties.url, kind: 'quake',
     // An earthquake needs no word list. Five is where they start knocking things down.
-    mood: +f.properties.mag >= 5 ? 'bad' : 'flat' }));
+    mood: +f.properties.mag >= 5 ? 'bad' : 'flat', cats: ['disaster'] };
+  });
 }
 
 async function loadNews(why) {
@@ -2349,12 +2448,15 @@ async function loadNews(why) {
 
 function newsHud(state) {
   const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
-  set('n-count', state || (NEWS.items.length ? NEWS.items.length + ' STORIES' : 'NOTHING YET'));
+  const shown = NEWS.items.filter(passes);
+  set('n-count', state || (!NEWS.items.length ? 'NOTHING YET'
+    : shown.length === NEWS.items.length ? shown.length + ' STORIES'
+    : shown.length + ' OF ' + NEWS.items.length + ' STORIES'));
   /* The day's balance, at the top where it is the first thing read. It is a guess made
      of a word list and the panel says GUESSED, because a day is not a number. */
-  const n = NEWS.items.length;
-  const good = NEWS.items.filter(i => i.mood === 'good').length;
-  const bad = NEWS.items.filter(i => i.mood === 'bad').length;
+  const n = shown.length;
+  const good = shown.filter(i => i.mood === 'good').length;
+  const bad = shown.filter(i => i.mood === 'bad').length;
   const flat = n - good - bad;
   set('n-mood', !n ? '—' : bad > good * 1.5 ? 'A BAD DAY, GUESSED'
                          : good > bad * 1.5 ? 'A GOOD DAY, GUESSED' : 'A MIXED DAY, GUESSED');
@@ -2364,14 +2466,14 @@ function newsHud(state) {
     if (e) e.style.width = (n ? v / n * 100 : 0).toFixed(1) + '%';
   };
   bar('n-bar-bad', bad); bar('n-bar-flat', flat); bar('n-bar-good', good);
-  set('n-placed', NEWS.items.filter(i => i.kind === 'quake').length + ' QUAKES · '
-                + NEWS.items.filter(i => i.kind === 'news').length + ' PLACED BY NAME');
+  set('n-placed', shown.filter(i => i.kind === 'quake').length + ' QUAKES · '
+                + shown.filter(i => i.kind === 'news').length + ' PLACED BY NAME');
   set('n-when', NEWS.at ? new Date(NEWS.at).toTimeString().slice(0, 5) : '—');
   set('n-next', NEWS.at ? new Date(NEWS.at + NEWS_EVERY).toTimeString().slice(0, 5) : '—');
   const list = document.getElementById('n-list');
   if (!list) return;
   list.innerHTML = '';
-  for (const i of NEWS.items.slice(0, 14)) {
+  for (const i of shown.slice(0, 14)) {
     const a = document.createElement('a');
     a.className = 'sub';
     a.href = i.url || '#';
@@ -2384,7 +2486,7 @@ function newsHud(state) {
 }
 
 // Far out, and only far out.
-function newsInView() { return map.getZoom() <= NEWS_ZOOM && NEWS.items.length > 0; }
+function newsInView() { return map.getZoom() <= NEWS_ZOOM && NEWS.items.some(passes); }
 
 /* A rail of stories down the left of the map, each on a line back to its own place on
    the globe. Radiating the words around the globe put them over it and over each other;
@@ -2435,6 +2537,7 @@ function drawNews() {
   const left = [], right = [];
   for (const it of NEWS.items) {
     if (left.length + right.length >= 20) break;
+    if (!passes(it)) continue;
     if (angularDist(ctr.lat, ctr.lng, it.lat, it.lon) > 82) continue;
     let p;
     try { p = map.project([it.lon, it.lat]); } catch (e) { continue; }
@@ -2534,6 +2637,36 @@ window.__news = {
   get hover() { return newsHover; },
   get rows() { return (NEWS.hot || []).map(h => h.box.map(v => Math.round(v))); },
 };
+
+(function buildCats() {
+  const box = document.getElementById('n-cats');
+  if (!box) return;
+  for (const k of CAT_KEYS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = CAT_NAME[k];
+    b.setAttribute('aria-pressed', catsOn.has(k));
+    b.addEventListener('click', () => {
+      if (catsOn.has(k)) catsOn.delete(k); else catsOn.add(k);
+      if (!catsOn.size) catsOn = new Set(CAT_KEYS);   // none chosen means all, not nothing
+      saveCats(catsOn);
+      [...box.children].forEach(c => c.setAttribute('aria-pressed',
+        catsOn.has(CAT_KEYS[[...box.children].indexOf(c)])));
+      newsHud();
+      dirty = true;
+    });
+    box.appendChild(b);
+  }
+})();
+
+document.getElementById('b-cats-all').addEventListener('click', () => {
+  catsOn = new Set(CAT_KEYS);
+  saveCats(catsOn);
+  const box = document.getElementById('n-cats');
+  [...box.children].forEach(c => c.setAttribute('aria-pressed', 'true'));
+  newsHud();
+  dirty = true;
+});
 
 document.getElementById('b-news-now').addEventListener('click', () => loadNews('by hand'));
 

@@ -5,6 +5,34 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — Country, place, and only the kinds you want
+
+Daniel: "I need to understand at the beginning of the news the place where it's happening,
+the country... add a filter of context where I can understand if there are news of tech,
+politics, geopolitics, food, catastrophes... and saved as a main, so all the time that I'm
+opening it's always giving me the news that I need in base of my filters."
+
+### Added
+
+- **Country and place, at the front of every story.** `RUSSIA · MOSCOW — A warship of the
+  Russian Navy…`, `INDONESIA · 289 KM WSW OF TUAL — M4.8 earthquake…`. The country so you
+  know which part of the world it is; the place so you know where the mark is standing.
+  When a story named a country and not a town, the second name is that country's capital
+  and the mark is a stand-in — the panel says so. Stories are 200 characters now, not 160.
+- **Eleven kinds, and you choose.** WAR · POLITICS · DISASTER · TECH · SCIENCE · MONEY ·
+  HEALTH · SOCIETY · FOOD · CULTURE · OTHER, decided by keywords in the page, since there
+  is no free classifier a browser may call either. A story can be two things at once — a
+  strike at a chip factory is work and tech — and it is kept under both, so a filter never
+  quietly loses it.
+- **And it is remembered.** The chips you leave on are saved, and the next time you open
+  it the world arrives already filtered. Measured: WAR alone gave 4 of 25 — the warship,
+  the drone, the Gulf states and Sudan; DISASTER alone gave 14 of 25, all earthquakes;
+  and after a reload DISASTER was still the only one lit, still 14 of 25. The counts, the
+  good/bad balance, the panel list and the globe all follow the filter.
+- Turning the last kind off turns them all back on rather than leaving an empty world.
+
+---
+
 ## 2026-09-15 — Good news or bad news
 
 Daniel: "add on the upside part an API to understand if it is a good news or a bad news."
