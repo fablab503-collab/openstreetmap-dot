@@ -384,6 +384,7 @@
   <button type="button" data-to="p-capitals">Capitals</button>
   <button type="button" data-to="p-monuments">Monuments</button>
   <button type="button" data-to="legend">Colours</button>
+  <button type="button" data-to="p-weather">Weather</button>
   <button type="button" data-to="p-space">Space</button>
   <button type="button" data-to="p-game">Game</button>
 </div>
@@ -439,6 +440,23 @@
     people in real time.</span>
 </div>
 
+<div id="p-weather" class="panel">
+  <span class="ttl">THE WEATHER THERE</span>
+  <span class="big" id="w-temp">—</span>
+  <span class="row">AT <b id="w-where">NOWHERE YET</b></span>
+  <span class="row">SKY <b id="w-sky">—</b></span>
+  <span class="row">FEELS LIKE <b id="w-feels">—</b></span>
+  <span class="row">WIND <b id="w-wind">—</b></span>
+  <span class="row">HUMIDITY <b id="w-hum">—</b></span>
+  <span class="row">RAIN, LAST HOUR <b id="w-rain">—</b></span>
+  <span class="row">MEASURED <b id="w-when">—</b></span>
+  <button id="b-weather" type="button">WEATHER WHERE I AM</button>
+  <span class="note">It follows whatever you last pointed at: press WEATHER WHERE I AM,
+    or find yourself in WHERE YOU ARE, or search a place — the weather comes with it.
+    Live readings from Open-Meteo, free and without a key, CC BY 4.0. The only thing sent
+    is a latitude and a longitude, and if it came from you it is the one already rounded
+    to about a kilometre.</span>
+</div>
 <div id="p-world" class="panel">
   <span class="ttl">THE WORLD, ON AVERAGE</span>
   <span class="row">DENSITY <b id="w-density">—</b></span>
@@ -789,6 +807,8 @@
         The dot lattice is a thin pass over their output</li>
       <li><a href="https://nominatim.org/" target="_blank" rel="noopener">Nominatim</a>
         (OpenStreetMap Foundation) — place search, country lookup and framing</li>
+      <li><a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
+        (CC BY 4.0) — the live weather, free and without a key or an account</li>
     </ul>
 
     <h3>Data</h3>
@@ -2028,10 +2048,72 @@ bHere.addEventListener('click', () => {
       const country = a.country || '';
       const line = [place, country].filter(Boolean).join(', ');
       if (line) meSet('me-place', line.toUpperCase());
+      loadWeather(lat, lon, line);
     } catch (e) { /* the dot is on the map either way */ }
   }, err => {
     bHere.textContent = err.code === 1 ? 'PERMISSION DENIED' : 'LOCATION UNAVAILABLE';
   }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 600000 });
+});
+
+/* ── the weather, wherever you last pointed ──────────────────────────────────────
+   Open-Meteo: current conditions, free, no key, no account, CC BY 4.0 - the only kind of
+   service this project is built on. One request, one latitude and one longitude, and
+   when they came from you they are the pair already rounded to about a kilometre.
+
+   The sky comes back as a WMO code, which is a number: 0 is a clear sky, 3 is overcast,
+   95 is a thunderstorm. The table is the standard one, abridged to the codes the service
+   actually returns. */
+const WMO = {
+  0: 'CLEAR', 1: 'MOSTLY CLEAR', 2: 'PART CLOUD', 3: 'OVERCAST',
+  45: 'FOG', 48: 'FREEZING FOG',
+  51: 'LIGHT DRIZZLE', 53: 'DRIZZLE', 55: 'HEAVY DRIZZLE',
+  56: 'FREEZING DRIZZLE', 57: 'FREEZING DRIZZLE',
+  61: 'LIGHT RAIN', 63: 'RAIN', 65: 'HEAVY RAIN',
+  66: 'FREEZING RAIN', 67: 'FREEZING RAIN',
+  71: 'LIGHT SNOW', 73: 'SNOW', 75: 'HEAVY SNOW', 77: 'SNOW GRAINS',
+  80: 'RAIN SHOWERS', 81: 'RAIN SHOWERS', 82: 'VIOLENT SHOWERS',
+  85: 'SNOW SHOWERS', 86: 'SNOW SHOWERS',
+  95: 'THUNDERSTORM', 96: 'THUNDERSTORM, HAIL', 99: 'THUNDERSTORM, HAIL',
+};
+const COMPASS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+const wSet = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+let weatherAt = null, weatherSeq = 0;
+
+async function loadWeather(lat, lon, where) {
+  weatherAt = { lat, lon, where };
+  const mine = ++weatherSeq;              // a slow answer must not overwrite a newer one
+  wSet('w-where', (where || lat.toFixed(2) + ', ' + lon.toFixed(2)).toUpperCase());
+  wSet('w-temp', '…');
+  try {
+    const u = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon
+            + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,'
+            + 'precipitation,weather_code,wind_speed_10m,wind_direction_10m,is_day'
+            + '&timezone=auto';
+    const j = await (await fetch(u)).json();
+    if (mine !== weatherSeq) return;
+    const c = j.current;
+    if (!c) throw new Error('no reading');
+    wSet('w-temp', Math.round(c.temperature_2m) + '°C');
+    wSet('w-sky', (WMO[c.weather_code] || 'CODE ' + c.weather_code)
+                + (c.is_day ? '' : ', AT NIGHT'));
+    wSet('w-feels', Math.round(c.apparent_temperature) + '°C');
+    wSet('w-wind', Math.round(c.wind_speed_10m) + ' KM/H FROM '
+                 + COMPASS[Math.round(c.wind_direction_10m / 22.5) % 16]);
+    wSet('w-hum', Math.round(c.relative_humidity_2m) + '%');
+    wSet('w-rain', (+c.precipitation).toFixed(1) + ' MM');
+    // Its own local time, not yours: the weather in Lima is not read off a Paris clock.
+    wSet('w-when', String(c.time).replace('T', ' ') + ' LOCAL');
+  } catch (e) {
+    if (mine !== weatherSeq) return;
+    wSet('w-temp', '—');
+    wSet('w-sky', 'OPEN-METEO DID NOT ANSWER');
+    ['w-feels', 'w-wind', 'w-hum', 'w-rain', 'w-when'].forEach(id => wSet(id, '—'));
+  }
+}
+
+document.getElementById('b-weather').addEventListener('click', () => {
+  showTopic('p-weather');
+  locateOnce();          // it fetches the weather itself; asking twice asked twice
 });
 
 /* ── where you are, on the side ──────────────────────────────────────────────────
@@ -2083,6 +2165,7 @@ function locateOnce(then) {
     showMe(lat, lon, pos.coords.accuracy);
     meSet('me-place', '—');
     const name = await namePlace(lat, lon);
+    loadWeather(lat, lon, name);
     if (then) then(lat, lon, name);
   }, err => {
     meSet('me-place', err.code === 1 ? 'YOU SAID NO' : 'NOT AVAILABLE');
@@ -2116,7 +2199,7 @@ bKeep.addEventListener('click', () => {
     if (key === lastKey) return;              // same kilometre, nothing to do
     lastKey = key;
     showMe(lat, lon, pos.coords.accuracy);
-    namePlace(lat, lon);
+    namePlace(lat, lon).then(name => loadWeather(lat, lon, name));
   }, err => {
     meSet('me-place', err.code === 1 ? 'YOU SAID NO' : 'NOT AVAILABLE');
     if (meWatch) { navigator.geolocation.clearWatch(meWatch); meWatch = 0; }
@@ -4701,6 +4784,8 @@ function showResults(items) {
         q.value = '';
         stopOrbit();
         dropMarker(+it.lon, +it.lat);   // someone is waiting for you there
+        loadWeather(+it.lat, +it.lon,
+                    String(it.display_name).split(',').slice(0, 2).join(','));
         // A bounding box frames a country properly; a point needs a zoom.
         if (it.boundingbox) {
           const [s, n, w, e] = it.boundingbox.map(Number);

@@ -58,6 +58,13 @@ Data ODbL, subject to the
 [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/).
 Requests are debounced to respect their one-per-second guidance.
 
+**[Open-Meteo](https://open-meteo.com/)** — the live weather in the WEATHER panel:
+current temperature, apparent temperature, sky (WMO code), wind, humidity and
+precipitation, at whatever place you last pointed at. Free, no key and no account,
+under **CC BY 4.0**. One request a place, carrying only a latitude and a longitude —
+and when those came from your own device they are the pair already rounded to two
+decimal places, about a kilometre, before anything is done with them.
+
 ## Statistics and datasets
 
 | Data | Source | Licence |

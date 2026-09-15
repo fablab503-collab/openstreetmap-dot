@@ -5,6 +5,36 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — The weather, wherever you last pointed
+
+Daniel: "the live weather should be put here, in base of the location or search bar where
+you want to search an address."
+
+### Added
+
+- **A WEATHER panel** in the left column, under its own topic chip: temperature, sky,
+  what it feels like, wind with its compass point, humidity, rain in the last hour, and
+  the time the reading was taken **in that place's own clock** - the weather in Lima is
+  not read off a Paris one.
+- **It follows whatever you last pointed at.** Search a place and the weather comes with
+  it; find yourself in WHERE YOU ARE and it comes with that; or press WEATHER WHERE I AM.
+  Tested: a Reykjavik search gave 8 °C, clear, feels 6 °C, 5 km/h from S, 74%, measured
+  10:15 local; a position in Sydney gave 15 °C, PART CLOUD AT NIGHT, 20:15 local.
+- **Open-Meteo**, free, no key and no account, CC BY 4.0 — credited in `CREDITS.md` and
+  in the app's own credits. One request a place, carrying a latitude and a longitude and
+  nothing else. Checked in the network log: the request for the Sydney position read
+  `latitude=-33.87&longitude=151.21` — the pair already rounded to about a kilometre, not
+  the precise one the browser handed over.
+- A slow answer cannot overwrite a newer one: each request carries a sequence number and
+  a late reply for a place you have already left is dropped.
+
+### Fixed before it shipped
+
+The WEATHER WHERE I AM button asked twice - once inside the locate call and once in its
+own callback. Two identical requests to a free service for one press.
+
+---
+
 ## 2026-09-15 — WHERE YOU ARE, on the side
 
 Daniel: "add on the side the geolocalisation settings to localise you."

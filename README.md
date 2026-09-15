@@ -91,6 +91,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | Cities by size | How the 34,091 cities fall across the eight bands, with the median and the mean | GeoNames |
 | The 195 capitals | Biggest, smallest, how many over a million, and which hour of the world each keeps | Wikidata + GeoNames zones |
 | Best known places | The ten monuments the world writes about most, of all 195 capitals | Wikidata |
+| Weather | The live weather wherever you last pointed — searched place or your own position: temperature, sky, feels-like, wind, humidity, rain, in that place's own clock | Open-Meteo (CC BY 4.0) |
 | Time | The clock where you are — or in the capital you picked — with how far ahead of the world's first capital and behind its last you are | GeoNames zones, your browser |
 | Population — world | Every city over 15,000 people, 34,091 of them, in eight named bands from `darkred` to `gold` | GeoNames |
 | Capitals | All 195 — 193 UN members plus Vatican and Palestine — with population and ISO country code | Wikidata |
