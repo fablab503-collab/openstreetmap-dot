@@ -65,6 +65,20 @@ under **CC BY 4.0**. One request a place, carrying only a latitude and a longitu
 and when those came from your own device they are the pair already rounded to two
 decimal places, about a kilometre, before anything is done with them.
 
+**[Wikipedia's Current events portal](https://en.wikipedia.org/wiki/Portal:Current_events)**
+(**CC BY-SA 4.0**) — the day's stories in THE WORLD, TODAY, read through the same public
+action API anyone can call, for today and yesterday. Each story keeps the link to its own
+source; the words are Wikipedia's editors' work, not mine. They carry no coordinates, so a
+story is placed by the first capital, country or demonym its own words name — a guess,
+and sometimes the wrong one.
+
+**[USGS earthquake feed](https://earthquake.usgs.gov/earthquakes/feed/)** (**public
+domain**, U.S. Geological Survey) — every earthquake over M4.5 in the last day. These come
+with their own coordinates and are exact.
+
+GDELT would have been the better source for world news — free, global, and geocoded — but
+it sends no cross-origin header, so a browser page cannot read it. Tried and dropped.
+
 ## Statistics and datasets
 
 | Data | Source | Licence |

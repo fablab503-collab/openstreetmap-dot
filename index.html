@@ -132,6 +132,9 @@
   .chart .cbar { grid-column:1 / -1; height:6px; background:#141414; }
   .chart .cbar i { display:block; height:100%; }
   .chart b { color:#e8e8e8; font-weight:400; letter-spacing:0; }
+  #n-list a.sub { color:#8a8a8a; text-decoration:none; border-bottom:1px solid #1e1e1e;
+    padding-bottom:5px; }
+  #n-list a.sub:hover { color:#e8e8e8; }
   .panel .sub { display:block; color:#4a4a4a; font-size:9px; line-height:1.45;
     letter-spacing:.03em; text-transform:none; margin-top:7px; }
 
@@ -384,6 +387,7 @@
   <button type="button" data-to="p-capitals">Capitals</button>
   <button type="button" data-to="p-monuments">Monuments</button>
   <button type="button" data-to="legend">Colours</button>
+  <button type="button" data-to="p-news">News</button>
   <button type="button" data-to="p-weather">Weather</button>
   <button type="button" data-to="p-space">Space</button>
   <button type="button" data-to="p-game">Game</button>
@@ -440,6 +444,22 @@
     people in real time.</span>
 </div>
 
+<div id="p-news" class="panel">
+  <span class="ttl">THE WORLD, TODAY</span>
+  <span class="big" id="n-count">—</span>
+  <span class="row">ON THE GLOBE <b id="n-placed">—</b></span>
+  <span class="row">LOOKED AT <b id="n-when">—</b></span>
+  <span class="row">NEXT LOOK <b id="n-next">—</b></span>
+  <button id="b-news-now" type="button">LOOK AGAIN NOW</button>
+  <div id="n-list"></div>
+  <span class="note">Only from far out — zoom past the whole world and it all goes away,
+    and the wordmark at the top brings you back. Two free sources, no key and no account:
+    Wikipedia's Current events portal for today and yesterday, and the USGS for
+    earthquakes. A story is put on the map by the first capital or country its own words
+    name, which is a guess and sometimes the wrong one; earthquakes carry their own
+    coordinates and are exact. Click one to read it at the source. Kept for 24 hours in
+    this browser and nowhere else.</span>
+</div>
 <div id="p-weather" class="panel">
   <span class="ttl">THE WEATHER THERE</span>
   <span class="big" id="w-temp">—</span>
@@ -809,6 +829,12 @@
         (OpenStreetMap Foundation) — place search, country lookup and framing</li>
       <li><a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
         (CC BY 4.0) — the live weather, free and without a key or an account</li>
+      <li><a href="https://en.wikipedia.org/wiki/Portal:Current_events" target="_blank" rel="noopener">Wikipedia
+        Current events</a> (CC BY-SA 4.0) — the day's stories on the globe, with a link to
+        each one's own source</li>
+      <li><a href="https://earthquake.usgs.gov/earthquakes/feed/" target="_blank" rel="noopener">USGS
+        earthquake feed</a> (public domain) — every quake over M4.5 in the last day, with
+        its own coordinates</li>
     </ul>
 
     <h3>Data</h3>
@@ -913,6 +939,9 @@ const HASH_VIEW = viewFromHash();
 // Declared up here because the moveend handler below reads it, and that can
 // fire during the initial fit — before the orbit block further down runs.
 let orbitRAF = null;
+// Beside the orbit, because the same moveend guard reads both and that guard runs during
+// the first resize, which happens while this file is still being evaluated.
+let spinRAF = 0;
 
 /* Nothing here fails loudly on its own: the dot canvas paints opaque black
    over the map every frame, so any failure underneath just looks like an
@@ -1216,7 +1245,9 @@ window.__map = map;   // convenience: drive it from the console
 
 // Keep the address bar in step, so the current view is always copyable.
 map.on('moveend', () => {
-  if (orbitRAF) return;   // an orbit ends a move every frame; don't spam history
+  // An orbit or the opening turn ends a move every frame; 60 replaceState calls a second
+  // is how a browser starts refusing them.
+  if (orbitRAF || spinRAF) return;
   const c = map.getCenter();
   history.replaceState(null, '',
     `#map=${map.getZoom().toFixed(2)}/${c.lat.toFixed(5)}/${c.lng.toFixed(5)}`);
@@ -1429,7 +1460,8 @@ function resize() {
   if (!framed && w > 0 && h > 0 && map) {
     framed = true;
     map.resize();
-    if (!HASH_VIEW) map.fitBounds(FRANCE_BOUNDS, { padding: 48, duration: 0 });
+    // A first arrival goes to the whole world and turns; see the opening turn below.
+    if (!HASH_VIEW) map.jumpTo({ center: [8, 12], zoom: 0.85 });
   }
   dirty = true;
 }
@@ -1619,6 +1651,7 @@ function paintLabels() {
   if (showCapitals || showCapMon || picked) drawCapitals();
   drawCountryName();
   drawCityNames();
+  drawNews();
   drawGame();
   drawMarker();
 }
@@ -1673,11 +1706,16 @@ const set = (id, v) => { document.getElementById(id).textContent = v; };
 // Redraw only when MapLibre actually produced a new frame, so a stationary
 // map costs nothing — which is also the point of the tile-streaming design.
 map.on('render', () => { dirty = true; });
-(function loop() {
+/* The first frame waits for a frame. This used to run its body immediately, which meant
+   halftone() - and everything paintLabels() reaches for - ran while this file was still
+   being evaluated, so any state declared below this line was in its temporal dead zone
+   and threw. It has cost four separate bugs today alone. Handing the first turn to
+   requestAnimationFrame costs one frame, about 16 ms, once, and ends the whole class. */
+requestAnimationFrame(function loop() {
   // Re-arm first: an exception inside halftone() must not stop rendering for good.
   requestAnimationFrame(loop);
   if (dirty) { dirty = false; halftone(); }
-})();
+});
 
 // Forward interaction to the map, since the dot canvas sits on top of it.
 dots.style.pointerEvents = 'none';
@@ -2054,6 +2092,328 @@ bHere.addEventListener('click', () => {
     bHere.textContent = err.code === 1 ? 'PERMISSION DENIED' : 'LOCATION UNAVAILABLE';
   }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 600000 });
 });
+
+/* ── the world, today ───────────────────────────────────────────────────────────
+   What is happening, on the globe, from far enough out to see all of it at once.
+
+   Two free sources with no key and no account between them, which is the rule this whole
+   project is built on:
+     - Wikipedia's Current events portal, today's page and yesterday's, through the same
+       action API anyone can call. It gives the day's stories and a link to each source.
+     - the USGS earthquake feed, which is already points on a map and needs no guessing.
+
+   GDELT would have been the obvious one - it is the global news database, it is free, and
+   it geocodes - but it sends no cross-origin header, so a page cannot read it. Tried,
+   "Failed to fetch", moved on.
+
+   The honest part: a Wikipedia story carries no coordinates. It is put on the map by the
+   first capital or country its own words name, and that is a guess. "A Russian warship in
+   the Baltic" lands on Moscow. The panel says so; earthquakes carry their own coordinates
+   and are exact. */
+const NEWS_ZOOM  = 2.0;          // past this, none of it is drawn
+const NEWS_EVERY = 10 * 60000;   // a look every ten minutes, as asked
+const NEWS_KEEP  = 24 * 3600e3;  // and a day of it kept
+const NEWS_STORE = 'dotworld.news.v1';
+const NEWS = { items: [], at: 0, timer: 0, busy: false, hot: null };
+
+/* Enough demonyms to catch the way news is actually written. The country's own name and
+   its capital's are matched too, and those come from the capitals file rather than from
+   here, so this list only has to carry what a name alone would miss. */
+const DEMONYM = {
+  'russian': 'Russia', 'ukrainian': 'Ukraine', 'american': 'United States of America',
+  'british': 'United Kingdom', 'english': 'United Kingdom', 'scottish': 'United Kingdom',
+  'french': 'France', 'german': 'Germany', 'italian': 'Italy', 'spanish': 'Spain',
+  'portuguese': 'Portugal', 'dutch': 'Netherlands', 'belgian': 'Belgium',
+  'danish': 'Denmark', 'swedish': 'Sweden', 'norwegian': 'Norway', 'finnish': 'Finland',
+  'polish': 'Poland', 'czech': 'Czechia', 'austrian': 'Austria', 'swiss': 'Switzerland',
+  'greek': 'Greece', 'turkish': 'Turkey', 'israeli': 'Israel', 'palestinian': 'Palestine',
+  'lebanese': 'Lebanon', 'syrian': 'Syria', 'iraqi': 'Iraq', 'iranian': 'Iran',
+  'saudi': 'Saudi Arabia', 'egyptian': 'Egypt', 'libyan': 'Libya', 'sudanese': 'Sudan',
+  'ethiopian': 'Ethiopia', 'kenyan': 'Kenya', 'nigerian': 'Nigeria', 'ghanaian': 'Ghana',
+  'congolese': 'Democratic Republic of the Congo', 'malian': 'Mali',
+  'south african': 'South Africa', 'moroccan': 'Morocco', 'algerian': 'Algeria',
+  'tunisian': 'Tunisia', 'indian': 'India', 'pakistani': 'Pakistan',
+  'bangladeshi': 'Bangladesh', 'chinese': 'China', 'japanese': 'Japan',
+  'korean': 'South Korea', 'north korean': 'North Korea', 'taiwanese': 'Taiwan',
+  'vietnamese': 'Vietnam', 'thai': 'Thailand', 'filipino': 'Philippines',
+  'indonesian': 'Indonesia', 'malaysian': 'Malaysia', 'australian': 'Australia',
+  'new zealand': 'New Zealand', 'canadian': 'Canada', 'mexican': 'Mexico',
+  'brazilian': 'Brazil', 'argentine': 'Argentina', 'chilean': 'Chile',
+  'colombian': 'Colombia', 'venezuelan': 'Venezuela', 'peruvian': 'Peru',
+  'cuban': 'Cuba', 'haitian': 'Haiti', 'afghan': 'Afghanistan', 'yemeni': 'Yemen',
+  'myanmar': 'Myanmar', 'burmese': 'Myanmar', 'nepali': 'Nepal', 'hungarian': 'Hungary',
+  'romanian': 'Romania', 'bulgarian': 'Bulgaria', 'serbian': 'Serbia',
+  'croatian': 'Croatia', 'irish': 'Ireland', 'icelandic': 'Iceland',
+};
+
+/* Where a sentence is about. The capital's own name first, because "Moscow" is a place
+   and "Russian" is an adjective about one; then the country; then the demonym. */
+function placeOf(text) {
+  const t = ' ' + text.toLowerCase().replace(/[.,;:()]/g, ' ') + ' ';
+  const at = w => {                       // where the word starts, or -1
+    const i = t.indexOf(' ' + w + ' ');
+    return i < 0 ? -1 : i;
+  };
+  /* Whichever name comes first in the sentence, not whichever comes first in the list of
+     countries. A New Zealand inquiry that mentions France further down was landing on
+     Paris, because France was earlier in the file. A sentence is about its subject, and
+     the subject is usually near the front. */
+  let best = null;
+  const offer = (i, cap, why, rank) => {
+    if (i < 0 || !cap) return;
+    if (!best || i < best.i || (i === best.i && rank < best.rank)) best = { i, cap, why, rank };
+  };
+  for (const c of CAPITALS) {
+    offer(at(c.name.toLowerCase()), c, c.name, 0);          // a city beats a country...
+    offer(at(c.country.toLowerCase()), c, c.country, 1);
+  }
+  for (const d in DEMONYM) {
+    offer(at(d), CAPITALS.find(x => x.country === DEMONYM[d]), DEMONYM[d], 2);
+  }
+  return best ? { cap: best.cap, why: best.why } : null;
+}
+
+const newsKey = it => (it.url || '') + '|' + it.text.slice(0, 60);
+
+function loadArchive() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(NEWS_STORE) || '[]');
+    /* Stored as arrays rather than objects: a thousand stories of {text,url,lon,lat,t}
+       is a lot of repeated key names, and this is a browser's storage, not a database. */
+    return raw.map(a => ({ t: a[0], lon: a[1], lat: a[2], text: a[3], url: a[4], where: a[5],
+                           kind: a[6] }));
+  } catch (e) { return []; }
+}
+function saveArchive(items) {
+  try {
+    const cut = Date.now() - NEWS_KEEP;
+    const keep = items.filter(i => i.t >= cut).slice(0, 400);
+    localStorage.setItem(NEWS_STORE, JSON.stringify(
+      keep.map(i => [i.t, +i.lon.toFixed(3), +i.lat.toFixed(3), i.text, i.url, i.where, i.kind])));
+  } catch (e) { /* a full or private-mode storage is not worth an error */ }
+}
+
+async function fetchWikiDay(d) {
+  const page = 'Portal:Current_events/' + d.getUTCFullYear() + '_'
+             + d.toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' }) + '_' + d.getUTCDate();
+  const u = 'https://en.wikipedia.org/w/api.php?action=parse&prop=text&format=json&origin=*&page='
+          + encodeURIComponent(page);
+  const j = await (await fetch(u)).json();
+  const html = (j.parse && j.parse.text && j.parse.text['*']) || '';
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const out = [];
+  for (const li of doc.querySelectorAll('li')) {
+    if (li.querySelector('ul')) continue;               // a heading with a list under it
+    const text = li.textContent.trim().replace(/\s+/g, ' ');
+    if (text.length < 30) continue;                     // "edit", "history", "watch"
+    // The source link is the last one, the one in brackets at the end of the line.
+    const links = [...li.querySelectorAll('a[href^="http"], a[href^="//"]')];
+    const a = links[links.length - 1];
+    const url = a ? (a.href.startsWith('//') ? 'https:' + a.getAttribute('href') : a.href) : '';
+    const p = placeOf(text);
+    if (!p) continue;                                   // nowhere to put it on a globe
+    out.push({ t: Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12),
+               lon: p.cap.lon, lat: p.cap.lat, where: p.why.toUpperCase(),
+               text: text.slice(0, 160), url, kind: 'news' });
+  }
+  return out;
+}
+
+async function fetchQuakes() {
+  const j = await (await fetch(
+    'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson')).json();
+  return (j.features || []).map(f => ({
+    t: f.properties.time, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1],
+    where: String(f.properties.place || '').toUpperCase().slice(0, 40),
+    text: 'M' + (+f.properties.mag).toFixed(1) + ' earthquake, ' + f.properties.place,
+    url: f.properties.url, kind: 'quake' }));
+}
+
+async function loadNews(why) {
+  if (NEWS.busy) return;
+  NEWS.busy = true;
+  newsHud('LOOKING…');
+  const now = new Date();
+  const yesterday = new Date(now.getTime() - 86400e3);
+  const got = await Promise.allSettled([
+    fetchWikiDay(now), fetchWikiDay(yesterday), fetchQuakes(),
+  ]);
+  const fresh = got.filter(r => r.status === 'fulfilled').flatMap(r => r.value);
+  const seen = new Set();
+  const all = [...fresh, ...loadArchive()]
+    .filter(i => { const k = newsKey(i); if (seen.has(k)) return false; seen.add(k); return true; })
+    .filter(i => Date.now() - i.t < NEWS_KEEP)
+    .sort((a, b) => b.t - a.t);
+  NEWS.items = all;
+  NEWS.at = Date.now();
+  saveArchive(all);
+  NEWS.busy = false;
+  newsHud();
+  dirty = true;
+}
+
+function newsHud(state) {
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  set('n-count', state || (NEWS.items.length ? NEWS.items.length + ' STORIES' : 'NOTHING YET'));
+  set('n-placed', NEWS.items.filter(i => i.kind === 'quake').length + ' QUAKES · '
+                + NEWS.items.filter(i => i.kind === 'news').length + ' PLACED BY NAME');
+  set('n-when', NEWS.at ? new Date(NEWS.at).toTimeString().slice(0, 5) : '—');
+  set('n-next', NEWS.at ? new Date(NEWS.at + NEWS_EVERY).toTimeString().slice(0, 5) : '—');
+  const list = document.getElementById('n-list');
+  if (!list) return;
+  list.innerHTML = '';
+  for (const i of NEWS.items.slice(0, 14)) {
+    const a = document.createElement('a');
+    a.className = 'sub';
+    a.href = i.url || '#';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = i.where + ' — ' + i.text.slice(0, 90);
+    list.appendChild(a);
+  }
+}
+
+// Far out, and only far out.
+function newsInView() { return map.getZoom() <= NEWS_ZOOM && NEWS.items.length > 0; }
+
+/* A line out of the globe and a few words at the end of it, the way a label points at
+   something too small to write on. They are kept apart by the same greedy de-clutter the
+   capitals use, so twelve stories out of one country do not stack into a smear. */
+function drawNews() {
+  if (!newsInView()) { NEWS.hot = []; return; }
+  const fs = Math.max(8, Math.round(8.5 * DPR));
+  lctx.save();
+  lctx.font = fs + 'px "Space Mono", ui-monospace, monospace';
+  lctx.textBaseline = 'middle';
+  const ctr = map.getCenter();
+  const hot = [];
+  let n = 0;
+  for (const it of NEWS.items) {
+    if (n >= 26) break;
+    if (angularDist(ctr.lat, ctr.lng, it.lat, it.lon) > 82) continue;   // the far side
+    let p;
+    try { p = map.project([it.lon, it.lat]); } catch (e) { continue; }
+    const x = p.x * DPR, y = p.y * DPR;
+    if (!(x > 0 && y > 0 && x < labels.width && y < labels.height)) continue;
+    // out and up, away from the middle, so the line leaves the globe rather than crossing it
+    const away = Math.atan2(y - labels.height / 2, x - labels.width / 2);
+    const len = 34 * DPR;
+    const ex = x + Math.cos(away) * len, ey = y + Math.sin(away) * len;
+    const hue = it.kind === 'quake' ? '#ff7a1a' : '#9dc4ff';
+    /* The mark goes down for every story there is room to see. Only the words are
+       de-cluttered: a globe 500 px across has room for two labels and fifteen dots, and
+       two labels is not "what is happening in the world". */
+    lctx.globalAlpha = 0.9;
+    lctx.fillStyle = hue;
+    lctx.beginPath(); lctx.arc(x, y, 2.6 * DPR, 0, Math.PI * 2); lctx.fill();
+    hot.push({ box: [x - 7 * DPR, y - 7 * DPR, x + 7 * DPR, y + 7 * DPR], url: it.url });
+    n++;
+
+    const label = it.text.slice(0, 30) + (it.text.length > 30 ? '…' : '');
+    const w = lctx.measureText(label).width;
+    const left = ex < labels.width / 2;
+    const bx = left ? ex - w - 6 * DPR : ex + 6 * DPR;
+    const box = [bx - 3 * DPR, ey - fs, bx + w + 3 * DPR, ey + fs];
+    if (labelBoxes.some(o => box[0] < o[2] && o[0] < box[2] && box[1] < o[3] && o[1] < box[3])) continue;
+    labelBoxes.push(box);
+
+    lctx.globalAlpha = 0.85;
+    lctx.strokeStyle = hue;
+    lctx.lineWidth = 1 * DPR;
+    lctx.beginPath(); lctx.moveTo(x, y); lctx.lineTo(ex, ey); lctx.stroke();
+    lctx.globalAlpha = 1;
+    lctx.fillStyle = 'rgba(0,0,0,.85)';
+    lctx.fillRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
+    lctx.fillStyle = '#d8d8d8';
+    lctx.fillText(label, bx, ey);
+    hot.push({ box, url: it.url });
+  }
+  lctx.restore();
+  NEWS.hot = hot;
+}
+
+// Clicking the words opens the story. Screen space, because that is where they were put.
+function newsAt(pt) {
+  if (!NEWS.hot) return null;
+  const x = pt.x * DPR, y = pt.y * DPR;
+  for (const h of NEWS.hot) {
+    if (x > h.box[0] && x < h.box[2] && y > h.box[1] && y < h.box[3]) return h;
+  }
+  return null;
+}
+
+/* A window on it, like the marker's: none of this is reachable from outside the module,
+   and counting coloured pixels off the canvas catches the map's own blue dots as well as
+   the stories, which is how a working zoom gate read as broken. */
+window.__news = {
+  get drawn() { return NEWS.hot ? NEWS.hot.length : 0; },
+  get count() { return NEWS.items.length; },
+  get at() { return NEWS.at; },
+  get placed() { return NEWS.items.slice(0, 6).map(i => i.where + ' | ' + i.text.slice(0, 60)); },
+};
+
+document.getElementById('b-news-now').addEventListener('click', () => loadNews('by hand'));
+
+/* The wordmark is the way back: one press and you are far enough out to see all of it,
+   with the whole day on the globe. */
+const brand = document.getElementById('brand');
+brand.style.cursor = 'pointer';
+brand.title = 'Back out to the whole world';
+brand.addEventListener('click', () => {
+  stopOrbit();
+  /* Stop the turn first. A spin that sets the centre every frame interrupts an easeTo
+     every frame: the flight out took three seconds to cover a fifth of the way. */
+  stopSpin();
+  showTopic('p-news');
+  map.easeTo({ center: [map.getCenter().lng, 8], zoom: 0.8, pitch: 0, bearing: 0,
+               duration: 2200 });
+  map.once('moveend', () => startSpin());
+  if (!NEWS.items.length) loadNews('the wordmark');
+});
+
+/* ── the opening turn ───────────────────────────────────────────────────────────
+   The first thing the app does is show you the whole of it, turning. The direction is the
+   real one: the Earth spins eastward, so an eye held still in space passes over
+   longitudes that run backwards, and the ground appears to slide the other way.
+
+   The rate is not the real one and saying otherwise would be a lie - a real turn takes
+   23 h 56 m 04 s and would look like a still picture. This is one turn in two minutes,
+   about 720 times over, and the panel says so. Any touch of the map stops it: it is a
+   way of arriving, not something to sit through. */
+const SPIN_TURN_MS = 120000;
+let spinLast = 0;
+
+function startSpin() {
+  stopSpin();
+  spinLast = 0;
+  const step = now => {
+    const dt = spinLast ? (now - spinLast) : 0;
+    spinLast = now;
+    const c = map.getCenter();
+    map.setCenter([((c.lng - 360 * dt / SPIN_TURN_MS + 540) % 360) - 180, c.lat]);
+    spinRAF = requestAnimationFrame(step);
+  };
+  spinRAF = requestAnimationFrame(step);
+}
+function stopSpin() { cancelAnimationFrame(spinRAF); spinRAF = 0; }
+['mousedown', 'touchstart', 'wheel', 'keydown'].forEach(ev =>
+  addEventListener(ev, stopSpin, { passive: true }));
+// And from the map's own side: originalEvent is what tells a hand from a flyTo.
+['dragstart', 'zoomstart', 'rotatestart'].forEach(ev =>
+  map.on(ev, e => { if (e && e.originalEvent) stopSpin(); }));
+
+/* Only on a first arrival. Someone who came in on a link with a place in it asked for
+   that place, and spinning them off it would be rude. */
+if (!HASH_VIEW) {
+  map.once('load', () => {
+    map.jumpTo({ center: [map.getCenter().lng, 12], zoom: 0.85, pitch: 0, bearing: 0 });
+    startSpin();
+    loadNews('first arrival');
+    showTopic('p-news');
+  });
+}
+setInterval(() => { if (Date.now() - NEWS.at > NEWS_EVERY - 5000) loadNews('the clock'); },
+            60000);
 
 /* ── the weather, wherever you last pointed ──────────────────────────────────────
    Open-Meteo: current conditions, free, no key, no account, CC BY 4.0 - the only kind of
@@ -3888,6 +4248,8 @@ const bandRange = b => {
 };
 
 map.on('click', e => {
+  const story = newsAt(e.point);          // the words are on top, so they are asked first
+  if (story && story.url) { window.open(story.url, '_blank', 'noopener'); return; }
   const cap = CAPITALS.length ? capitalAt(e.point) : null;
   if (cap) {
     selCountry.value = cap.country;

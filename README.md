@@ -91,6 +91,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | Cities by size | How the 34,091 cities fall across the eight bands, with the median and the mean | GeoNames |
 | The 195 capitals | Biggest, smallest, how many over a million, and which hour of the world each keeps | Wikidata + GeoNames zones |
 | Best known places | The ten monuments the world writes about most, of all 195 capitals | Wikidata |
+| The world, today | What is happening, on the globe, from far out only: the day's stories with a line and a few words over the place, and every earthquake over M4.5. Refreshed every ten minutes, kept for 24 hours in your own browser | Wikipedia Current events (CC BY-SA 4.0) + USGS (public domain) |
 | Weather | The live weather wherever you last pointed — searched place or your own position: temperature, sky, feels-like, wind, humidity, rain, in that place's own clock | Open-Meteo (CC BY 4.0) |
 | Time | The clock where you are — or in the capital you picked — with how far ahead of the world's first capital and behind its last you are | GeoNames zones, your browser |
 | Population — world | Every city over 15,000 people, 34,091 of them, in eight named bands from `darkred` to `gold` | GeoNames |
@@ -126,6 +127,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 
 | Control | Effect |
 | --- | --- |
+| The `DOTWORLD` wordmark | Flies back out to the whole globe, turning, with the day's news on it |
 | `WHERE AM I` (bottom centre) | Marks where you are, rounded to about a kilometre, and flies there |
 | `WHERE YOU ARE` (right column) | The same thing with its numbers showing — latitude, longitude, how close it is and the place name — plus `KEEP UP WITH ME` to follow you while you move, and `FORGET IT` to clear it. Nothing is asked for until you press a button, and the position is rounded to two decimal places before anything is done with it, the name lookup included |
 | The story line | The headline of whichever year the bar is on, with month and day. Click it for everything from the Big Bang to that year | Wikidata + linked articles |

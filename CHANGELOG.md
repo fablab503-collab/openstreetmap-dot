@@ -5,6 +5,61 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — It opens on the whole world, turning, with the day on it
+
+Daniel: the first launch should show the world turning, from far away; every ten minutes
+it should check a free feed for what is happening and put a line and a few words over the
+place; zoom in past that and it all goes; the wordmark takes you back out; and the last 24
+hours should be kept.
+
+### Added
+
+- **The opening turn.** A first arrival — no place in the URL — opens on the whole globe
+  and turns it. The direction is the real one: the Earth spins eastward, so an eye held
+  still in space passes over longitudes running backwards. **The rate is not real and the
+  panel says so**: one turn in two minutes, about 720× over. A real turn takes 23 h 56 m
+  04 s and would look like a still photograph. Any touch of the map stops it. Measured:
+  6.03° in 2 s, one turn in 119.6 s.
+- **THE WORLD, TODAY.** Every ten minutes, two free feeds with no key and no account:
+  Wikipedia's Current events portal for today and yesterday, and the USGS feed for
+  earthquakes over M4.5. A mark on the globe for each, a line out of the globe and a few
+  words at the end of it, and a click opens the story at its own source. In one run: 28
+  stories, 15 quakes and 13 placed by name.
+- **Only from far out.** Nothing is drawn above zoom 2. Measured: 22 of 28 drawn at zoom
+  0.85 (the other six were on the far side), 22 at 1.9, **0** at 2.1 and 0 at 5.
+- **The wordmark is the way back.** Click DOTWORLD and it flies out to the whole globe and
+  starts turning again. Measured: zoom 9 to 0.82 in 2.9 s.
+- **A day of it, kept in this browser and nowhere else.** `localStorage`, as arrays rather
+  than objects — a thousand stories of `{text,url,lon,lat,t}` is mostly repeated key names
+  — trimmed to 24 hours and 400 entries on every write.
+
+### The honest part
+
+A Wikipedia story carries no coordinates. It is placed by the first capital, country or
+demonym its own words name. That is a guess: "a Russian warship in the Baltic" lands on
+Moscow. The panel and CREDITS both say so, and earthquakes, which carry their own
+coordinates, are exact.
+
+GDELT was the right source — free, global, geocoded — and it cannot be used: **no
+cross-origin header**, so a browser page gets "Failed to fetch". Tried from the page
+itself before building anything on it.
+
+### Found by testing
+
+- **Two stories drawn out of 28.** The labels were 46 characters wide and a globe 500 px
+  across has room for two. The mark goes down for every story now and only the words are
+  de-cluttered — 22 instead of 2.
+- **The flight out crawled**, zoom 9 to 6.87 in three seconds. The opening turn sets the
+  centre every frame, which interrupts an easeTo every frame. It stops first now.
+- **60 `replaceState` calls a second** while turning. There was already a guard for the
+  orbit doing exactly this; the turn needed adding to it.
+- **A fourth dead-zone crash**, and then the end of them: the render loop ran its first
+  pass synchronously while the file was still being evaluated, so anything declared below
+  it was in its temporal dead zone. It waits for a frame now. That one bug shape cost four
+  crashes today.
+
+---
+
 ## 2026-09-15 — The weather, wherever you last pointed
 
 Daniel: "the live weather should be put here, in base of the location or search bar where
