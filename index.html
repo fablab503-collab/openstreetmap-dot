@@ -75,6 +75,10 @@
   .panel { position:relative; z-index:10; width:100%;
     background:rgba(0,0,0,.86);
     border:1px solid #1e1e1e; padding:7px 9px 8px; letter-spacing:.05em;
+    /* Never shrink. In one long column with a 2,000 px news panel in it, a shrinkable
+       panel gets squashed to its padding: LIVE and SETTINGS were 17 px tall with all
+       their content still inside them, which read as a fold that would not open. */
+    flex:0 0 auto;
     text-transform:uppercase; backdrop-filter:blur(2px); }
 
   /* One red dot a panel, top right. Click it and the panel folds down to its own
@@ -144,6 +148,21 @@
   #n-cats button { flex:1 1 auto; cursor:pointer; background:#000;
     border:1px solid #1e1e1e; }
 
+  /* The little window a held story opens, once the map has flown to the place. Small on
+     purpose: enough to know whether it is worth the click. */
+  #n-card { position:absolute; left:50%; top:52%; transform:translate(-50%, 0);
+    z-index:16; width:min(320px, calc(100vw - 40px)); padding:10px 12px;
+    background:rgba(0,0,0,.94); border:1px solid #2a2a2a; cursor:pointer;
+    letter-spacing:.04em; }
+  #n-card:hover { border-color:var(--lit); }
+  #n-card-where { color:#9dc4ff; font-size:9px; letter-spacing:.12em;
+    text-transform:uppercase; }
+  #n-card-text { color:#e8e8e8; font-size:11px; line-height:1.5; margin:5px 0 7px;
+    text-transform:none; letter-spacing:.02em; }
+  #n-card-foot { display:flex; justify-content:space-between; font-size:9px;
+    color:#6a6a6a; letter-spacing:.1em; }
+  #n-card-foot b { color:#c98500; font-weight:400; }
+
   .moodbar { display:flex; height:7px; margin:3px 0 6px; background:#141414; }
   .moodbar i { display:block; height:100%; }
   #n-bar-bad { background:#ff6b6b; } #n-bar-flat { background:#3e3e3e; }
@@ -173,7 +192,6 @@
   #hud .infoends { display:flex; justify-content:space-between; color:#3e3e3e;
     font-size:9px; letter-spacing:.03em; }
 
-  #stats { flex:0 1 auto; overflow-y:auto; min-height:0; }
   #stats .row { display:block; }
   #stats b { color:#e8e8e8; font-weight:400; float:right; letter-spacing:0; }
   #stats .sep { height:1px; background:#1e1e1e; margin:8px -12px; }
@@ -218,16 +236,10 @@
   #live-dot.stale { background:#ffb000; animation:none; }
   @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.2 } }
 
-  #ctl { flex:0 1 auto; overflow-y:auto; min-height:0; }
-  #ctl::-webkit-scrollbar { width:6px; }
-  #ctl::-webkit-scrollbar-thumb { background:#2a2a2a; }
+  /* The settings panel used to be a column of its own and scrolled inside itself. In the
+     one column it is a panel like the others: the column does the scrolling, and leaving
+     it shrinkable squashed it to 17 px with all its sliders still in it. */
 
-  #b-set { flex:0 0 auto; width:100%;
-    padding:9px; cursor:pointer; background:rgba(0,0,0,.86); color:#8a8a8a;
-    border:1px solid #1e1e1e; font:inherit; letter-spacing:.1em;
-    text-transform:uppercase; }
-  #b-set:hover { border-color:#4a4a4a; color:#e8e8e8; }
-  #b-set[aria-pressed=true] { border-color:var(--lit); color:var(--lit); }
 
   /* Centred on the top row, between the wordmark and the settings button —
      anywhere on the left collides with the readouts. */
@@ -381,14 +393,17 @@
   }
 
   /* Where am I: directly above the zoom bar, so both live at the bottom centre. */
-  #b-here { position:absolute; bottom:34px; left:12px;
-    z-index:12; padding:8px 16px; cursor:pointer; background:rgba(0,0,0,.86);
+  /* Up beside the search, where you are already looking for a place. In the bottom-left
+     corner it sat on top of whichever panel had grown that far, belonged to no section,
+     and was the last thing anyone found. */
+  #b-here { position:absolute; top:12px; right:12px;
+    z-index:15; padding:8px 16px; cursor:pointer; background:rgba(0,0,0,.86);
     color:#8a8a8a; border:1px solid #1e1e1e; font:inherit; letter-spacing:.1em;
     text-transform:uppercase; white-space:nowrap;
     transition:transform .38s cubic-bezier(.4,0,.2,1), opacity .38s ease; }
   #b-here:hover { border-color:var(--lit); color:var(--lit); }
   #b-here[aria-pressed=true] { border-color:var(--lit); color:var(--lit); }
-  body.ui-hidden #b-here { transform:translateY(140px); opacity:0;
+  body.ui-hidden #b-here { transform:translateY(-72px); opacity:0;
     pointer-events:none; }
 
   #attr { position:absolute; bottom:8px; left:12px; z-index:10; font-size:10px;
@@ -409,6 +424,11 @@
   <div id="results"></div>
 </div>
 
+<div id="n-card" hidden>
+  <div id="n-card-where"></div>
+  <div id="n-card-text"></div>
+  <div id="n-card-foot"><span id="n-card-when"></span><b>READ IT →</b></div>
+</div>
 <div id="ui-left" class="col">
   <div id="brandrow">
     <div id="brand">DOTWORLD<span class="r">(R)</span></div>
@@ -710,7 +730,6 @@
     orbit at J2000 from Wikipedia. Two-body orbits: good to a fraction of a degree
     from 1800 to 2050, drifting outside that.</span>
 </div>
-<button id="b-set" aria-pressed="true">SETTINGS</button>
 <div id="p-me" class="panel">
   <span class="ttl">WHERE YOU ARE</span>
   <span class="row">LATITUDE <b id="me-lat">—</b></span>
@@ -2128,37 +2147,23 @@ bCaps.addEventListener('click', () => {
    nothing sharper than a kilometre exists in the page, the URL hash or any request.
    The button says the town it found, so you can see it worked. */
 const bHere = document.getElementById('b-here');
+/* One way of asking, not two. This button and FIND ME in the panel each ran their own
+   copy of the geolocation call, their own rounding and their own reverse lookup. They
+   share locateOnce() now, so the panel, the weather and the button always agree - and the
+   rounding to two decimal places happens in exactly one place in the file. */
 bHere.addEventListener('click', () => {
   if (!navigator.geolocation) { bHere.textContent = 'NO GEOLOCATION'; return; }
-  bHere.textContent = 'LOCATING…';
-  navigator.geolocation.getCurrentPosition(async pos => {
-    const lat = +pos.coords.latitude.toFixed(2);
-    const lon = +pos.coords.longitude.toFixed(2);
-    const src = map.getSource('me');
-    if (src) src.setData({ type: 'FeatureCollection', features: [
-      { type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] },
-        properties: {} }] });
+  bHere.textContent = 'ASKING…';
+  showTopic('p-me');
+  locateOnce((lat, lon, name) => {
     stopOrbit();
+    stopSpin();
     map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 10.5), duration: 1800 });
     bHere.setAttribute('aria-pressed', 'true');
-    bHere.textContent = 'YOU ARE HERE';
-    showMe(lat, lon, pos.coords.accuracy);     // the side panel says the same thing
-    dirty = true;
-    try {
-      const r = await fetch('https://nominatim.openstreetmap.org/reverse'
-                          + `?format=jsonv2&zoom=10&lat=${lat}&lon=${lon}`);
-      const j = await r.json();
-      const a = j.address || {};
-      const place = a.city || a.town || a.village || a.county || a.state || '';
-      if (place) bHere.textContent = 'YOU: ' + place.toUpperCase();
-      const country = a.country || '';
-      const line = [place, country].filter(Boolean).join(', ');
-      if (line) meSet('me-place', line.toUpperCase());
-      loadWeather(lat, lon, line);
-    } catch (e) { /* the dot is on the map either way */ }
+    bHere.textContent = name ? 'YOU: ' + name.split(',')[0].toUpperCase() : 'YOU ARE HERE';
   }, err => {
-    bHere.textContent = err.code === 1 ? 'PERMISSION DENIED' : 'LOCATION UNAVAILABLE';
-  }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 600000 });
+    bHere.textContent = err && err.code === 1 ? 'YOU SAID NO' : 'WHERE AM I';
+  });
 });
 
 /* ── the world, today ───────────────────────────────────────────────────────────
@@ -2668,10 +2673,25 @@ function drawNews() {
 
       // the line leaves the row on the side facing the globe
       const tie = side < 0 ? railX + railW + 8 * DPR : railX - 8 * DPR;
-      lctx.globalAlpha = on ? 0.9 : 0.45;
+      /* The line bends, and how much is how far round the world the place is: something
+         square in front of you gets a straight run, something out at the edge gets a long
+         curve that follows the turn of the globe instead of cutting across it. Under the
+         pointer it pulls taut - one straight line, which is how you know which row you
+         are on without reading anything. */
+      const round = Math.min(1, angularDist(ctr.lat, ctr.lng, it.lat, it.lon) / 82);
+      const bend = on ? 0 : round * 0.55;
+      lctx.globalAlpha = on ? 0.95 : 0.45;
       lctx.strokeStyle = hue;
-      lctx.lineWidth = 1 * DPR;
-      lctx.beginPath(); lctx.moveTo(x, y); lctx.lineTo(tie, ry); lctx.stroke();
+      lctx.lineWidth = (on ? 1.4 : 1) * DPR;
+      lctx.beginPath();
+      lctx.moveTo(tie, ry);
+      if (bend < 0.02) lctx.lineTo(x, y);
+      else {
+        const dx = x - tie, dy = y - ry;          // one control point, off at right angles
+        lctx.quadraticCurveTo((tie + x) / 2 - dy * bend * 0.5,
+                              (ry + y) / 2 + dx * bend * 0.5, x, y);
+      }
+      lctx.stroke();
 
       const box = [railX - 4 * DPR, ry - fs, railX + railW + 4 * DPR, ry + fs];
       hot.push({ box, url: it.url, id });
@@ -2752,6 +2772,60 @@ window.__news = {
     box.appendChild(b);
   }
 })();
+
+/* ── hold a story and go there ───────────────────────────────────────────────────
+   A click opens the source, as it always did. Holding the same row for two thirds of a
+   second does something else: the map flies to the place it happened, and a small window
+   opens with the story in it. Read that and decide; the window itself is the way through
+   to the real thing.
+
+   Two thirds of a second is the gap that tells a click from a hold without either one
+   feeling like a mistake. */
+const HOLD_MS = 650;
+let holdTimer = 0, holdId = null, holdFired = false;
+
+function openCard(it) {
+  const card = document.getElementById('n-card');
+  if (!card || !it) return;
+  document.getElementById('n-card-where').textContent = it.where;
+  document.getElementById('n-card-text').textContent = it.text;
+  document.getElementById('n-card-when').textContent =
+    new Date(it.t).toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+  card.hidden = false;
+  card.onclick = () => { if (it.url) window.open(it.url, '_blank', 'noopener'); };
+}
+function closeCard() {
+  const card = document.getElementById('n-card');
+  if (card) card.hidden = true;
+}
+
+function flyToStory(id) {
+  const it = NEWS.items.find(i => newsKey(i) === id);
+  if (!it) return;
+  stopSpin();
+  stopOrbit();
+  closeCard();
+  /* Past NEWS_ZOOM the rails are gone, which is right - you asked to look at the place,
+     not at the list. The card carries the story from here. */
+  map.flyTo({ center: [it.lon, it.lat], zoom: 9.5, pitch: 0, bearing: 0, duration: 2600 });
+  map.once('moveend', () => openCard(it));
+}
+
+// Moving the map by hand, or picking another story, puts the window away.
+map.on('dragstart', ev => { if (ev && ev.originalEvent) closeCard(); });
+map.on('zoomstart', ev => { if (ev && ev.originalEvent) closeCard(); });
+
+map.on('mousedown', e => {
+  const story = newsAt(e.point);
+  clearTimeout(holdTimer);
+  if (!story) { holdId = null; return; }
+  holdId = story.id;
+  holdFired = false;
+  holdTimer = setTimeout(() => { holdFired = true; flyToStory(story.id); }, HOLD_MS);
+});
+['mouseup', 'mouseout', 'dragstart'].forEach(ev =>
+  map.on(ev, () => clearTimeout(holdTimer)));
+
 
 document.getElementById('b-cats-all').addEventListener('click', () => {
   catsOn = new Set(CAT_KEYS);
@@ -2928,8 +3002,10 @@ async function namePlace(lat, lon) {
   return '';
 }
 
-function locateOnce(then) {
-  if (!navigator.geolocation) { meSet('me-place', 'NO GEOLOCATION HERE'); return; }
+function locateOnce(then, failed) {
+  if (!navigator.geolocation) {
+    meSet('me-place', 'NO GEOLOCATION HERE'); if (failed) failed(); return;
+  }
   meSet('me-place', 'ASKING…');
   navigator.geolocation.getCurrentPosition(async pos => {
     const lat = +pos.coords.latitude.toFixed(2);
@@ -2941,6 +3017,7 @@ function locateOnce(then) {
     if (then) then(lat, lon, name);
   }, err => {
     meSet('me-place', err.code === 1 ? 'YOU SAID NO' : 'NOT AVAILABLE');
+    if (failed) failed(err);
   }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 600000 });
 }
 
@@ -4680,7 +4757,10 @@ const bandRange = b => {
 };
 
 map.on('click', e => {
-  const story = newsAt(e.point);          // the words are on top, so they are asked first
+  // The words are on top, so they are asked first. A click that was really a hold has
+  // already flown somewhere and must not also open a tab.
+  const story = newsAt(e.point);
+  if (holdFired) { holdFired = false; return; }
   if (story && story.url) { window.open(story.url, '_blank', 'noopener'); return; }
   const cap = CAPITALS.length ? capitalAt(e.point) : null;
   if (cap) {
@@ -5353,13 +5433,8 @@ bCol.addEventListener('click', () => {
   bCol.setAttribute('aria-label', small ? 'Open the column again' : 'Shrink the column to a strip');
 });
 
-const bSet = document.getElementById('b-set');
-const ctl = document.getElementById('ctl');
-bSet.addEventListener('click', () => {
-  const on = bSet.getAttribute('aria-pressed') !== 'true';
-  bSet.setAttribute('aria-pressed', on);
-  ctl.hidden = !on;
-});
+/* The SETTINGS button is gone. It sat loose between two panels, could not be folded
+   itself, and did the same job as the red dot on the settings panel beside it. */
 
 /* World statistics.
    The counter is a PROJECTION, not a measurement: population is estimated
