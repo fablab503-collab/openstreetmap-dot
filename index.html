@@ -480,7 +480,8 @@
   <label>MIN POPULATION <span id="l-minpop">15 K</span></label>
   <input id="s-minpop" type="range" min="0" max="100" step="1" value="0">
   <label>WHO FLOATS OVER A PLACE YOU FIND</label>
-  <span class="note" id="s-marker-note">W A S D to walk it · SPACE to jump · it will not walk through a building</span>
+  <span class="note" id="s-marker-note">W A S D to walk it · SPACE to jump · hold SHIFT
+    for ten times the speed · G walks it itself · it will not walk through a building</span>
   <select id="s-marker" aria-label="What floats over a place you search for">
     <option value="ghost" selected>GHOST</option>
     <option value="person">PERSON</option>
@@ -749,9 +750,11 @@
   <span class="row">PAUSE <b>P</b></span>
   <span class="row">START OVER <b>R</b></span>
   <span class="row">CHANGE SHAPE <b>T</b></span>
-  <span class="row">WALK ITSELF <b>SHIFT + A</b></span>
-  <span class="note">A on its own is already left, so walking itself is SHIFT + A.
-    The keys work outside the game too — that is where they came from.
+  <span class="row">WALK ITSELF <b>G</b></span>
+  <span class="row">TEN TIMES FASTER <b>HOLD SHIFT</b></span>
+  <span class="note">Shift is the boost - ten times the speed on the ground and half
+    again as high in the air - so walking itself is G rather than a chord shift already
+    owns. The keys work outside the game too — that is where they came from.
     Nothing here is loaded from anywhere: the streets are the gaps between the buildings
     the map has already drawn, which is all a maze ever was.</span>
 </div>
@@ -1121,13 +1124,13 @@ const style = {
     { id:'water', type:'fill', source:'ofm', 'source-layer':'water',
       paint:{
         'fill-color':['match',['get','class'],
-          'ocean','#191970',          // midnightblue
-          'lake','#483d8b',           // darkslateblue
+          'ocean','#123a5e',          // a plain sea blue: midnightblue read as violet
+          'lake','#1e5f86',           // and so did darkslateblue
           'pond','#4682b4',           // steelblue
           'river','#5f9ea0',          // cadetblue
           'dock','#708090',           // slategray
           'swimming_pool','#4169e1',  // royalblue
-          '#483d8b'],
+          '#1e5f86'],
         'fill-opacity':['case',
           ['==',['get','intermittent'],1], 0.35,     // dry for part of the year
           ['match',['get','class'],
@@ -1163,8 +1166,8 @@ const style = {
           'farmland','#808000',    // olive
           'wetland','#3a3a3a',
           'sand','#bdb76b',        // darkkhaki
-          'ice','#b0c4de',         // lightsteelblue
-          'glacier','#b0c4de',
+          'ice','#b8c6cc',         // steel without the violet in it
+          'glacier','#b8c6cc',
           '#2e2e2e'],
         'fill-opacity':['match',['get','class'],
           'ice',0.30, 'glacier',0.30, 'sand',0.22, 'wetland',0.16,
@@ -1181,8 +1184,8 @@ const style = {
           'residential','#696969',   // dimgray
           'commercial','#bc8f8f',    // rosybrown
           'industrial','#a0522d',    // sienna
-          'military','#4b0082',      // indigo
-          'cemetery','#663399',      // rebeccapurple
+          'military','#5a5a5a',      // indigo was one of the violets
+          'cemetery','#6a6a6a',
           'hospital','#da70d6',      // orchid
           'school','#9370db',        // mediumpurple
           'university','#9370db',
@@ -1301,7 +1304,7 @@ const style = {
         'circle-radius':['interpolate',['linear'],['zoom'], 10.5,3, 14,7, 17,15, 20,32],
         'circle-color':['match',['get','cat'],
           'museum','#d95926', 'fortification','#199e70', 'religious','#c98500',
-          'theatre','#9085e9', 'square','#d55181', '#d95926'],
+          'theatre','#7a8ad0', 'square','#d55181', '#d95926'],
         'circle-opacity':0.96 } },
 
     /* Only used in 3D dot view. Height becomes dot brightness, so taller
@@ -4043,8 +4046,11 @@ function driveMarker(now) {
 
   let p;
   try { p = map.project([markerAt.lon, markerAt.lat]); } catch (e) { return; }
-  // Metres a second, turned into pixels only here, at whatever the zoom happens to be.
-  const step = KEY_SPEED * GM.mult * dt / mPerPx();
+  /* Metres a second, turned into pixels only here, at whatever the zoom happens to be.
+     Shift is ten times that - 120 m/s, a fast train - for getting across a city rather
+     than along a street. */
+  const boost = keysDown.has('shift') ? 10 : 1;
+  const step = KEY_SPEED * GM.mult * boost * dt / mPerPx();
   let nx = p.x + dx * step, ny = p.y + dy * step;
 
   /* Walls, unless it is over them. Blocked head-on, it tries each axis on its own
@@ -4136,12 +4142,14 @@ addEventListener('keydown', e => {
     if (e.repeat) return;
     const p = map.project([markerAt.lon, markerAt.lat]);
     if (Math.abs(jumpY - surfaceAt(p.x, p.y)) < 0.4 && !jumpV) {   // only from a surface
-      jumpV = JUMP_V0; holdT = 0; holding = true;
+      // Shift on the way up too: a boosted jump is half again as fast off the ground,
+      // which is more than half again as high, because height goes with the square.
+      jumpV = JUMP_V0 * (e.shiftKey ? 1.5 : 1); holdT = 0; holding = true;
     }
     return;
   }
 
-  if ('prta'.includes(raw) && !GM.keysBusy) {
+  if ('prtg'.includes(raw) && !GM.keysBusy) {
     if (raw === 'p') { e.preventDefault(); pauseGame(); return; }
     if (raw === 'r') { e.preventDefault(); if (GM.on) startGame(); return; }
     if (raw === 't') {
@@ -4150,10 +4158,12 @@ addEventListener('keydown', e => {
       setMarkerKind(MARK_CYCLE[(i + 1) % MARK_CYCLE.length]);
       return;
     }
-    // 'a' is both a direction and a command, so it is only the command on its own
-    if (raw === 'a' && e.shiftKey) { e.preventDefault(); autoWalk = !autoWalk; return; }
+    /* Walking itself used to be SHIFT + A. Shift is the boost now, so it moved to G -
+       'go' - and A is only ever left. Two things cannot share one chord. */
+    if (raw === 'g') { e.preventDefault(); autoWalk = !autoWalk; return; }
   }
 
+  if (raw === 'shift') { keysDown.add('shift'); return; }
   if (!'wasd'.includes(k)) return;
   e.preventDefault();
   // Nothing dropped yet: start it in the middle of what you are looking at, or the
@@ -5405,7 +5415,7 @@ function chart(id, rows, max) {
 
 /* Water, in the same words the style uses. */
 const WATER_KEY = [
-  ['ocean', 'midnightblue', '#191970'], ['lake', 'darkslateblue', '#483d8b'],
+  ['ocean', 'sea blue', '#123a5e'], ['lake', 'deep blue', '#1e5f86'],
   ['pond / little lake', 'steelblue', '#4682b4'], ['river', 'cadetblue', '#5f9ea0'],
   ['canal', 'cadetblue', '#5f9ea0'], ['stream', 'lightslategray', '#778899'],
   ['drain / ditch', 'darkslategray', '#2f4f4f'], ['dock', 'slategray', '#708090'],
@@ -5415,10 +5425,10 @@ const LAND_KEY = [
   ['wood / forest', 'grey, greens out', '#2a2a2a'], ['scrub', 'grey, greens out', '#333333'],
   ['grass / meadow', 'grey, greens out', '#2e2e2e'], ['park', 'grey, greens out', '#303030'],
   ['farmland', 'olive', '#808000'], ['wetland', 'grey, greens out', '#3a3a3a'],
-  ['sand', 'darkkhaki', '#bdb76b'], ['ice / glacier', 'lightsteelblue', '#b0c4de'],
+  ['sand', 'darkkhaki', '#bdb76b'], ['ice / glacier', 'steel', '#b8c6cc'],
   ['residential', 'dimgray', '#696969'], ['commercial', 'rosybrown', '#bc8f8f'],
-  ['industrial', 'sienna', '#a0522d'], ['military', 'indigo', '#4b0082'],
-  ['cemetery', 'rebeccapurple', '#663399'], ['hospital', 'orchid', '#da70d6'],
+  ['industrial', 'sienna', '#a0522d'], ['military', 'grey, violets out', '#5a5a5a'],
+  ['cemetery', 'grey, violets out', '#6a6a6a'], ['hospital', 'orchid', '#da70d6'],
   ['school / university', 'mediumpurple', '#9370db'], ['stadium', 'purple', '#800080'],
   ['quarry / pier', 'tan', '#d2b48c'], ['railway', 'thistle', '#d8bfd8']
 ];
@@ -6641,7 +6651,7 @@ function emitWell(pos, cam, batch, now) {
   const g = wellGrid(pos, now), p = { x: 0, y: 0, z: 0 };
   for (let i = 0; i < g.a.length; i++) {
     p.x = g.pts[i*3]; p.y = g.pts[i*3+1]; p.z = g.pts[i*3+2];
-    dot3(cam, p, 0.75, '#6a7ba2', g.a[i], batch);
+    dot3(cam, p, 0.75, '#7a8a94', g.a[i], batch);   // the gravity well, violet out
   }
 }
 

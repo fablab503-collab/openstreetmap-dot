@@ -68,8 +68,8 @@ grid, so capital names are drawn on their own layer above it.
 
 | Feature | Value | Result |
 | --- | --- | --- |
-| Ocean | `midnightblue` at a third | reads as sea, at the brightness the old grey had |
-| Lake, pond, river, canal, stream, dock, pool | `darkslateblue` … `royalblue` | nine named blues, dimmer the more screen they cover |
+| Ocean | `#123a5e` at a third | reads as sea, at the brightness the old grey had |
+| Lake, pond, river, canal, stream, dock, pool | `#1e5f86` … `royalblue` | nine blues, none of them violet, dimmer the more screen they cover |
 | Land | `#242424` → `#151515` as you zoom in | faint field; the coastline is its edge |
 | Buildings | `#333333`, `#8a8a8a` outlines from z15 | small dots with readable edges |
 | Minor roads and paths → secondary roads | `#5a5a5a` → `#9a9a9a` | mid dots |
@@ -135,8 +135,8 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | `COLOURS` | How many colours the map may use, 1 to 43. Each step hands a group its own hues — water, population, monuments, land, built land, transport — and turning it down costs less power |
 | `ZOOM` bar (bottom centre) | Drag to go from a street to the whole globe in one gesture; it follows the map too, and slides away with the panels |
 | `SEARCH A PLACE` | Search by name; countries and regions frame to their bounds, and a small 3D figure hangs over the place with its shadow on the ground |
-| `GAME` → `PLAY GAME` | A chase across Montpellier, from above. Take the dots, dodge the four, and get to wherever GO TO points — round the corner or twelve thousand kilometres away. The buildings are the maze and they block the view of what is behind them; nothing is loaded for any of it. Orange dots make you faster. Caught, you come apart into your own pixels. `P` pause, `R` start over, `T` change shape, `SHIFT`+`A` walk itself |
-| `WHO FLOATS OVER A PLACE YOU FIND` | What that figure is: a ghost, a person, a dog, a bicycle, a motorbike, a car, a van, a bus — or nobody. It holds the spot and breathes up and down. `W` `A` `S` `D` walk it around, `SPACE` jumps and holding it jumps far higher — a tap about 2.5 m, a held key about 13. Walking is 12 m/s and gravity 9.81 m/s², in metres rather than pixels, so zoom changes only how much you can see. The camera sits on the figure while you move it. Buildings carry their real heights, so a wall only stops what is shorter than it: jump onto a roof and you stand on it, walk off the edge and you fall. The map pans to keep up |
+| `GAME` → `PLAY GAME` | A chase across Montpellier, from above. Take the dots, dodge the four, and get to wherever GO TO points — round the corner or twelve thousand kilometres away. The buildings are the maze and they block the view of what is behind them; nothing is loaded for any of it. Orange dots make you faster. Caught, you come apart into your own pixels. `P` pause, `R` start over, `T` change shape, `G` walk itself |
+| `WHO FLOATS OVER A PLACE YOU FIND` | What that figure is: a ghost, a person, a dog, a bicycle, a motorbike, a car, a van, a bus — or nobody. It holds the spot and breathes up and down. `W` `A` `S` `D` walk it around, `SPACE` jumps and holding it jumps far higher — a tap about 2.5 m, a held key about 13. Hold `SHIFT` with any of them for ten times the speed and half again the jump: measured 3.6 m in 300 ms walking, 36.3 m boosted, and a peak of 15.5 m against 23 m. Walking is 12 m/s and gravity 9.81 m/s², in metres rather than pixels, so zoom changes only how much you can see. The camera sits on the figure while you move it. Buildings carry their real heights, so a wall only stops what is shorter than it: jump onto a roof and you stand on it, walk off the edge and you fall. The map pans to keep up |
 | `SETTINGS` | Show or hide the control panel |
 | `HIDE PANELS` | Slide every panel off the map and back |
 | `DOT SCALE` / `GAIN` / `CUTOFF` | Lattice pitch (0.01 to 2 - past about 0.05 the dots are finer than a screen pixel and the map goes continuous), brightness response, unlit threshold |

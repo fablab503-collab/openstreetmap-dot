@@ -5,6 +5,43 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — Hold shift to run, and the violets are gone
+
+Daniel: "add shift plus the direction command W, S, D, A to boost the speed to 10× and the
+jump as well. Take out as well the violet colour around the globe and also the bluish
+violet colour."
+
+### Added
+
+- **Hold `SHIFT` with `W` `A` `S` `D` and the figure runs ten times faster.** 12 m/s
+  becomes 120 m/s. Measured on open ground at Champ de Mars, same 300 ms burst both ways:
+  **3.6 m walking, 36.3 m boosted** — 10.1×, and nothing was blocked either time.
+- **`SHIFT` + `SPACE` jumps half again as high.** The kick-off goes from 7 m/s to 10.5.
+  Measured peak **15.5 m plain against 23 m boosted**, holding the key both times.
+
+### Changed
+
+- **Walking itself has moved from `SHIFT`+`A` to `G`.** Two things cannot share one chord:
+  `SHIFT`+`A` is now a boosted step to the left. `G` for "go". The game's other keys are
+  untouched — `P` pause, `R` start over, `T` change shape.
+- **Every violet is out of the map.** Ocean `#191970` → **`#123a5e`**, lakes and the
+  default water `#483d8b` → **`#1e5f86`**, ice and glacier `#b0c4de` → **`#b8c6cc`**,
+  military `#4b0082` → **`#5a5a5a`**, cemeteries `#663399` → **`#6a6a6a`**, theatres
+  `#9085e9` → **`#7a8ad0`**, and the solar system's gravity well `#6a7ba2` →
+  **`#7a8a94`**. That is the purple ring the globe carried at every zoom and the bluish
+  violet inland; both were the same two colours showing everywhere there is water. The
+  legend rows say sea blue, deep blue, steel and grey now.
+
+### Measured
+
+- The boost reaches the walker: `window.__marker.keys` reports `["shift"]` while the key
+  is down and `[]` after. The first attempt at measuring it read 1.4× rather than 10×
+  because the figure had walked into a building — displacement stops meaning speed once
+  something is in the way. Both numbers above were taken on open ground with
+  `blocked: false`.
+
+---
+
 ## 2026-09-15 — One column, and the buttons in the right face
 
 Daniel: "could you refresh the settings so it's going to be just on the left side and not
