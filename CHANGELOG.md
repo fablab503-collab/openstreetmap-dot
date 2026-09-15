@@ -5,6 +5,36 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — The grey slab over the sea by Italy
+
+Daniel sent a picture of the Ligurian Sea with a big dull quadrilateral across it and
+said: "there is a bug in italy."
+
+### Fixed
+
+- **It was the Pelagos Sanctuary.** The marine protected area between Monaco, Corsica,
+  Sardinia and Tuscany — about 87,500 km² of open sea — is in the tiles as a polygon, and
+  DotWorld was filling it with 16% grey like any other park. Read straight off the map
+  canvas: sea **inside** its edge came out `rgb(29,40,51)`, sea **outside** `rgb(25,39,52)`.
+  Four points of red is nothing on its own, but the halftone runs a gain of 2.05 and a
+  cutoff, so near the threshold those four points decide whether a dot lights at all —
+  which turns a faint wash into a hard-edged slab. That is the shape in the picture.
+- **Protected areas are their edge now, not a fill.** The tiles' `park` layer is not city
+  parks; it is national parks, nature reserves and protected areas, and every one of them
+  covers a region — 1,327 of them in that one view, led by Pelagos at 2.9° across. The
+  layer went from `fill` to `line`: `#4a4a4a` at 55%, 0.3 px at z5 up to 1 px at z14. You
+  can see the sanctuary traced round Corsica and Sardinia, and the sea under it is sea.
+- **Measured after:** four sea points — inside Pelagos, off Monaco, west of Sardinia, and
+  the open Tyrrhenian — all read `rgb(25,39,52)`. They were not equal before.
+
+### Changed
+
+- The texture groundwork listed `park` as one of the fills it patterns. It patterns
+  `green` instead, since `park` has no fill to pattern.
+- The legend row says **protected area — edge only** where it said *park — grey*.
+
+---
+
 ## 2026-09-15 — Hold shift to run, and the violets are gone
 
 Daniel: "add shift plus the direction command W, S, D, A to boost the speed to 10× and the

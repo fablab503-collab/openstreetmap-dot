@@ -71,6 +71,7 @@ grid, so capital names are drawn on their own layer above it.
 | Ocean | `#123a5e` at a third | reads as sea, at the brightness the old grey had |
 | Lake, pond, river, canal, stream, dock, pool | `#1e5f86` … `royalblue` | nine blues, none of them violet, dimmer the more screen they cover |
 | Land | `#242424` → `#151515` as you zoom in | faint field; the coastline is its edge |
+| National parks, reserves, protected areas | `#4a4a4a`, edge only | a thin line, never a fill — half of them are sea |
 | Buildings | `#333333`, `#8a8a8a` outlines from z15 | small dots with readable edges |
 | Minor roads and paths → secondary roads | `#5a5a5a` → `#9a9a9a` | mid dots |
 | Motorway, trunk, primary | `#ffffff` | full dots |

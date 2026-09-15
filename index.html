@@ -470,9 +470,10 @@
   <input id="s-bear" type="range" min="0" max="359" step="1" value="0">
   <label>SUN <span id="l-sun">210</span>° <span class="hint">— 3D ONLY</span></label>
   <input id="s-sun" type="range" min="0" max="359" step="1" value="210">
-  <span class="note">The greens are out for now — the big park and landuse fills were
-    reading as slabs of colour over whole regions. They are neutral greys until the
-    texture work below can carry them properly.</span>
+  <span class="note">The greens are out for now — the big landuse fills were reading as
+    slabs of colour over whole regions. They are neutral greys until the texture work
+    below can carry them properly. Protected areas are drawn as their edge alone, so a
+    marine sanctuary no longer greys out the sea it covers.</span>
   <label>DOT COLOUR <span id="swatch-name">WHITE</span></label>
   <div id="pal"></div>
   <label>COLOURS <span id="l-colours">—</span></label>
@@ -1172,8 +1173,16 @@ const style = {
         'fill-opacity':['match',['get','class'],
           'ice',0.30, 'glacier',0.30, 'sand',0.22, 'wetland',0.16,
           'farmland',0.13, 'scrub',0.16, 0.22] } },
-    { id:'park', type:'fill', source:'ofm', 'source-layer':'park',
-      paint:{ 'fill-color':'#303030', 'fill-opacity':0.16 } },
+    /* Protected areas are drawn as their edge, never as a fill. The tiles' `park`
+       layer is not city parks - it is national parks, nature reserves and protected
+       areas, and every one of them is a region. A 16% grey over all of Pelagos, the
+       marine sanctuary between Monaco, Corsica, Sardinia and Tuscany, washed 2.9° of
+       open sea into a grey slab: measured (29,40,51) inside its edge against
+       (25,39,52) outside, and the halftone's gain turns four points of red into a
+       visible wedge. The line says the same thing and touches nothing under it. */
+    { id:'park', type:'line', source:'ofm', 'source-layer':'park',
+      paint:{ 'line-color':'#4a4a4a', 'line-opacity':0.55,
+        'line-width':['interpolate',['linear'],['zoom'], 5,0.3, 9,0.6, 14,1] } },
 
     /* What people put on the land. Purples and browns, because every other family
        is spoken for - warm is population, blue is water, turquoise is a monument -
@@ -3254,7 +3263,7 @@ levelBar('s-newsn', 'l-newsn', v => v === 0 ? 'NONE' : v >= 30 ? 'ALL' : String(
    thing here that could make the frame time run away. Turn it up and watch FRAME in the
    VIEW panel - if it climbs, that is the answer, and it is better to find out on purpose
    than by shipping it on. */
-const TEXTURED = ['landuse', 'park', 'land'];
+const TEXTURED = ['landuse', 'green', 'land'];   // park is an edge now, not a fill
 let detailLevel = 0, texturesMade = false;
 
 function makeTexture(kind) {
@@ -5087,7 +5096,7 @@ const COLOUR_GROUPS = [
       paint('monument-top', 'fill-extrusion-color', on ? '#e0ffff' : '#e8e8e8'); } },
   { name: 'LAND', colours: 9, apply: on => {
       paint('green', 'fill-color', on ? LAND_FILL : '#0d0d0d');
-      paint('park', 'fill-color', on ? '#303030' : '#0d0d0d'); } },
+      paint('park', 'line-color', on ? '#4a4a4a' : '#2c2c2c'); } },
   { name: 'BUILT', colours: 11, apply: on => {
       paint('landuse', 'fill-color', on ? BUILT_FILL : '#141414'); } },
   { name: 'TRANSPORT', colours: 2, apply: on => {
@@ -5423,7 +5432,7 @@ const WATER_KEY = [
 ];
 const LAND_KEY = [
   ['wood / forest', 'grey, greens out', '#2a2a2a'], ['scrub', 'grey, greens out', '#333333'],
-  ['grass / meadow', 'grey, greens out', '#2e2e2e'], ['park', 'grey, greens out', '#303030'],
+  ['grass / meadow', 'grey, greens out', '#2e2e2e'], ['protected area', 'edge only', '#4a4a4a'],
   ['farmland', 'olive', '#808000'], ['wetland', 'grey, greens out', '#3a3a3a'],
   ['sand', 'darkkhaki', '#bdb76b'], ['ice / glacier', 'steel', '#b8c6cc'],
   ['residential', 'dimgray', '#696969'], ['commercial', 'rosybrown', '#bc8f8f'],
