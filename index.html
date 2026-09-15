@@ -533,8 +533,8 @@
   <label>WHO FLOATS OVER A PLACE YOU FIND</label>
   <span class="note" id="s-marker-note">W A S D to walk it · SPACE to jump · hold SHIFT
     for ten times the speed · G walks it itself · it will not walk through a building</span>
-  <label>WALKING SPEED <span id="l-walk">12 M/S</span></label>
-  <input id="s-walk" type="range" min="1" max="60" step="1" value="12">
+  <label>WALKING SPEED <span id="l-walk">30 M/S · 108 KM/H</span></label>
+  <input id="s-walk" type="range" min="1" max="200" step="1" value="30">
   <select id="s-marker" aria-label="What floats over a place you search for">
     <option value="ghost" selected>GHOST</option>
     <option value="person">PERSON</option>
@@ -3372,8 +3372,10 @@ const levelBar = (id, label, read, apply) => {
   show();
 };
 
+/* In metres a second, because the physics is in metres and always was - with the speed
+   in kilometres an hour beside it, because 30 m/s means nothing until you read 108. */
 levelBar('s-walk', 'l-walk',
-  v => v + ' M/S' + (v >= 40 ? ' — RUNNING' : v <= 3 ? ' — STROLL' : ''),
+  v => v + ' M/S · ' + Math.round(v * 3.6) + ' KM/H',
   v => { KEY_SPEED = v; });
 levelBar('s-all', 'l-all', v => v === 0 ? 'NOTHING' : v === 100 ? 'FULL' : v + '%',
   v => { everything = v / 100; applyLevels(); });
@@ -4148,12 +4150,17 @@ function dropMarker(lon, lat) {
    made every building shorter than your jump. It is in metres and metres a second now,
    and the screen is only where it gets drawn: the same jump clears the same building
    at any zoom, and the only thing zoom changes is how much of it you can see. */
-/* Metres a second on the ground, and yours to set. 12 was one number for every zoom,
-   which is right in metres and wrong in feeling: at zoom 20 the view is 84 m across and
-   12 m/s crosses it in seven seconds, which reads as slow next to a drag that moves the
-   whole screen in one gesture. SHIFT is still ten times whatever this is - so the bar
-   sets the walk and the key still gives you the sprint. */
-let KEY_SPEED = 12;
+/* Metres a second on the ground, and yours to set. It was fixed at 12 - a real running
+   pace, and the right number if you are watching a person. But at zoom 20 the view is
+   84 metres across, so 12 m/s takes seven seconds to cross the screen, and next to a
+   drag that moves the whole view in one gesture that is simply slow. Daniel said so
+   plainly: it covers ground too slowly.
+
+   So it starts at 30 - 108 km/h, under three seconds across that same view - and the bar
+   goes to 200 for getting across a city. SHIFT is still ten times whatever it is set to,
+   and the unit stays metres a second because the gravity and the jump are in metres and
+   always were. */
+let KEY_SPEED = 30;
 const JUMP_V0   = 7;        // metres a second off the ground: a tap is about 2.5 m
 const JUMP_HOLD = 22;       // metres a second a second while the key is held...
 const HOLD_MAX  = 0.55;     // ...for this long, which is worth about 15 m in all

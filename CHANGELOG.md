@@ -5,7 +5,7 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
-## 2026-09-15 — A bar for how fast it walks
+## 2026-09-15 — A bar for how fast it walks, and a faster starting point
 
 Daniel, after the frame-sync and the camera slack: "still the same problem."
 
@@ -18,6 +18,14 @@ is the tilt: the step is worked out with the ground resolution at the centre of 
 screen, and a tilted view covers more ground than that per pixel. SHIFT is still ten
 times whatever the bar says, so the bar sets the walk and the key still gives the sprint.
 Kept with the other settings.
+
+Asked him which kind of slow he meant rather than guess a third time, and the answer was
+the plain one: **it covers ground too slowly.** So the bar starts at **30 m/s — 108 km/h
+— and goes to 200**, not 12 and 60. Measured on the same lawn: at the new default it
+crosses an 84-metre view in **3.2 seconds, where 12 m/s took seven**. With SHIFT, 0.3
+seconds. At the top of the bar, 0.5. The unit stays metres a second because the gravity
+and the jump are in metres and always were, with the speed in km/h beside it — 30 means
+nothing until you read 108.
 
 ---
 
