@@ -131,7 +131,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | `COLOURS` | How many colours the map may use, 1 to 43. Each step hands a group its own hues — water, population, monuments, land, built land, transport — and turning it down costs less power |
 | `ZOOM` bar (bottom centre) | Drag to go from a street to the whole globe in one gesture; it follows the map too, and slides away with the panels |
 | `SEARCH A PLACE` | Search by name; countries and regions frame to their bounds, and a small 3D figure hangs over the place with its shadow on the ground |
-| `WHO FLOATS OVER A PLACE YOU FIND` | What that figure is: a ghost, a person, a dog, a bicycle, a motorbike, a car, a van, a bus — or nobody. It wanders slowly off on the ways it belongs on, roads for a car, footpaths for a person, through the buildings for a ghost, and stays within 340 m of where it landed |
+| `WHO FLOATS OVER A PLACE YOU FIND` | What that figure is: a ghost, a person, a dog, a bicycle, a motorbike, a car, a van, a bus — or nobody. It holds the spot and breathes up and down; it does not wander |
 | `SETTINGS` | Show or hide the control panel |
 | `HIDE PANELS` | Slide every panel off the map and back |
 | `DOT SCALE` / `GAIN` / `CUTOFF` | Lattice pitch (0.01 to 2 - past about 0.05 the dots are finer than a screen pixel and the map goes continuous), brightness response, unlit threshold |

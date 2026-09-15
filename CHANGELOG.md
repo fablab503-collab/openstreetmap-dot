@@ -5,6 +5,26 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — Out: the wandering
+
+Daniel, on seeing it drive off: "the model should be static and not move."
+
+### Removed
+
+- **The walking.** The road query, the way-to-way wander, the 340 m leash, the ghost's
+  drift, and the heading that turned the model along the street - all of it. A marker
+  that wanders off is no longer marking the place it was put there to mark, which was
+  the point of it.
+- **The slow yaw sway** went with it. A thing asked to hold still should hold still; the
+  angle is fixed now and turns only with the map's bearing, so it stays part of the
+  world.
+
+Kept: the breathing, which is what was asked for in the first place. Measured after the
+cut - **0 metres** over 8 seconds on the ground, and the drawn figure still rises and
+falls 2 px in 0.7 s.
+
+---
+
 ## 2026-09-15 — LOADING TILES… over a map that had already loaded
 
 Daniel sent a screenshot of the boot line sitting there. It was telling the truth about
