@@ -5,6 +5,51 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — Good news or bad news
+
+Daniel: "add on the upside part an API to understand if it is a good news or a bad news."
+
+### The API that isn't
+
+There is no free sentiment service a browser can call. text-processing.com and sentim both
+answer **"Failed to fetch"** from the page — the same wall GDELT is behind — and the ones
+that would work want an account and a key. So it is done here, offline, in about a tenth
+of a millisecond: **a word list of about 300 words a news line actually uses**, scored −3
+to +3. The approach AFINN made the standard one; the words and scores are written for this
+and not copied from it. The panel says so in as many words.
+
+### Added
+
+- **The day's balance at the top of the panel** — A GOOD DAY, A BAD DAY or A MIXED DAY,
+  always followed by **GUESSED**, over a three-colour bar and the count good · flat · bad.
+- **A sign in front of every story**, on the rails and in the list: `+` green, `−` red,
+  `·` grey. It sits still while the words walk past it.
+- **An earthquake needs no word list.** M5.0 and up is bad; below that, flat.
+
+### Tuned against the real feed
+
+- **Two points either way left 23 of 26 stories flat**, including a warship firing on a
+  military helicopter. A headline is one sentence and does not get many chances to use a
+  word from any list. One point either way, and forty more words a news line uses —
+  warship, drone, seized, intercepted, airspace, inquiry, talks, summit, pledged. It now
+  reads **5 good · 12 flat · 8 bad** out of 25, with the warship, the drone and the
+  inquiry all marked bad and the M5.0 and M5.3 quakes with them.
+
+### Fixed
+
+- **A reload landed with an empty news panel.** The day was only fetched on a first
+  arrival, and a reload has a place in the URL, so it was skipped — with no way for the
+  reader to know it should ask. The day is fetched however you arrive now; only the turn
+  and the fly-out are kept for a first arrival.
+
+### What it cannot do
+
+It cannot read irony, it does not know that "killed the bill" is not a death, and a rescue
+after a disaster counts twice. It is good for the shape of a day, not for one story, and
+the panel says that too.
+
+---
+
 ## 2026-09-15 — Two rails, and they follow the zoom
 
 Daniel: "you could go back having some on the left and some on the right, half side parts

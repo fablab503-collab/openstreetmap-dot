@@ -126,6 +126,11 @@
 
   /* Charts: a label, a bar, a number. No axes - at this width they would cost more
      room than they explain. */
+  .moodbar { display:flex; height:7px; margin:3px 0 6px; background:#141414; }
+  .moodbar i { display:block; height:100%; }
+  #n-bar-bad { background:#ff6b6b; } #n-bar-flat { background:#3e3e3e; }
+  #n-bar-good { background:#35e07f; }
+
   .chart { display:grid; gap:3px; margin:5px 0 2px; }
   .chart .crow { display:grid; grid-template-columns:1fr auto; gap:6px;
     align-items:center; font-size:9px; letter-spacing:.03em; color:#8a8a8a; }
@@ -446,13 +451,20 @@
 
 <div id="p-news" class="panel">
   <span class="ttl">THE WORLD, TODAY</span>
+  <span class="big" id="n-mood">—</span>
+  <div class="moodbar"><i id="n-bar-bad"></i><i id="n-bar-flat"></i><i id="n-bar-good"></i></div>
+  <span class="row">GOOD · FLAT · BAD <b id="n-split">—</b></span>
   <span class="big" id="n-count">—</span>
   <span class="row">ON THE GLOBE <b id="n-placed">—</b></span>
   <span class="row">LOOKED AT <b id="n-when">—</b></span>
   <span class="row">NEXT LOOK <b id="n-next">—</b></span>
   <button id="b-news-now" type="button">LOOK AGAIN NOW</button>
   <div id="n-list"></div>
-  <span class="note">Only from far out — zoom past the whole world and it all goes away,
+  <span class="note">Good or bad is guessed here in the page, from a word list of about
+    three hundred words a news line actually uses. Every free sentiment service refuses a
+    browser, so there is no API to call. It cannot read irony and it counts a rescue after
+    a disaster twice; it is good for the shape of a day, not for one story.
+    Only from far out — zoom past the whole world and it all goes away,
     and they sit in two rails, one each side of the map, whichever half of the globe each
     one is on, on lines back to their own places. They grow and shrink with the zoom. Put
     the pointer on one and the words walk along until the end of the sentence; click and
@@ -2177,6 +2189,82 @@ function placeOf(text) {
   return best ? { cap: best.cap, why: best.why } : null;
 }
 
+/* ── good news or bad news ───────────────────────────────────────────────────────
+   Every free sentiment service refuses a browser. text-processing.com and sentim both
+   answer "Failed to fetch" from a page, the same wall GDELT is behind, and the ones that
+   would work want an account and a key. So this is not an API: it is a word list, read
+   here, offline, in about a tenth of a millisecond.
+
+   About three hundred words a news line actually uses, scored -3 to +3 - the approach
+   AFINN made the standard one, though the words and the scores below are written for
+   this and not copied from it. It is blunt by nature: it cannot read irony, it does not
+   know that "killed the bill" is not a death, and a rescue after a disaster counts both.
+   The panel says GUESSED for that reason. What it is good for is the shape of a day. */
+const MOOD_WORDS = {
+  // the bad, which is most of the news
+  kill: -3, killed: -3, killing: -3, dead: -3, death: -3, deaths: -3, died: -3,
+  murder: -3, massacre: -3, genocide: -3, war: -3, invasion: -3, invade: -3,
+  bomb: -3, bombing: -3, bombed: -3, missile: -2, strike: -2, strikes: -2, shelling: -3,
+  attack: -3, attacked: -3, shooting: -3, shot: -2, gunman: -3, terror: -3, terrorist: -3,
+  earthquake: -2, quake: -2, flood: -2, flooding: -2, wildfire: -2, hurricane: -2,
+  cyclone: -2, typhoon: -2, drought: -2, famine: -3, landslide: -2, eruption: -2,
+  crash: -3, crashed: -3, collision: -2, derailed: -2, sank: -2, capsized: -3,
+  disaster: -3, tragedy: -3, catastrophe: -3, emergency: -2, crisis: -2,
+  injured: -2, wounded: -2, casualties: -3, victims: -2, missing: -2, trapped: -2,
+  protest: -1, protests: -1, riot: -2, unrest: -2, clashes: -2, coup: -3,
+  arrested: -1, jailed: -2, convicted: -2, sentenced: -2, charged: -1, guilty: -2,
+  corruption: -2, fraud: -2, scandal: -2, bribery: -2, smuggling: -2,
+  resign: -1, resigns: -1, resigned: -1, ousted: -2, impeached: -2, collapse: -2,
+  ban: -1, bans: -1, banned: -1, sanctions: -1, boycott: -1, strikeaction: -1,
+  outbreak: -2, epidemic: -2, pandemic: -2, infection: -1, disease: -2, virus: -1,
+  recession: -2, inflation: -1, layoffs: -2, bankruptcy: -2, default: -2, slump: -2,
+  cut: -1, cuts: -1, loss: -1, losses: -1, fell: -1, plunge: -2, plummet: -2,
+  threat: -2, threatens: -2, warning: -1, warns: -1, fear: -2, fears: -2,
+  violence: -3, abuse: -3, assault: -3, kidnap: -3, hostage: -3, torture: -3,
+  refugees: -1, displaced: -2, evacuated: -1, homeless: -2, poverty: -2, hunger: -2,
+  condemn: -1, condemns: -1, dispute: -1, tension: -1, tensions: -1, standoff: -1,
+  warship: -1, navy: -1, military: -1, troops: -1, soldiers: -1, army: -1, drone: -1,
+  fires: -1, fired: -1, gunfire: -2, seize: -2, seized: -2, raid: -2, siege: -3,
+  intercepted: -1, airspace: -1, incursion: -2, blockade: -2, expelled: -1,
+  failed: -1, failure: -2, denied: -1, rejects: -1, rejected: -1, halted: -1,
+  cancelled: -1, called: 0, postponed: -1, suspended: -1, delayed: -1, blocked: -1,
+  accused: -2, alleged: -1, investigation: -1, inquiry: -1, probe: -1, lawsuit: -1,
+  sues: -1, fined: -1, penalty: -1, closure: -1, shutdown: -2, evacuation: -2,
+  shortage: -2, contamination: -2, spill: -2, leak: -1, toxic: -2, pollution: -2,
+  // and the good, which is rarer and worth finding
+  peace: 3, ceasefire: 3, truce: 2, treaty: 2, agreement: 2, deal: 1, accord: 2,
+  rescue: 2, rescued: 3, saved: 3, survived: 2, survivor: 2, freed: 3, released: 2,
+  aid: 2, relief: 2, donated: 2, donation: 2, charity: 2, volunteers: 2,
+  cure: 3, cured: 3, vaccine: 2, recovery: 2, recovered: 2, healed: 2, breakthrough: 3,
+  discovery: 2, discovered: 2, invented: 2, launched: 1, launch: 1, unveiled: 1,
+  win: 2, wins: 2, won: 2, victory: 2, champion: 2, record: 1, gold: 1, medal: 2,
+  award: 2, awarded: 2, prize: 2, honoured: 2, celebrates: 2, celebration: 2,
+  elected: 1, sworn: 1, reopened: 1, restored: 2, rebuilt: 2, reunited: 3,
+  growth: 1, rises: 1, rose: 1, surge: 1, boost: 2, gains: 1, profit: 1, funding: 1,
+  approved: 1, passed: 1, signed: 1, ratified: 1, legalises: 1, legalizes: 1,
+  first: 1, historic: 1, milestone: 2, progress: 2, success: 2, successful: 2,
+  hope: 2, hopeful: 2, improve: 2, improved: 2, better: 1, safe: 2, protected: 2,
+  talks: 1, summit: 1, cooperation: 2, partnership: 1, reopen: 1, resumed: 1,
+  agreed: 2, pledged: 1, commits: 1, invests: 1, investment: 1, jobs: 1, hired: 1,
+  rebuild: 2, repaired: 1, opened: 1, completed: 1, achieved: 2, honour: 2,
+};
+const MOOD_HUE = { good: '#35e07f', bad: '#ff6b6b', flat: '#6a6a6a' };
+
+/* One pass over the words. Sum, then judge: two points either way is a story with its
+   mind made up, anything between is a day like any other. */
+function moodOf(text) {
+  let sum = 0, hits = 0;
+  for (const w of String(text).toLowerCase().split(/[^a-z']+/)) {
+    const v = MOOD_WORDS[w];
+    if (v) { sum += v; hits++; }
+  }
+  /* One point either way is enough. Two was the first try and it left 23 of 26 stories
+     flat, including a warship firing on a helicopter: a headline is one sentence and does
+     not get many chances to use a word from any list. */
+  return { score: sum, hits, kind: sum >= 1 ? 'good' : sum <= -1 ? 'bad' : 'flat' };
+}
+const MOOD_MARK = { good: '+', bad: '−', flat: '·' };
+
 const newsKey = it => (it.url || '') + '|' + it.text.slice(0, 60);
 
 function loadArchive() {
@@ -2185,7 +2273,7 @@ function loadArchive() {
     /* Stored as arrays rather than objects: a thousand stories of {text,url,lon,lat,t}
        is a lot of repeated key names, and this is a browser's storage, not a database. */
     return raw.map(a => ({ t: a[0], lon: a[1], lat: a[2], text: a[3], url: a[4], where: a[5],
-                           kind: a[6] }));
+                           kind: a[6], mood: a[7] || moodOf(a[3]).kind }));
   } catch (e) { return []; }
 }
 function saveArchive(items) {
@@ -2193,7 +2281,8 @@ function saveArchive(items) {
     const cut = Date.now() - NEWS_KEEP;
     const keep = items.filter(i => i.t >= cut).slice(0, 400);
     localStorage.setItem(NEWS_STORE, JSON.stringify(
-      keep.map(i => [i.t, +i.lon.toFixed(3), +i.lat.toFixed(3), i.text, i.url, i.where, i.kind])));
+      keep.map(i => [i.t, +i.lon.toFixed(3), +i.lat.toFixed(3), i.text, i.url, i.where,
+                     i.kind, i.mood])));
   } catch (e) { /* a full or private-mode storage is not worth an error */ }
 }
 
@@ -2218,7 +2307,7 @@ async function fetchWikiDay(d) {
     if (!p) continue;                                   // nowhere to put it on a globe
     out.push({ t: Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12),
                lon: p.cap.lon, lat: p.cap.lat, where: p.why.toUpperCase(),
-               text: text.slice(0, 160), url, kind: 'news' });
+               text: text.slice(0, 160), url, kind: 'news', mood: moodOf(text).kind });
   }
   return out;
 }
@@ -2230,7 +2319,9 @@ async function fetchQuakes() {
     t: f.properties.time, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1],
     where: String(f.properties.place || '').toUpperCase().slice(0, 40),
     text: 'M' + (+f.properties.mag).toFixed(1) + ' earthquake, ' + f.properties.place,
-    url: f.properties.url, kind: 'quake' }));
+    url: f.properties.url, kind: 'quake',
+    // An earthquake needs no word list. Five is where they start knocking things down.
+    mood: +f.properties.mag >= 5 ? 'bad' : 'flat' }));
 }
 
 async function loadNews(why) {
@@ -2259,6 +2350,20 @@ async function loadNews(why) {
 function newsHud(state) {
   const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
   set('n-count', state || (NEWS.items.length ? NEWS.items.length + ' STORIES' : 'NOTHING YET'));
+  /* The day's balance, at the top where it is the first thing read. It is a guess made
+     of a word list and the panel says GUESSED, because a day is not a number. */
+  const n = NEWS.items.length;
+  const good = NEWS.items.filter(i => i.mood === 'good').length;
+  const bad = NEWS.items.filter(i => i.mood === 'bad').length;
+  const flat = n - good - bad;
+  set('n-mood', !n ? '—' : bad > good * 1.5 ? 'A BAD DAY, GUESSED'
+                         : good > bad * 1.5 ? 'A GOOD DAY, GUESSED' : 'A MIXED DAY, GUESSED');
+  set('n-split', n ? good + ' · ' + flat + ' · ' + bad : '—');
+  const bar = (id, v) => {
+    const e = document.getElementById(id);
+    if (e) e.style.width = (n ? v / n * 100 : 0).toFixed(1) + '%';
+  };
+  bar('n-bar-bad', bad); bar('n-bar-flat', flat); bar('n-bar-good', good);
   set('n-placed', NEWS.items.filter(i => i.kind === 'quake').length + ' QUAKES · '
                 + NEWS.items.filter(i => i.kind === 'news').length + ' PLACED BY NAME');
   set('n-when', NEWS.at ? new Date(NEWS.at).toTimeString().slice(0, 5) : '—');
@@ -2272,7 +2377,8 @@ function newsHud(state) {
     a.href = i.url || '#';
     a.target = '_blank';
     a.rel = 'noopener';
-    a.textContent = i.where + ' — ' + i.text.slice(0, 90);
+    a.textContent = MOOD_MARK[i.mood || 'flat'] + ' ' + i.where + ' — ' + i.text.slice(0, 90);
+    a.style.color = i.mood === 'good' ? MOOD_HUE.good : i.mood === 'bad' ? MOOD_HUE.bad : '';
     list.appendChild(a);
   }
 }
@@ -2373,7 +2479,7 @@ function drawNews() {
       const box = [railX - 4 * DPR, ry - fs, railX + railW + 4 * DPR, ry + fs];
       hot.push({ box, url: it.url, id });
 
-      const line = it.where + ' — ' + it.text;
+      const line = MOOD_MARK[it.mood || 'flat'] + ' ' + it.where + ' — ' + it.text;
       const full = lctx.measureText(line).width;
       /* The walk: a second of stillness, then 40 px a second until the end is showing.
          It only ever moves under the pointer, so nothing on screen crawls on its own. */
@@ -2393,6 +2499,9 @@ function drawNews() {
       lctx.clip();
       lctx.fillStyle = on ? '#ffffff' : '#d8d8d8';
       lctx.fillText(line, railX - off, ry);
+      // the sign in front is the mood, in its own colour, and does not walk away
+      lctx.fillStyle = MOOD_HUE[it.mood || 'flat'];
+      lctx.fillText(MOOD_MARK[it.mood || 'flat'], railX, ry);
       lctx.restore();
       // a nick of colour on the outside edge, so the kind reads without the line
       lctx.fillStyle = hue;
@@ -2478,14 +2587,16 @@ function stopSpin() { cancelAnimationFrame(spinRAF); spinRAF = 0; }
 
 /* Only on a first arrival. Someone who came in on a link with a place in it asked for
    that place, and spinning them off it would be rude. */
-if (!HASH_VIEW) {
-  map.once('load', () => {
-    map.jumpTo({ center: [map.getCenter().lng, 12], zoom: 0.85, pitch: 0, bearing: 0 });
-    startSpin();
-    loadNews('first arrival');
-    showTopic('p-news');
-  });
-}
+map.once('load', () => {
+  /* The day is fetched however you arrived - a reload has a place in the URL and used to
+     land with an empty news panel and no way to know it should ask. Only the turn and the
+     fly-out are for a first arrival; someone who came in on a link asked for that place. */
+  loadNews('arrival');
+  if (HASH_VIEW) return;
+  map.jumpTo({ center: [map.getCenter().lng, 12], zoom: 0.85, pitch: 0, bearing: 0 });
+  startSpin();
+  showTopic('p-news');
+});
 setInterval(() => { if (Date.now() - NEWS.at > NEWS_EVERY - 5000) loadNews('the clock'); },
             60000);
 
