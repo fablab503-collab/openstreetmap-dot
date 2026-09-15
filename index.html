@@ -1292,6 +1292,7 @@ let picked = null;       // the country chosen in the picker, declared here for 
 let nameFX = null, cityFX = null, fxRAF = 0;   // the reveal, same reason; see showCountryName
 const labelBoxes = [];   // what drawCapitals put on the label canvas this frame
 let markerAt = null, markerKind = 'ghost', markerRAF = 0, markerT0 = 0, markerBuilt = null;
+let markerHead = null;   // read while drawing, so it is declared up here with the rest
 let dirty = true;
 
 /* Dot pitch is a function of zoom, and it is the whole LOD story:
@@ -2534,17 +2535,163 @@ function markerModel() {
   return markerBuilt.parts;
 }
 
+/* ── and then it goes about its business ────────────────────────────────────────
+   It does not hover on the spot: it goes for a walk, and it keeps to the kind of way
+   it belongs on. The ways come from the tiles already on screen - the same
+   `transportation` layer the map draws its roads from - so a car takes the road, a
+   person takes the footpath, and a ghost, owing nothing to anybody, drifts through the
+   buildings. Below zoom 12 the tiles carry no minor roads, so there is nothing to walk
+   on and it simply hangs where it was put. */
+const MARK_WAYS = {
+  car:     ['motorway','trunk','primary','secondary','tertiary','minor','service'],
+  van:     ['motorway','trunk','primary','secondary','tertiary','minor','service'],
+  bus:     ['motorway','trunk','primary','secondary','tertiary','minor'],
+  moto:    ['motorway','trunk','primary','secondary','tertiary','minor','service','track'],
+  bicycle: ['primary','secondary','tertiary','minor','service','track','path'],
+  person:  ['tertiary','minor','service','track','path','footway'],
+  dog:     ['tertiary','minor','service','track','path','footway'],
+};
+/* Metres a second, near enough to the real thing to look unhurried rather than slow.
+   The ghost is not here: its drift is set by the waves below, not by a speed. */
+const MARK_SPEED = { person: 1.3, dog: 1.7, bicycle: 4.5, moto: 11, car: 11,
+                     van: 9, bus: 8 };
+const MARK_ROAM  = 340;                // metres it is allowed to get from where it landed
+const MPD        = 111320;             // metres in a degree of latitude
+
+let markerHome = null, markerLast = 0;
+let walk = null, ways = null, waysAt = 0;
+
+const mDist = (a, b) => {
+  const x = (b[0] - a[0]) * MPD * Math.cos(a[1] * RAD), y = (b[1] - a[1]) * MPD;
+  return Math.hypot(x, y);
+};
+
 function dropMarker(lon, lat) {
   markerAt = { lon, lat };
+  markerHome = { lon, lat };
   markerT0 = performance.now();
+  markerLast = 0;
+  walk = null; ways = null; waysAt = 0; markerHead = null;
   if (!markerRAF) markerRAF = requestAnimationFrame(tickMarker);
   paintLabels();
+}
+
+/* Every way of the right kind under the tiles around it. Asked again every few
+   seconds rather than every frame: it is a query over rendered geometry, and the
+   street does not move. */
+function roadsNear() {
+  const classes = MARK_WAYS[markerKind];
+  if (!classes || !markerAt) return null;
+  const layers = ['road-main', 'road-sec', 'road-minor'].filter(id => map.getLayer(id));
+  if (!layers.length) return null;
+  let p, feats;
+  try {
+    p = map.project([markerAt.lon, markerAt.lat]);
+    const pad = 220;
+    feats = map.queryRenderedFeatures([[p.x - pad, p.y - pad], [p.x + pad, p.y + pad]], { layers });
+  } catch (e) { return null; }
+  const out = [];
+  for (const f of feats) {
+    if (!classes.includes(f.properties.class)) continue;
+    const g = f.geometry;
+    if (g.type === 'LineString') out.push(g.coordinates);
+    else if (g.type === 'MultiLineString') for (const l of g.coordinates) out.push(l);
+  }
+  return out.filter(l => l.length > 1);
+}
+
+// A way, measured, entered at whichever of its corners it is standing nearest to.
+function adoptWay(line, at) {
+  const cum = [0];
+  for (let i = 1; i < line.length; i++) cum.push(cum[i - 1] + mDist(line[i - 1], line[i]));
+  if (cum[cum.length - 1] < 8) return null;          // a stub, not a street
+  let best = 0, bd = Infinity;
+  for (let i = 0; i < line.length; i++) {
+    const d = mDist(line[i], at);
+    if (d < bd) { bd = d; best = i; }
+  }
+  return { line, cum, s: cum[best], dir: best === line.length - 1 ? -1 : 1 };
+}
+
+/* What to take at the end of a street. Anything that touches where it is standing,
+   the current way last; and if it has wandered too far, only the ones that lead back.
+   With nothing on offer it turns round, which is what you do at a dead end. */
+function nextWay(at) {
+  if (!ways || !ways.length) return null;
+  const far = markerHome ? mDist([at[0], at[1]], [markerHome.lon, markerHome.lat]) : 0;
+  const near = [];
+  for (const line of ways) {
+    if (walk && line === walk.line) continue;
+    for (let i = 0; i < line.length; i++) {
+      if (mDist(line[i], at) > 30) continue;
+      if (far > MARK_ROAM) {
+        // heading home means the far end of this way is closer to home than we are
+        const end = line[i === 0 ? line.length - 1 : 0];
+        if (mDist(end, [markerHome.lon, markerHome.lat]) >= far) break;
+      }
+      near.push(line);
+      break;
+    }
+  }
+  if (!near.length) return null;
+  return adoptWay(near[Math.floor(Math.random() * near.length)], at);
+}
+
+function walkPoint(w) {
+  const { line, cum } = w, s = Math.max(0, Math.min(cum[cum.length - 1], w.s));
+  let i = 1;
+  while (i < cum.length - 1 && cum[i] < s) i++;
+  const a = line[i - 1], b = line[i], span = cum[i] - cum[i - 1] || 1;
+  const k = (s - cum[i - 1]) / span;
+  const lon = a[0] + (b[0] - a[0]) * k, lat = a[1] + (b[1] - a[1]) * k;
+  // Compass bearing of the way, in the direction of travel: what it is facing.
+  const dx = (b[0] - a[0]) * Math.cos(lat * RAD), dy = b[1] - a[1];
+  const head = (Math.atan2(dx, dy) / RAD + (w.dir < 0 ? 180 : 0) + 360) % 360;
+  return { lon, lat, head };
+}
+
+function moveMarker(now) {
+  if (!markerAt || !markerHome || markerKind === 'none') return;
+  const dt = markerLast ? Math.min(0.12, (now - markerLast) / 1000) : 0;
+  markerLast = now;
+  if (!dt) return;
+
+  if (markerKind === 'ghost') {
+    /* Two slow waves that never quite repeat, so it drifts around forty metres of
+       courtyard without pacing a circle. The frequencies are what set its speed, and
+       they are low on purpose: at 0.21 and 0.37 it crossed the square at 4.3 m/s,
+       which is a ghost late for something. These give about 1.2 m/s at its quickest.
+       No road and no heading either: it is not going anywhere in particular. */
+    const t = now / 1000, r = 38 / MPD * 0.6;
+    markerAt.lat = markerHome.lat + (Math.cos(t * 0.024) + 0.6 * Math.cos(t * 0.041 + 0.9)) * r;
+    markerAt.lon = markerHome.lon + (Math.sin(t * 0.028) + 0.6 * Math.sin(t * 0.045 + 1.7)) * r
+                 / Math.cos(markerHome.lat * RAD);
+    markerHead = null;
+    return;
+  }
+
+  if (!ways || now - waysAt > 4000) { ways = roadsNear(); waysAt = now; }
+  if (!ways || !ways.length) { markerHead = null; return; }
+  if (!walk) walk = adoptWay(ways[0], [markerAt.lon, markerAt.lat]);
+  if (!walk) return;
+
+  walk.s += walk.dir * (MARK_SPEED[markerKind] || 1) * dt;
+  const end = walk.cum[walk.cum.length - 1];
+  if (walk.s <= 0 || walk.s >= end) {
+    const here = walkPoint(walk);
+    const nxt = nextWay([here.lon, here.lat]);
+    if (nxt) walk = nxt;
+    else { walk.dir *= -1; walk.s = Math.max(0, Math.min(end, walk.s)); }
+  }
+  const p = walkPoint(walk);
+  markerAt.lon = p.lon; markerAt.lat = p.lat; markerHead = p.head;
 }
 /* Its own frames, and only this canvas: the lattice underneath has not changed,
    so putting the whole of halftone() through the GPU to move a ghost 3 px would be
    paying map prices for a puppet. */
 function tickMarker() {
   if (!markerAt || markerKind === 'none') { markerRAF = 0; return; }
+  moveMarker(performance.now());
   paintLabels();
   markerRAF = requestAnimationFrame(tickMarker);
 }
@@ -2562,8 +2709,14 @@ function drawMarker() {
   const bob = Math.sin(t * 2.2) * MARK_BOB * DPR;
   const hy = gy - lift - bob;                    // where the feet hang
   // Turning with the map keeps it part of the world; the slow sway keeps it alive.
+  /* Facing where it is going, if it is going anywhere. A compass bearing H shows on
+     screen turned by H minus the map's own bearing, and the model's nose is at -z,
+     which is up the screen - so the yaw that points the nose along the way is the
+     difference between the two. Standing still, it takes the corner view instead. */
+  const B = map.getBearing();
   const turn = MARK_TURN[markerKind] == null ? MARK_YAW : MARK_TURN[markerKind];
-  const yaw = turn - map.getBearing() * RAD + Math.sin(t * 0.7) * 0.22;
+  const yaw = markerHead == null ? turn - B * RAD + Math.sin(t * 0.7) * 0.22
+                                 : (B - markerHead) * RAD;
   const ca = Math.cos(yaw), sa = Math.sin(yaw);
   const ce = Math.cos(MARK_ELEV), se = Math.sin(MARK_ELEV);
 
@@ -3007,6 +3160,7 @@ map.on('mousemove', e => {
 const selMarker = document.getElementById('s-marker');
 selMarker.addEventListener('change', () => {
   markerKind = selMarker.value;
+  walk = null; ways = null; waysAt = 0;   // a car and a dog do not use the same ways
   if (markerKind === 'none') { cancelAnimationFrame(markerRAF); markerRAF = 0; }
   else if (markerAt && !markerRAF) markerRAF = requestAnimationFrame(tickMarker);
   paintLabels();

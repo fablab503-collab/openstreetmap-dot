@@ -5,6 +5,41 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — And it goes about its business
+
+Daniel: "so he can move a bit like slow but just between the buildings, just in the area
+or the street map for the bikes, person or highways."
+
+### Added
+
+- **It takes the ways it belongs on.** The ways come out of the tiles already on screen -
+  the same `transportation` layer the map draws its roads from - so a car and a bus keep
+  to motorway through service, a bicycle adds tracks and paths, and a person or a dog
+  walk the footways. It enters a way at the corner it is nearest to, walks to the end,
+  and takes whatever other way touches that spot; at a dead end it turns round. Below
+  zoom 12 the tiles carry no minor roads, so there is nothing to walk on and it simply
+  hangs where it was put.
+- **A ghost owes nothing to anybody** and drifts through the buildings instead, on two
+  slow waves that never quite repeat, around forty metres of courtyard.
+- **It faces where it is going.** A compass bearing shows on screen turned by itself
+  minus the map's own bearing, and the model's nose is at -z, which is up the screen, so
+  the yaw that points the nose along the way is the difference between the two. Standing
+  still, it goes back to the corner view.
+- **It stays in the area.** Past 340 m from where it landed, only the ways that lead back
+  are on offer. Measured over 12 s of driving: furthest from the drop, **203 m**.
+
+### Measured
+
+- Speeds, over the ground, from the marker's own position: person **1.3 m/s**, dog 1.7,
+  bicycle 4.4, car 9.9 over 7 s of real streets, bus 6.5 (turns cost displacement).
+- The ghost's first draft crossed the square at **4.3 m/s** - a ghost late for something.
+  Its speed is set by the wave frequencies, not by the speed table; at 0.024 and 0.041
+  it drifts at **0.77 m/s**.
+- Still no map redraws: 3 seconds, 433 browser frames of a car driving, **0** halftone
+  passes. The whole label canvas is 0.3 ms.
+
+---
+
 ## 2026-09-15 — Someone floats over the place you looked for
 
 Daniel asked for a small 3D figure hanging a millimetre or two above the map, breathing
