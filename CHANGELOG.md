@@ -5,6 +5,35 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — A red dot on every panel, and less of them
+
+Daniel: "the settings, menus are really big. could you make smaller and add the red dot
+to minimise them directly with a click?"
+
+### Changed
+
+- **Smaller all through.** Body type 11 px to 10, the columns 240 px wide to 206, panel
+  padding 10/12 to 7/9, the gap between panels 10 to 7, the wordmark 23 px to 19. The
+  readouts panel is 184 px wide now where it was 216.
+
+### Added
+
+- **A red dot, top right of every panel.** Click it and the panel folds to its own name;
+  click again and it is back. The names come from the topic strip, which already has
+  them, so the two cannot drift apart - and SETTINGS, which is not in that strip, says so
+  itself. Measured: settings 1,061 px tall open, **26 px** folded; the readouts 191 to 26;
+  every panel folded leaves the left column 451 px instead of a full screen.
+- The error panel is the one without a dot. A message you need to read is not something
+  to fold away by accident.
+
+### Fixed on the way
+
+`.panel.min > *` did not hide anything: half those children are styled by id, and an id
+beats a class however the rule is written. It folded to 365 px instead of 26 until the
+rule was made `!important`.
+
+---
+
 ## 2026-09-15 — A jump with a thumb on it, and roofs to land on
 
 Daniel: "add the real gravity and jump. it needs to jump really high in base of how long

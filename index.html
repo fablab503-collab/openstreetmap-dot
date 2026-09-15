@@ -15,12 +15,12 @@
   :root { --lit: #ffffff; }
   * { box-sizing: border-box; }
   html, body { margin:0; height:100%; background:#000; overflow:hidden;
-    font: 11px/1.5 "Space Mono", ui-monospace, Menlo, Consolas, monospace;
+    font: 10px/1.45 "Space Mono", ui-monospace, Menlo, Consolas, monospace;
     color:#8a8a8a; -webkit-font-smoothing:antialiased; }
 
   /* Dots are display-only — they visibly merge below ~24px, so the wordmark
      gets the dot face and every small readout stays in Space Mono. */
-  #brand { font-family:"Dotwork", monospace; font-size:23px; letter-spacing:.13em;
+  #brand { font-family:"Dotwork", monospace; font-size:19px; letter-spacing:.13em;
     color:var(--lit); line-height:1; user-select:none; padding:2px 0 2px 2px; }
   #brand .r { font-family:"Space Mono", monospace; font-size:10px;
     letter-spacing:.14em; color:#6a6a6a; vertical-align:top; margin-left:6px; }
@@ -71,14 +71,28 @@
   /* One panel width for everything, and two columns that lay their panels out
      in flow — so nothing can overlap or run off the page however the content
      grows, and both slide away together. */
-  :root { --panel: 240px; }
+  :root { --panel: 206px; }
   .panel { position:relative; z-index:10; width:100%;
     background:rgba(0,0,0,.86);
-    border:1px solid #1e1e1e; padding:10px 12px; letter-spacing:.06em;
+    border:1px solid #1e1e1e; padding:7px 9px 8px; letter-spacing:.05em;
     text-transform:uppercase; backdrop-filter:blur(2px); }
 
+  /* One red dot a panel, top right. Click it and the panel folds down to its own
+     name; click it again and it comes back. Nothing is destroyed and nothing is
+     remembered - it is a fold, not a setting. */
+  .panel .min-dot { position:absolute; top:5px; right:5px; width:9px; height:9px;
+    padding:0; border:0; border-radius:50%; background:#ff5f57; opacity:.5;
+    cursor:pointer; z-index:13; }
+  .panel .min-dot:hover, .panel.min .min-dot { opacity:1; }
+  .panel > .cap { display:none; font-size:9px; letter-spacing:.14em; color:#6a6a6a; }
+  .panel.min { padding:5px 9px 6px; }
+  /* !important because half these children are styled by id, and an id beats a class
+     however the rule is written. A fold that folds most of the way is not a fold. */
+  .panel.min > *:not(.cap):not(.min-dot) { display:none !important; }
+  .panel.min > .cap { display:block; }
+
   .col { position:absolute; top:12px; z-index:12; width:var(--panel);
-    display:flex; flex-direction:column; gap:10px; align-items:stretch;
+    display:flex; flex-direction:column; gap:7px; align-items:stretch;
     max-height:calc(100vh - 24px);
     transition:transform .38s cubic-bezier(.4,0,.2,1), opacity .38s ease; }
   #ui-left  { left:12px; }
@@ -105,7 +119,7 @@
   #ui-left::-webkit-scrollbar-thumb { background:#2a2a2a; }
   #topics { position:sticky; top:0; z-index:14; display:flex; flex-wrap:wrap; gap:3px;
     padding:6px; background:rgba(0,0,0,.92); border:1px solid #1e1e1e; }
-  #topics button { flex:1 1 auto; padding:4px 5px; cursor:pointer; background:#000;
+  #topics button { flex:1 1 auto; padding:3px 4px; cursor:pointer; background:#000;
     color:#6a6a6a; border:1px solid #1e1e1e; font:inherit; font-size:9px;
     letter-spacing:.08em; text-transform:uppercase; }
   #topics button:hover { border-color:#4a4a4a; color:#e8e8e8; }
@@ -2766,6 +2780,34 @@ function followEdge() {
   const oy = p.y < EDGE_PAD ? p.y - EDGE_PAD : Math.max(0, p.y - (H - EDGE_PAD));
   if (ox || oy) map.panBy([ox, oy], { duration: 0 });
 }
+
+/* Every panel gets its name and a red dot, put there rather than written out ten
+   times: the names come from the topic strip, which already has them, so the two can
+   never drift apart. SETTINGS is not in that strip and says so itself. */
+(function foldPanels() {
+  const names = {};
+  document.querySelectorAll('#topics button').forEach(b => {
+    names[b.dataset.to] = b.textContent.trim().toUpperCase();
+  });
+  names.ctl = 'SETTINGS';
+  for (const panel of document.querySelectorAll('.panel:not(#err)')) {
+    const label = names[panel.id] || panel.id.replace(/^p-/, '').toUpperCase();
+    const cap = document.createElement('span');
+    cap.className = 'cap';
+    cap.textContent = label;
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'min-dot';
+    dot.setAttribute('aria-label', label + ': fold');
+    dot.setAttribute('aria-pressed', 'false');
+    dot.addEventListener('click', e => {
+      e.stopPropagation();
+      dot.setAttribute('aria-pressed', panel.classList.toggle('min'));
+    });
+    panel.prepend(cap);
+    panel.prepend(dot);
+  }
+})();
 
 const typing = () => {
   const el = document.activeElement;
