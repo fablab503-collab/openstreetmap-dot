@@ -5,6 +5,47 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — Metres, not pixels, and a camera that sits on it
+
+Daniel: "the following camera should be and start from the center of the persona. check
+again the zoom in and out because the object get bigger and smaller so the jump and
+movement are different. respect the physics independently of the jump, zoom or size of
+the buildings." And, on a screenshot of four figures hanging over the Atlantic: "there
+are some items floating. turn them off when your zoom is in the city or make them
+disappear. the little small balls as well, they are not well placed."
+
+### Changed
+
+- **The physics is in metres.** It was all in screen pixels, which meant zooming out made
+  you faster and made every building shorter than your jump. Walking is **12 m/s**,
+  gravity is **9.81 m/s²**, the push off the ground 7 m/s and the held thrust 22 m/s² for
+  up to 0.55 s. The screen is only where it gets drawn. Measured at three zooms: the jump
+  peaks at **13.4 m at z15, z17 and z19** - the same number three times - and walking
+  gives 12.0, 12.2, 12.3 m in a second. (A 0 in one direction at z19 was a wall, 20
+  samples of it, and the other three directions were 12.2.)
+- **Buildings are compared in metres too**, against their own `render_height`, instead of
+  being converted to pixels first. The same jump clears the same building at any zoom.
+- **The camera sits on the figure.** Not a pen it is kept inside - centred, so the city
+  moves under it. Measured while walking: the figure stayed within **0.2 to 0.7 metres**
+  of the map centre. Only while it is being moved, so a marker dropped by a search does
+  not drag the map off what you were looking at.
+- **Below zoom 14 the game is not drawn and does not happen.** Out there the dots are
+  countries apart and four figures the size of a thumb hang over the sea. Measured:
+  zoomed out to z11 the panel says TOO FAR OUT — ZOOM IN, the canvas holds **0** of the
+  game's yellow pixels and no life is lost; back at z17, **412** of them and PLAYING.
+
+### Fixed
+
+- **The game declared itself won the instant it started.** Laying the dots waits for the
+  map to settle, and in the gap between switching the game on and having any dots, the
+  win check found an empty board. There is a `ready` flag now, and the panel says
+  SETTING OUT while it lays them.
+- **`fmtBig` had been throwing on every single load.** A const arrow reached for by the
+  first frame, which happens while the file is still being evaluated - the same dead-zone
+  trap that caught `gameInView` an hour earlier. Both are function declarations now.
+
+---
+
 ## 2026-09-15 — A red dot on every panel, and less of them
 
 Daniel: "the settings, menus are really big. could you make smaller and add the red dot

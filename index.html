@@ -529,7 +529,9 @@
   <span class="row">GO TO <b id="g-go">—</b></span>
   <span class="row">SPEED <b id="g-speed">—</b></span>
   <button id="b-play" type="button">PLAY GAME</button>
-  <span class="note">Montpellier, from above. Take the dots, keep away from the four,
+  <span class="note">Montpellier, from above, and only from close enough to see the
+    streets — zoom out past the city and the game stops rather than floating over a
+    continent. Take the dots, keep away from the four,
     and get to wherever GO TO is pointing — round the corner, or twelve thousand
     kilometres away. The orange ones are worth more and make you faster, 5% then 10%
     then 100%. Nothing walks through a building, but a jump clears one, and a long
@@ -1360,7 +1362,7 @@ const labelBoxes = [];   // what drawCapitals put on the label canvas this frame
 let markerAt = null, markerKind = 'ghost', markerRAF = 0, markerT0 = 0, markerBuilt = null;
 let markerHead = null, jumpY = 0;   // read while drawing, so declared up here with the rest
 let autoWalk = false, autoEnt = null;
-const GM = { on: false, paused: false, over: '', score: 0, lives: 3, mult: 1,
+const GM = { on: false, ready: false, paused: false, over: '', score: 0, lives: 3, mult: 1,
              dots: [], coinsTaken: 0, foes: [], keysBusy: false, last: 0, from: null,
              target: null };
 let dying = null;   // the pixels of someone who has just been caught, falling
@@ -2090,9 +2092,15 @@ bCapMon.addEventListener('click', () => {
 const selCountry = document.getElementById('s-country');
 const pickedBox = document.getElementById('s-picked');
 const cPopCache = new Map();
-const fmtBig = n => n >= 1e9 ? (n / 1e9).toFixed(2) + ' B'
-                  : n >= 1e6 ? (n / 1e6).toFixed(1) + ' M'
-                  : n >= 1e3 ? Math.round(n / 1e3) + ' K' : String(n);
+/* A declaration rather than a const arrow, because countInformation reaches for it on
+   the very first frame - which happens while this file is still being evaluated - and a
+   const in its dead zone throws instead of reading as undefined. It has been throwing
+   once on every load. */
+function fmtBig(n) {
+  return n >= 1e9 ? (n / 1e9).toFixed(2) + ' B'
+       : n >= 1e6 ? (n / 1e6).toFixed(1) + ' M'
+       : n >= 1e3 ? Math.round(n / 1e3) + ' K' : String(n);
+}
 
 function fillCountries() {
   const frag = document.createDocumentFragment();
@@ -2650,22 +2658,22 @@ function dropMarker(lon, lat) {
    whichever way the map is turned, which is the only version that stays predictable
    once you have rotated the map. Screen pixels a second, so it handles the same at
    street zoom and at country zoom - it is a puppet, not a vehicle with a speedometer. */
-const KEY_SPEED = 135;      // CSS px a second
-/* A jump with a thumb on it. The push off the ground is the same every time; holding
-   the key keeps pushing for up to four tenths of a second, which is worth another
-   hundred pixels of height. A tap clears a kerb, a held key clears a roof. */
-const JUMP_V0   = 260;      // px a second, off the ground
-const JUMP_HOLD = 900;      // px a second a second, while the key is down
-const HOLD_MAX  = 0.40;     // for this long, at most
-const GRAVITY   = 900;      // px a second a second, always
-const EDGE_PAD  = 90;       // how close to the edge before the map follows it
+/* ── the physics, in metres ──────────────────────────────────────────────────────
+   All of this used to be in screen pixels, which meant zooming out made you faster and
+   made every building shorter than your jump. It is in metres and metres a second now,
+   and the screen is only where it gets drawn: the same jump clears the same building
+   at any zoom, and the only thing zoom changes is how much of it you can see. */
+const KEY_SPEED = 12;       // metres a second on the ground
+const JUMP_V0   = 7;        // metres a second off the ground: a tap is about 2.5 m
+const JUMP_HOLD = 22;       // metres a second a second while the key is held...
+const HOLD_MAX  = 0.55;     // ...for this long, which is worth about 15 m in all
+const GRAVITY   = 9.81;     // metres a second a second, the real one
 const keysDown = new Set();
 let jumpV = 0, markerLast = 0, holding = false, holdT = 0;
 
-/* How high the ground is here. A building's own roof is ground, once you are on top of
-   it - that is the whole of the climbing. `render_height` is the tiles' own figure in
-   metres; metres become pixels through the map's own scale, so a jump that clears a
-   four-storey building at street zoom does not clear a continent at country zoom. */
+/* How high the ground is here, in metres. A building's own roof is ground once you are
+   on top of it - that is the whole of the climbing - and `render_height` is the tiles'
+   own figure, already in metres, so nothing has to be converted to compare them. */
 function mPerPx() {
   return 40075016.686 * Math.cos(map.getCenter().lat * RAD)
        / (512 * Math.pow(2, map.getZoom()));
@@ -2680,15 +2688,15 @@ function buildingAt(x, y) {
     return { h: isFinite(h) ? h : 5 };
   } catch (e) { return null; }
 }
-// The height of the roof under a point, in screen pixels. Flat ground is zero.
+// The height of the roof under a point, in metres. Flat ground is zero.
 function surfaceAt(x, y) {
   const b = buildingAt(x, y);
-  return b ? b.h / mPerPx() : 0;
+  return b ? b.h : 0;
 }
-/* A wall only stops you if it is taller than you are. Over the roofline you walk on. */
+/* A wall only stops you if it is taller than you are. Over the roofline you walk on.
+   Half a metre of tolerance, so standing on a roof is not a coin toss every frame. */
 function blockedAt(x, y, h) {
-  const top = surfaceAt(x, y);
-  return top > (h == null ? 0 : h) + 1;
+  return surfaceAt(x, y) > (h == null ? 0 : h) + 0.5;
 }
 
 /* Out of sight behind a building. Nothing can ever stand inside one, so if its point on
@@ -2727,7 +2735,7 @@ function driveMarker(now) {
     markerAt.lon = autoEnt.lon; markerAt.lat = autoEnt.lat;
     markerHead = (map.getBearing()
                 + Math.atan2(autoEnt.dir[0], -autoEnt.dir[1]) / RAD + 360) % 360;
-    followEdge();
+    followCam();
     return;
   }
 
@@ -2742,7 +2750,8 @@ function driveMarker(now) {
 
   let p;
   try { p = map.project([markerAt.lon, markerAt.lat]); } catch (e) { return; }
-  const step = KEY_SPEED * GM.mult * dt;
+  // Metres a second, turned into pixels only here, at whatever the zoom happens to be.
+  const step = KEY_SPEED * GM.mult * dt / mPerPx();
   let nx = p.x + dx * step, ny = p.y + dy * step;
 
   /* Walls, unless it is over them. Blocked head-on, it tries each axis on its own
@@ -2768,17 +2777,19 @@ function driveMarker(now) {
   // compass by the map's own bearing; the yaw the model wants is the difference again.
   markerHead = (map.getBearing() + Math.atan2(nx - p.x, p.y - ny) / RAD + 360) % 360;
 
-  followEdge();
+  followCam();
 }
 
-// The map comes along rather than letting it walk off the edge.
-function followEdge() {
+/* The camera sits on it. Not a pen it is kept inside - centred, so the city moves under
+   it and it does not have to be looked for. Only while it is being moved: a marker
+   dropped by a search should not drag the map away from what you were looking at. */
+function followCam() {
+  if (!markerAt) return;
   let p;
   try { p = map.project([markerAt.lon, markerAt.lat]); } catch (e) { return; }
   const W = labels.width / DPR, H = labels.height / DPR;
-  const ox = p.x < EDGE_PAD ? p.x - EDGE_PAD : Math.max(0, p.x - (W - EDGE_PAD));
-  const oy = p.y < EDGE_PAD ? p.y - EDGE_PAD : Math.max(0, p.y - (H - EDGE_PAD));
-  if (ox || oy) map.panBy([ox, oy], { duration: 0 });
+  if (Math.hypot(p.x - W / 2, p.y - H / 2) < 1) return;
+  map.panBy([p.x - W / 2, p.y - H / 2], { duration: 0 });
 }
 
 /* Every panel gets its name and a red dot, put there rather than written out ten
@@ -2830,7 +2841,7 @@ addEventListener('keydown', e => {
        length of the press and only then leaving the ground. */
     if (e.repeat) return;
     const p = map.project([markerAt.lon, markerAt.lat]);
-    if (Math.abs(jumpY - surfaceAt(p.x, p.y)) < 2 && !jumpV) {   // only from a surface
+    if (Math.abs(jumpY - surfaceAt(p.x, p.y)) < 0.4 && !jumpV) {   // only from a surface
       jumpV = JUMP_V0; holdT = 0; holding = true;
     }
     return;
@@ -2884,9 +2895,14 @@ function setMarkerKind(kind) {
 const GAME_AT   = [3.8797, 43.6086];   // Place de la Comedie
 const GAME_ZOOM = 17;
 const DOT_GAP   = 150;                 // screen px between dots: rare, not a carpet
+/* Below this the game is not on screen, it is on top of a continent: the dots stop
+   being streets apart and become countries apart, and four figures the size of a thumb
+   hang over the Atlantic. Zoomed out past it, nothing of the game is drawn and nothing
+   of it happens - you cannot be caught by something you cannot see. */
+const GAME_MIN_ZOOM = 14;
 const COIN_EVERY = 11;                 // one dot in this many is worth more than a dot
 const SPEED_STEP = [5, 10, 15, 25, 50, 100];   // per cent faster, a coin at a time
-const FOE_SPEED = 92;                  // px a second; the player has 135
+const FOE_SPEED = 9;                   // metres a second; the player has 12
 const FOE_HUES  = [['#ff5c5c', '#5a1b1b'], ['#ffb0d8', '#5a2c42'],
                    ['#67e8ff', '#173f4a'], ['#ffc46b', '#4f3512']];
 
@@ -2925,9 +2941,11 @@ function targetLine() {
 }
 
 function gameHud() {
-  gset('g-state', !GM.on ? 'NOT PLAYING' : GM.over ? GM.over : GM.paused ? 'PAUSED' : 'PLAYING');
+  gset('g-state', !GM.on ? 'NOT PLAYING' : !GM.ready ? 'SETTING OUT…' : GM.over ? GM.over
+    : GM.paused ? 'PAUSED'
+    : map.getZoom() < GAME_MIN_ZOOM ? 'TOO FAR OUT — ZOOM IN' : 'PLAYING');
   gset('g-score', GM.score);
-  gset('g-left', GM.on ? GM.dots.filter(d => !d.eaten).length : '—');
+  gset('g-left', GM.on && GM.ready ? GM.dots.filter(d => !d.eaten).length : '—');
   gset('g-lives', GM.on ? '●'.repeat(Math.max(0, GM.lives)) || 'NONE' : '—');
   gset('g-go', GM.on ? targetLine() : '—');
   gset('g-speed', GM.on ? '×' + GM.mult.toFixed(2) : '—');
@@ -2968,7 +2986,7 @@ function freeSpot(awayFrom) {
 
 async function startGame() {
   GM.keysBusy = true;
-  GM.on = true; GM.paused = false; GM.over = '';
+  GM.on = true; GM.ready = false; GM.paused = false; GM.over = '';
   GM.score = 0; GM.lives = 3; GM.mult = 1; GM.coinsTaken = 0; GM.target = null;
   dying = null;
   gameHud();
@@ -2990,6 +3008,7 @@ async function startGame() {
     return { ...at, lit, dk, dir: DIRS[i % 4], t0: i * 0.4 };
   });
   GM.keysBusy = false;
+  GM.ready = true;
   gameHud();
 }
 
@@ -3012,7 +3031,7 @@ function endGame(how) {
 function walkOn(e, speed, dt, chase) {
   let p;
   try { p = map.project([e.lon, e.lat]); } catch (err) { return; }
-  const step = speed * dt;
+  const step = speed * dt / mPerPx();          // metres a second, same as the player
   let nx = p.x + e.dir[0] * step, ny = p.y + e.dir[1] * step;
   if (blockedAt(nx, ny) || Math.random() < 0.012) {
     const open = DIRS.filter(d => {
@@ -3064,7 +3083,7 @@ function drawMelt() {
   for (const b of dying.bits) {
     const s = t * MELT_MS / 1000;
     const x = b.x + b.vx * s;
-    let y = b.y + b.vy * s + 260 * DPR * s * s;     // the same gravity the jump uses
+    let y = b.y + b.vy * s + 260 * DPR * s * s;     // pixels, because it is a picture
     if (y > dying.ground) y = dying.ground;         // and it settles on the ground
     lctx.fillRect(x, y, b.s, b.s);
   }
@@ -3072,7 +3091,11 @@ function drawMelt() {
 }
 
 function stepGame(now) {
-  if (!GM.on || GM.paused || GM.over || !markerAt) { GM.last = now; return; }
+  if (!gameInView() || GM.paused || GM.over || !markerAt) {
+    GM.last = now;
+    if (GM.on) gameHud();      // or the panel goes on saying PLAYING to an empty screen
+    return;
+  }
   const dt = GM.last ? Math.min(0.06, (now - GM.last) / 1000) : 0;
   GM.last = now;
   if (!dt) return;
@@ -3114,7 +3137,7 @@ function stepGame(now) {
       if ((f.stuck = (f.stuck || 0) + dt) > 3) { Object.assign(f, freeSpot(me) || f); f.stuck = 0; }
     } else f.stuck = 0;
     f.was = { x: q.x, y: q.y };
-    if (jumpY < 6 && Math.hypot(q.x - me.x, q.y - me.y) < 19) {
+    if (jumpY < 2 && Math.hypot(q.x - me.x, q.y - me.y) < 19) {
       melt(me.x * DPR, me.y * DPR, '#ffe74d');
       GM.lives--;
       if (GM.lives <= 0) { endGame('CAUGHT'); return; }
@@ -3128,8 +3151,15 @@ function stepGame(now) {
   gameHud();
 }
 
+// A function declaration, not a const arrow: paintLabels can run before this line is
+// reached and a const in its dead zone throws rather than reading as undefined.
+/* `ready` matters: laying the dots waits for the map to settle, and between switching
+   the game on and having any dots there is an await. Without this the first frame of
+   that gap found an empty board and declared the game won. */
+function gameInView() { return GM.on && GM.ready && map.getZoom() >= GAME_MIN_ZOOM; }
+
 function drawGame() {
-  if (!GM.on) return;
+  if (!gameInView()) return;
   lctx.save();
   for (const d of GM.dots) {
     if (d.eaten) continue;
@@ -3203,6 +3233,9 @@ function tickMarker() {
 
 function drawMarker() {
   if (!markerAt || markerKind === 'none' || dying) return;
+  // In the game it is a player and belongs to the streets; out of it, it is a marker
+  // and belongs wherever you dropped it, at any zoom.
+  if (GM.on && map.getZoom() < GAME_MIN_ZOOM) return;
   // In the game you are the warm one and the four chasing you are not.
   const me = GM.on;
   drawFigure(markerAt, markerKind, markerHead, jumpY,
@@ -3236,13 +3269,14 @@ function drawFigure(at, kind, head, jump, t, lit, dk, gl) {
   const S = MARK_PX * DPR, lift = MARK_LIFT * DPR;
   if (!(gx > -S * 2 && gy > -S * 3 && gx < labels.width + S * 2 && gy < labels.height + S * 2)) return;
   // On a roof you are above the thing, not behind it, so you are not hidden by it.
-  if (jump < surfaceAt(p.x, p.y) - 1 && hiddenBehind(p.x, p.y)) {
+  if (jump < surfaceAt(p.x, p.y) - 0.5 && hiddenBehind(p.x, p.y)) {
     hidden = { x: gx, y: gy, gl }; return;
   }
 
   const S2 = S * (MARK_SCALE[kind] || 1);
   const bob = Math.sin(t * 2.2) * MARK_BOB * DPR;
-  const hy = gy - lift - bob - jump * DPR;       // where the feet hang, jump included
+  // Height is in metres; it becomes pixels here and nowhere else.
+  const hy = gy - lift - bob - (jump / mPerPx()) * DPR;
   /* Standing still it holds one angle, turning only with the map so that it stays part
      of the world. Driven, it faces the way it is being pushed, and keeps facing that way
      once you let go rather than snapping back. */
