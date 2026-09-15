@@ -5,6 +5,22 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — A bar for how fast it walks
+
+Daniel, after the frame-sync and the camera slack: "still the same problem."
+
+Two guesses spent on what "slow" meant, so here is the one that answers every reading of
+it: **`WALKING SPEED`, 1 to 60 metres a second, under WHO FLOATS OVER A PLACE YOU FIND.**
+It was fixed at 12 and there was nothing between that and SHIFT's 120, which in a city
+spends most of its frames in a wall. Measured on the open lawn at Champ de Mars, no frame
+blocked in any of them: **3 → 2.7 m/s, 12 → 10.6, 30 → 26.5, 60 → 53.0.** The 12% short
+is the tilt: the step is worked out with the ground resolution at the centre of the
+screen, and a tilted view covers more ground than that per pixel. SHIFT is still ten
+times whatever the bar says, so the bar sets the walk and the key still gives the sprint.
+Kept with the other settings.
+
+---
+
 ## 2026-09-15 — Why the little man looked slow
 
 Daniel, with a recording at zoom 20.68, tilt 58–79°, buildings at full height: "could you
