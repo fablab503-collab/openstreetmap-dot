@@ -5,6 +5,34 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — A rail for the news, and a shadow on the roof
+
+Daniel: "the physics should match and not be suspended, but be on the top of the building
+here... about the news, they should be a little bit further from the earth and all like a
+line on the left side and scrolling the writing on it until the end, so it can always show
+you the next preview if you are putting your mouse on it."
+
+### Fixed
+
+- **A figure on a roof was drawn hanging over the street.** Its shadow went on the ground
+  and a dotted string ran all the way down to it, four storeys of string. The height it is
+  standing on and the height it is in the air were the same number; they are two now. The
+  shadow goes on whatever it is standing on, and the string only measures the air — which
+  is zero whenever it is standing, so there is no string at all.
+
+### Changed
+
+- **The stories are a rail down the side of the map**, clear of the panels and well off
+  the Earth, each on a line back to its own place on the globe. Radiating the words around
+  the globe put them over it and over each other.
+- **Point at one and the words walk.** A second of stillness, then 40 px a second until
+  the end of the sentence is showing, then they stop; take the pointer away and they walk
+  back. Nothing moves on its own — it only ever walks under the pointer. Checked: the
+  pixels in a row change while it is hovered and the cursor turns to a pointer.
+- Clicking still opens the story at its source.
+
+---
+
 ## 2026-09-15 — It opens on the whole world, turning, with the day on it
 
 Daniel: the first launch should show the world turning, from far away; every ten minutes

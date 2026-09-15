@@ -453,6 +453,9 @@
   <button id="b-news-now" type="button">LOOK AGAIN NOW</button>
   <div id="n-list"></div>
   <span class="note">Only from far out — zoom past the whole world and it all goes away,
+    and they sit in a rail down the side of the map on lines back to their own places. Put
+    the pointer on one and the words walk along until the end of the sentence; click and
+    the story opens at its source.
     and the wordmark at the top brings you back. Two free sources, no key and no account:
     Wikipedia's Current events portal for today and yesterday, and the USGS for
     earthquakes. A story is put on the map by the first capital or country its own words
@@ -2276,9 +2279,17 @@ function newsHud(state) {
 // Far out, and only far out.
 function newsInView() { return map.getZoom() <= NEWS_ZOOM && NEWS.items.length > 0; }
 
-/* A line out of the globe and a few words at the end of it, the way a label points at
-   something too small to write on. They are kept apart by the same greedy de-clutter the
-   capitals use, so twelve stories out of one country do not stack into a smear. */
+/* A rail of stories down the left of the map, each on a line back to its own place on
+   the globe. Radiating the words around the globe put them over it and over each other;
+   a column has room for all of them and the lines say which is which.
+
+   A line is as long as it needs to be, so the words sit well clear of the Earth, and the
+   text is clipped to the rail's width. Put the pointer on one and the words walk left
+   until the end of the sentence, then stop; take it away and they walk back. Click and
+   the story opens at its source. */
+const RAIL_W = 200, RAIL_ROW = 19, RAIL_PAD = 18;
+let newsHover = null, newsHoverAt = 0;
+
 function drawNews() {
   if (!newsInView()) { NEWS.hot = []; return; }
   const fs = Math.max(8, Math.round(8.5 * DPR));
@@ -2286,47 +2297,72 @@ function drawNews() {
   lctx.font = fs + 'px "Space Mono", ui-monospace, monospace';
   lctx.textBaseline = 'middle';
   const ctr = map.getCenter();
-  const hot = [];
-  let n = 0;
+  const W = labels.width, H = labels.height;
+  // Clear of the left column of panels, whatever width they happen to be.
+  const railX = (12 + (getComputedStyle(document.documentElement)
+                .getPropertyValue('--panel').trim().replace('px', '') | 0) + RAIL_PAD) * DPR;
+
+  // Who is on this side of the world, nearest the top first, so the lines do not cross.
+  const seen = [];
   for (const it of NEWS.items) {
-    if (n >= 26) break;
-    if (angularDist(ctr.lat, ctr.lng, it.lat, it.lon) > 82) continue;   // the far side
+    if (seen.length >= 14) break;
+    if (angularDist(ctr.lat, ctr.lng, it.lat, it.lon) > 82) continue;
     let p;
     try { p = map.project([it.lon, it.lat]); } catch (e) { continue; }
     const x = p.x * DPR, y = p.y * DPR;
-    if (!(x > 0 && y > 0 && x < labels.width && y < labels.height)) continue;
-    // out and up, away from the middle, so the line leaves the globe rather than crossing it
-    const away = Math.atan2(y - labels.height / 2, x - labels.width / 2);
-    const len = 34 * DPR;
-    const ex = x + Math.cos(away) * len, ey = y + Math.sin(away) * len;
+    if (!(x > 0 && y > 0 && x < W && y < H)) continue;
+    seen.push({ it, x, y });
+  }
+  seen.sort((a, b) => a.y - b.y);
+
+  const rowH = RAIL_ROW * DPR;
+  const top = Math.max(rowH, H / 2 - seen.length * rowH / 2);
+  const hot = [];
+  for (let i = 0; i < seen.length; i++) {
+    const { it, x, y } = seen[i];
+    const ry = top + i * rowH;
     const hue = it.kind === 'quake' ? '#ff7a1a' : '#9dc4ff';
-    /* The mark goes down for every story there is room to see. Only the words are
-       de-cluttered: a globe 500 px across has room for two labels and fifteen dots, and
-       two labels is not "what is happening in the world". */
+
     lctx.globalAlpha = 0.9;
     lctx.fillStyle = hue;
     lctx.beginPath(); lctx.arc(x, y, 2.6 * DPR, 0, Math.PI * 2); lctx.fill();
-    hot.push({ box: [x - 7 * DPR, y - 7 * DPR, x + 7 * DPR, y + 7 * DPR], url: it.url });
-    n++;
 
-    const label = it.text.slice(0, 30) + (it.text.length > 30 ? '…' : '');
-    const w = lctx.measureText(label).width;
-    const left = ex < labels.width / 2;
-    const bx = left ? ex - w - 6 * DPR : ex + 6 * DPR;
-    const box = [bx - 3 * DPR, ey - fs, bx + w + 3 * DPR, ey + fs];
-    if (labelBoxes.some(o => box[0] < o[2] && o[0] < box[2] && box[1] < o[3] && o[1] < box[3])) continue;
-    labelBoxes.push(box);
-
-    lctx.globalAlpha = 0.85;
+    lctx.globalAlpha = 0.5;
     lctx.strokeStyle = hue;
     lctx.lineWidth = 1 * DPR;
-    lctx.beginPath(); lctx.moveTo(x, y); lctx.lineTo(ex, ey); lctx.stroke();
+    lctx.beginPath();
+    lctx.moveTo(x, y);
+    lctx.lineTo(railX + RAIL_W * DPR + 8 * DPR, ry);   // into the end of its row
+    lctx.stroke();
+
+    const box = [railX - 4 * DPR, ry - fs, railX + RAIL_W * DPR + 4 * DPR, ry + fs];
+    hot.push({ box, url: it.url, id: newsKey(it) });
+
+    const line = it.where + ' — ' + it.text;
+    const full = lctx.measureText(line).width;
+    const room = RAIL_W * DPR;
+    /* The walk: a second of stillness, then 40 px a second until the end is showing.
+       It only ever moves under the pointer, so nothing on screen crawls on its own. */
+    let off = 0;
+    if (newsHover === newsKey(it) && full > room) {
+      const t = (performance.now() - newsHoverAt) / 1000;
+      off = Math.max(0, Math.min(full - room, (t - 1) * 40 * DPR));
+      dirty = true;
+    }
+
     lctx.globalAlpha = 1;
-    lctx.fillStyle = 'rgba(0,0,0,.85)';
+    lctx.fillStyle = newsHover === newsKey(it) ? 'rgba(20,26,38,.96)' : 'rgba(0,0,0,.85)';
     lctx.fillRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
-    lctx.fillStyle = '#d8d8d8';
-    lctx.fillText(label, bx, ey);
-    hot.push({ box, url: it.url });
+    lctx.save();
+    lctx.beginPath();
+    lctx.rect(railX, box[1], room, box[3] - box[1]);
+    lctx.clip();
+    lctx.fillStyle = newsHover === newsKey(it) ? '#ffffff' : '#d8d8d8';
+    lctx.fillText(line, railX - off, ry);
+    lctx.restore();
+    // a nick of colour at the head of the row, so the kind reads without the line
+    lctx.fillStyle = hue;
+    lctx.fillRect(railX - 4 * DPR, box[1], 2 * DPR, box[3] - box[1]);
   }
   lctx.restore();
   NEWS.hot = hot;
@@ -2350,6 +2386,8 @@ window.__news = {
   get count() { return NEWS.items.length; },
   get at() { return NEWS.at; },
   get placed() { return NEWS.items.slice(0, 6).map(i => i.where + ' | ' + i.text.slice(0, 60)); },
+  get hover() { return newsHover; },
+  get rows() { return (NEWS.hot || []).map(h => h.box.map(v => Math.round(v))); },
 };
 
 document.getElementById('b-news-now').addEventListener('click', () => loadNews('by hand'));
@@ -3184,6 +3222,14 @@ window.__marker = {
   get jump() { return +jumpY.toFixed(1); },
   get head() { return markerHead == null ? null : +markerHead.toFixed(1); },
   blocked: false,          // was the last step refused by a building
+  get standing() {          // the roof it is on, in metres, and the air above it
+    if (!markerAt) return null;
+    try {
+      const p = map.project([markerAt.lon, markerAt.lat]);
+      const st = surfaceAt(p.x, p.y);
+      return { roof: +st.toFixed(1), air: +Math.max(0, jumpY - st).toFixed(1) };
+    } catch (e) { return null; }
+  },
   get dying() { return dying ? dying.bits.length : 0; },
   get game() { return { on: GM.on, score: GM.score, lives: GM.lives, mult: +GM.mult.toFixed(2),
                         coins: GM.coinsTaken, left: GM.dots.filter(d => !d.eaten).length,
@@ -3843,8 +3889,17 @@ function drawFigure(at, kind, head, jump, t, lit, dk, gl) {
 
   const S2 = S * (MARK_SCALE[kind] || 1);
   const bob = Math.sin(t * 2.2) * MARK_BOB * DPR;
-  // Height is in metres; it becomes pixels here and nowhere else.
-  const hy = gy - lift - bob - (jump / mPerPx()) * DPR;
+  /* Height is in metres; it becomes pixels here and nowhere else.
+
+     `stand` is the roof it is standing on and `air` is how far it is above that - which
+     is zero whenever it is standing. They were the same number before, so a figure on a
+     four-storey roof was drawn hanging in the air on a long dotted string that went all
+     the way down to the street. The string is the jump; the roof is the ground. */
+  const perPx = mPerPx();
+  const stand = Math.min(jump, surfaceAt(p.x, p.y));
+  const air = Math.max(0, jump - stand);
+  const sy = gy - (stand / perPx) * DPR;          // where its feet would be, standing
+  const hy = sy - lift - bob - (air / perPx) * DPR;
   /* Standing still it holds one angle, turning only with the map so that it stays part
      of the world. Driven, it faces the way it is being pushed, and keeps facing that way
      once you let go rather than snapping back. */
@@ -3861,14 +3916,17 @@ function drawFigure(at, kind, head, jump, t, lit, dk, gl) {
   lctx.globalAlpha = 0.10 + 0.13 * near;
   lctx.fillStyle = gl;
   lctx.beginPath();
-  lctx.ellipse(gx, gy, S * (0.30 + 0.06 * near), S * (0.10 + 0.02 * near), 0, 0, Math.PI * 2);
+  lctx.ellipse(gx, sy, S * (0.30 + 0.06 * near), S * (0.10 + 0.02 * near), 0, 0, Math.PI * 2);
   lctx.fill();
-  lctx.globalAlpha = 0.32;
-  lctx.strokeStyle = gl;
-  lctx.lineWidth = 1 * DPR;
-  lctx.setLineDash([2 * DPR, 3 * DPR]);
-  lctx.beginPath(); lctx.moveTo(gx, gy); lctx.lineTo(gx, hy); lctx.stroke();
-  lctx.setLineDash([]);
+  // The string only measures the air. Standing on something, there is none to measure.
+  if (air > 0.3) {
+    lctx.globalAlpha = 0.32;
+    lctx.strokeStyle = gl;
+    lctx.lineWidth = 1 * DPR;
+    lctx.setLineDash([2 * DPR, 3 * DPR]);
+    lctx.beginPath(); lctx.moveTo(gx, sy); lctx.lineTo(gx, hy); lctx.stroke();
+    lctx.setLineDash([]);
+  }
 
   const glow = lctx.createRadialGradient(gx, hy - S * 0.5, S * 0.1, gx, hy - S * 0.5, S * 0.95);
   glow.addColorStop(0, hexA(gl, 0.16));
@@ -4289,6 +4347,13 @@ map.on('click', e => {
 });
 
 map.on('mousemove', e => {
+  const story = newsAt(e.point);
+  if ((story && story.id) !== newsHover) {
+    newsHover = story ? story.id : null;
+    newsHoverAt = performance.now();
+    dirty = true;
+  }
+  if (story) { map.getCanvas().style.cursor = 'pointer'; return; }
   if (!CAPITALS.length) return;
   map.getCanvas().style.cursor = capitalAt(e.point) ? 'pointer' : '';
 });
