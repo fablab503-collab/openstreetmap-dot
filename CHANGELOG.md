@@ -5,6 +5,60 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — The game, after watching it played
+
+Daniel played it and sent a list. All of it is in.
+
+### Changed
+
+- **No Pac-Man ball.** He asked for the figures that were already there - ghost, person,
+  car, whatever `T` is on - and for the game to be its own thing rather than a copy. The
+  wedge-mouthed model is gone; you play as whoever is in `WHO FLOATS`.
+- **The dots are rare now**, 150 px apart instead of 58, and smaller. The pickup reach
+  went the other way, 15 px to 24: on a 150 px grid a 15 px reach meant threading a
+  needle rather than walking past something.
+- **The figures are smaller and quieter** - 22 px instead of 34, the glow down from .30
+  to .16, the shadow and the tether fainter with them.
+
+### Added
+
+- **A solid blocks the sight of what is behind it.** Nothing can ever stand inside a
+  building, so if a figure's point on screen lands on a drawn extrusion, the only thing
+  that can mean is the building is between it and the eye - so it is not drawn, and
+  neither are the dots behind it. It is not a depth buffer and it is wrong about a figure
+  on the far pavement of a narrow street, but it is right about a whole solid in the way.
+  **The player keeps a dashed ring** when it is hidden: you should not see through a
+  wall, but losing yourself entirely is a bug, not a rule.
+- **Being caught comes apart.** 46 of its own pixels, thrown out and falling under the
+  same gravity the jump uses, settling on the ground and going out over 900 ms - then it
+  starts again from where it started. Measured: caught after 5.7 s of standing still,
+  46 pixels, three lives down to two.
+- **Somewhere to go.** A destination every time, and a new one when you reach it: 62% of
+  the time round the corner, 28% across the city or out of it, 8% another region or
+  country, 2% anywhere on Earth up to 13,500 km. The panel gives the distance and the
+  compass point; an arrow at the edge of the view points at it when it is off screen.
+  Seen in testing: 491 m SE, then 21.3 km SE.
+- **Coins that make you faster.** One dot in eleven is orange and worth 100 instead of
+  10, and each one is a step up the ladder: 5% faster, then 10, 15, 25, 50, 100 - so the
+  sixth is the one you remember.
+- **The footprint is still queryable in 3D.** It used to be hidden, and a hidden layer
+  is not rendered and cannot be asked anything, so in 3D the walls were being read off
+  the extrusion's drawn shape - which covers the ground behind a building as well as the
+  ground under it. It stays rendered at zero opacity now: the footprint answers "is there
+  a wall", the extrusion answers "is something in the way".
+- **A foe that gets itself stuck** in a courtyard with no way out is put back in play
+  after 3 seconds, and they now start 220-700 px away rather than anywhere at all - on a
+  wide window they used to begin a full screen away and take a minute to become a game.
+
+### Not verified
+
+The coin's speed step. Coins are laid (11 of the 85 dots in one run) and drawn, and the
+award is the same branch as an ordinary dot, but I never managed to land on one while
+testing: the browser I test in kept zooming the map between runs, which spreads a 150 px
+grid to 4,800 px and ends the run. Worth a look the first time you play.
+
+---
+
 ## 2026-09-15 — Pac-Man, on the real streets
 
 Daniel: "add a little section called GAME, and when you press PLAY GAME it's gonna start

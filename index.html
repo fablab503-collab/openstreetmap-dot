@@ -512,10 +512,15 @@
   <span class="row">SCORE <b id="g-score">0</b></span>
   <span class="row">DOTS LEFT <b id="g-left">—</b></span>
   <span class="row">LIVES <b id="g-lives">—</b></span>
+  <span class="row">GO TO <b id="g-go">—</b></span>
+  <span class="row">SPEED <b id="g-speed">—</b></span>
   <button id="b-play" type="button">PLAY GAME</button>
-  <span class="note">Montpellier, from above. Eat every dot without being caught by
-    the four. They cannot walk through a building and neither can you — but a jump
-    clears one, and a long press jumps further than a tap.</span>
+  <span class="note">Montpellier, from above. Take the dots, keep away from the four,
+    and get to wherever GO TO is pointing — round the corner, or twelve thousand
+    kilometres away. The orange ones are worth more and make you faster, 5% then 10%
+    then 100%. Nothing walks through a building, but a jump clears one, and a long
+    press jumps further than a tap. Caught, you come apart into your own pixels and
+    start again where you started.</span>
   <div class="sep"></div>
   <span class="ttl">KEYS</span>
   <span class="row">MOVE <b>W A S D · ARROWS</b></span>
@@ -1341,8 +1346,10 @@ const labelBoxes = [];   // what drawCapitals put on the label canvas this frame
 let markerAt = null, markerKind = 'ghost', markerRAF = 0, markerT0 = 0, markerBuilt = null;
 let markerHead = null, jumpY = 0;   // read while drawing, so declared up here with the rest
 let autoWalk = false, autoEnt = null;
-const GM = { on: false, paused: false, over: '', score: 0, lives: 3,
-             dots: [], foes: [], keysBusy: false, last: 0, from: null };
+const GM = { on: false, paused: false, over: '', score: 0, lives: 3, mult: 1,
+             dots: [], coinsTaken: 0, foes: [], keysBusy: false, last: 0, from: null,
+             target: null };
+let dying = null;   // the pixels of someone who has just been caught, falling
 let dirty = true;
 
 /* Dot pitch is a function of zoom, and it is the whole LOD story:
@@ -1642,7 +1649,12 @@ b3d.addEventListener('click', () => {
   const on = b3d.getAttribute('aria-pressed') !== 'true';
   b3d.setAttribute('aria-pressed', on);
   map.setLayoutProperty('building-3d', 'visibility', on ? 'visible' : 'none');
-  map.setLayoutProperty('building',    'visibility', on ? 'none' : 'visible');
+  /* The flat footprint is not hidden in 3D, only made invisible. A hidden layer is not
+     rendered and cannot be asked anything, and the footprint is the only honest answer
+     to "is there a wall here" - an extrusion's drawn shape covers the ground behind it
+     as well as the ground under it. */
+  map.setLayoutProperty('building', 'visibility', 'visible');
+  map.setPaintProperty('building', 'fill-opacity', on ? 0 : 1);
   monumentVisibility();          // flat outline or cyan volume, to match
   if (!on) stopOrbit();
   map.easeTo({ pitch: on ? 60 : 0, bearing: on ? -22 : 0, duration: 900 });
@@ -2450,7 +2462,7 @@ function drawCountryName() {
    the border light, cyan for monuments - so the one who floats needed one of its
    own, or it would read as another measurement. */
 const MARK_LIT  = '#eaf4ff', MARK_DARK = '#3d4f6e', MARK_GLOW = '#9dc4ff';
-let   MARK_PX   = 34;                  // CSS px tall, at every zoom
+let   MARK_PX   = 22;                  // CSS px tall, at every zoom
 const MARK_LIFT = 15;                  // how far above the ground it hangs
 const MARK_BOB  = 3.4;                 // and how far it drifts while it hangs
 /* Seen from above and off one corner. Straight on and nearly level, a car is a
@@ -2460,7 +2472,7 @@ let   MARK_ELEV = 32 * RAD;            // the game looks almost straight down in
 /* A vehicle wants the corner view; a face wants to be looked at. The ghost turned
    36 degrees showed one eye and gazed off past your shoulder. */
 const MARK_YAW  = 36 * RAD;
-const MARK_TURN = { ghost: 8 * RAD, person: 15 * RAD, dog: 26 * RAD, pacman: 0 };
+const MARK_TURN = { ghost: 8 * RAD, person: 15 * RAD, dog: 26 * RAD };
 // The ones that are long and low need more of the box than a standing figure does.
 const MARK_SCALE = { car: 1.45, van: 1.4, bus: 1.3, moto: 1.3, bicycle: 1.3, dog: 1.3 };
 
@@ -2527,37 +2539,9 @@ function mGhostBody(r, top, seg) {
   return { v, f };
 }
 
-/* Pac-Man: a ball with a wedge missing. The sweep stops short of the whole circle and
-   two flat faces close the gap, which is the mouth; `pacGap` opens and shuts it. The
-   mouth points at -z, the way everything else here faces. */
-let pacGap = 0.5;
-function mPac(r, seg, rings, gap) {
-  const v = [], f = [], span = Math.PI * 2 - gap;
-  for (let j = 0; j <= rings; j++) {
-    const t = j / rings * Math.PI, sy = Math.cos(t) * r, rr = Math.sin(t) * r;
-    for (let i = 0; i <= seg; i++) {
-      const a = Math.PI * 1.5 + gap / 2 + i / seg * span;
-      v.push([Math.cos(a) * rr, r + sy, Math.sin(a) * rr]);
-    }
-  }
-  const W = seg + 1;
-  for (let j = 0; j < rings; j++) for (let i = 0; i < seg; i++) {
-    const a = j * W, b = (j + 1) * W;
-    f.push([a + i, a + i + 1, b + i + 1, b + i]);
-  }
-  // the two cheeks of the mouth, each a fan back to the middle of the ball
-  const mid = v.push([0, r, 0]) - 1;
-  for (let j = 0; j < rings; j++) {
-    f.push([j * W, (j + 1) * W, mid]);
-    f.push([mid, (j + 1) * W + seg, j * W + seg]);
-  }
-  return { v, f };
-}
-
 const dark = (part, tone) => Object.assign(part, { tone });
 const wheel = (x, z, r) => dark(mCyl(x, r, z, r, 0.13, 'x', 9), 0.42);
 const MODELS = {
-  pacman: () => [mPac(0.42, 14, 8, pacGap)],
   ghost:  () => [mGhostBody(0.30, 0.70, 14), mBall(0, 0.70, 0, 0.30, 12, 7),
                  dark(mBall(-0.12, 0.74, 0.26, 0.055, 6, 4), 0.06),
                  dark(mBall(0.12, 0.74, 0.26, 0.055, 6, 4), 0.06)],
@@ -2595,8 +2579,8 @@ const MODELS = {
                  wheel(-0.27, 0.44, 0.14), wheel(0.27, 0.44, 0.14)],
 };
 const MARK_NAMES = { ghost: 'GHOST', person: 'PERSON', dog: 'DOG', bicycle: 'BICYCLE',
-                     moto: 'MOTORBIKE', car: 'CAR', van: 'VAN', bus: 'BUS', pacman: 'PAC-MAN' };
-// What T walks through. Pac-Man is not in it: he is what the game gives you.
+                     moto: 'MOTORBIKE', car: 'CAR', van: 'VAN', bus: 'BUS' };
+// What T walks through.
 const MARK_CYCLE = ['ghost', 'person', 'dog', 'bicycle', 'moto', 'car', 'van', 'bus'];
 
 /* A window on the puppet, since none of this is reachable from outside the module:
@@ -2611,10 +2595,21 @@ window.__marker = {
   get jump() { return +jumpY.toFixed(1); },
   get head() { return markerHead == null ? null : +markerHead.toFixed(1); },
   blocked: false,          // was the last step refused by a building
+  get dying() { return dying ? dying.bits.length : 0; },
+  get game() { return { on: GM.on, score: GM.score, lives: GM.lives, mult: +GM.mult.toFixed(2),
+                        coins: GM.coinsTaken, left: GM.dots.filter(d => !d.eaten).length,
+                        coinsOnMap: GM.dots.filter(d => d.coin && !d.eaten).length,
+                        target: GM.target,
+                        foes: GM.foes.map(f => {
+                          try {
+                            const a = map.project([f.lon, f.lat]);
+                            const b = map.project([markerAt.lon, markerAt.lat]);
+                            return Math.round(Math.hypot(a.x - b.x, a.y - b.y));
+                          } catch (e) { return null; }
+                        }) }; },
 };
 
 function markerModel(kind) {
-  if (kind === 'pacman') return MODELS.pacman();     // its mouth moves, so never cached
   if (!markerBuilt || markerBuilt.kind !== kind) {
     markerBuilt = { kind, parts: (MODELS[kind] || MODELS.ghost)() };
   }
@@ -2652,9 +2647,20 @@ let jumpV = 0, markerLast = 0;
    is switched on is the one that answers, because a hidden layer is not rendered and
    `queryRenderedFeatures` only knows about what is. */
 function blockedAt(x, y) {
-  const layers = ['building-3d', 'building'].filter(id => map.getLayer(id));
-  if (!layers.length) return false;
-  try { return map.queryRenderedFeatures([x, y], { layers }).length > 0; }
+  if (!map.getLayer('building')) return false;
+  try { return map.queryRenderedFeatures([x, y], { layers: ['building'] }).length > 0; }
+  catch (e) { return false; }
+}
+
+/* Out of sight behind a building. Nothing can ever stand inside one, so if its point on
+   screen lands on a drawn extrusion the only thing that can mean is that the building is
+   between it and the eye. It is not a depth buffer - a figure on the far pavement of a
+   narrow street reads as hidden - but it is right about the case that matters, which is
+   a whole solid in the way. */
+function hiddenBehind(x, y) {
+  if (!map.getPitch() || !map.getLayer('building-3d')) return false;
+  if (map.getLayoutProperty('building-3d', 'visibility') !== 'visible') return false;
+  try { return map.queryRenderedFeatures([x, y], { layers: ['building-3d'] }).length > 0; }
   catch (e) { return false; }
 }
 
@@ -2695,7 +2701,7 @@ function driveMarker(now) {
 
   let p;
   try { p = map.project([markerAt.lon, markerAt.lat]); } catch (e) { return; }
-  const step = KEY_SPEED * dt;
+  const step = KEY_SPEED * GM.mult * dt;
   let nx = p.x + dx * step, ny = p.y + dy * step;
 
   /* Walls, unless it is over them. Blocked head-on, it tries each axis on its own
@@ -2760,7 +2766,6 @@ addEventListener('keydown', e => {
     if (raw === 'r') { e.preventDefault(); if (GM.on) startGame(); return; }
     if (raw === 't') {
       e.preventDefault();
-      if (markerKind === 'pacman') return;    // in the game you are Pac-Man, that is the game
       const i = MARK_CYCLE.indexOf(markerKind);
       setMarkerKind(MARK_CYCLE[(i + 1) % MARK_CYCLE.length]);
       return;
@@ -2803,7 +2808,9 @@ function setMarkerKind(kind) {
    the one that closes the gap. That is the whole of it. */
 const GAME_AT   = [3.8797, 43.6086];   // Place de la Comedie
 const GAME_ZOOM = 17;
-const DOT_GAP   = 58;                  // screen px between dots when they are laid out
+const DOT_GAP   = 150;                 // screen px between dots: rare, not a carpet
+const COIN_EVERY = 11;                 // one dot in this many is worth more than a dot
+const SPEED_STEP = [5, 10, 15, 25, 50, 100];   // per cent faster, a coin at a time
 const FOE_SPEED = 92;                  // px a second; the player has 135
 const FOE_HUES  = [['#ff5c5c', '#5a1b1b'], ['#ffb0d8', '#5a2c42'],
                    ['#67e8ff', '#173f4a'], ['#ffc46b', '#4f3512']];
@@ -2811,11 +2818,44 @@ const FOE_HUES  = [['#ff5c5c', '#5a1b1b'], ['#ffb0d8', '#5a2c42'],
 const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];     // up, right, down, left
 const gset = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
 
+/* Somewhere to head for. Mostly the next few streets, sometimes the next county, and
+   now and then a point picked off the whole globe - which is usually the sea, so it is
+   drawn from the land the map already knows about when it can be. A target is a
+   direction and a distance, not a route: how you get there is your problem. */
+function newTarget() {
+  const here = markerAt || { lon: GAME_AT[0], lat: GAME_AT[1] };
+  const roll = Math.random();
+  let km;
+  if (roll < 0.62) km = 0.15 + Math.random() * 0.6;        // round the corner
+  else if (roll < 0.9) km = 2 + Math.random() * 30;         // across the city, or out of it
+  else if (roll < 0.98) km = 60 + Math.random() * 900;      // another region, another country
+  else km = 1500 + Math.random() * 12000;                   // the other side of the world
+  const bear = Math.random() * 360;
+  const d = km / 6371, b = bear * RAD, la = here.lat * RAD, lo = here.lon * RAD;
+  const lat2 = Math.asin(Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(b));
+  const lon2 = lo + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(la),
+                               Math.cos(d) - Math.sin(la) * Math.sin(lat2));
+  GM.target = { lon: ((lon2 / RAD + 540) % 360) - 180,
+                lat: Math.max(-85, Math.min(85, lat2 / RAD)), km };
+}
+
+function targetLine() {
+  if (!GM.target || !markerAt) return '—';
+  const t = GM.target;
+  const x = (t.lon - markerAt.lon) * Math.cos(markerAt.lat * RAD), y = t.lat - markerAt.lat;
+  const km = Math.hypot(x, y) * 111.32;
+  const bear = (Math.atan2(x, y) / RAD + 360) % 360;
+  const rose = ['N','NE','E','SE','S','SW','W','NW'][Math.round(bear / 45) % 8];
+  return (km < 1 ? Math.round(km * 1000) + ' M' : km.toFixed(km < 100 ? 1 : 0) + ' KM') + ' ' + rose;
+}
+
 function gameHud() {
   gset('g-state', !GM.on ? 'NOT PLAYING' : GM.over ? GM.over : GM.paused ? 'PAUSED' : 'PLAYING');
   gset('g-score', GM.score);
   gset('g-left', GM.on ? GM.dots.filter(d => !d.eaten).length : '—');
   gset('g-lives', GM.on ? '●'.repeat(Math.max(0, GM.lives)) || 'NONE' : '—');
+  gset('g-go', GM.on ? targetLine() : '—');
+  gset('g-speed', GM.on ? '×' + GM.mult.toFixed(2) : '—');
   const b = document.getElementById('b-play');
   if (b) b.textContent = GM.on ? 'START OVER' : 'PLAY GAME';
 }
@@ -2827,7 +2867,8 @@ function layDots() {
     for (let y = DOT_GAP; y < H - DOT_GAP; y += DOT_GAP) {
       if (blockedAt(x, y)) continue;
       const ll = map.unproject([x, y]);
-      out.push({ lon: ll.lng, lat: ll.lat, eaten: false });
+      out.push({ lon: ll.lng, lat: ll.lat, eaten: false,
+                 coin: Math.random() < 1 / COIN_EVERY });
     }
   return out;
 }
@@ -2838,7 +2879,12 @@ function freeSpot(awayFrom) {
   for (let i = 0; i < 300; i++) {
     const x = 60 + Math.random() * (W - 120), y = 60 + Math.random() * (H - 120);
     if (blockedAt(x, y)) continue;
-    if (awayFrom && Math.hypot(x - awayFrom.x, y - awayFrom.y) < 220) continue;
+    if (awayFrom) {
+      /* Near enough to be a threat, far enough to be fair. Unbounded, they started a
+         whole screen away on a wide window and took a minute to be a game. */
+      const d = Math.hypot(x - awayFrom.x, y - awayFrom.y);
+      if (d < 220 || d > 700) continue;
+    }
     const ll = map.unproject([x, y]);
     return { lon: ll.lng, lat: ll.lat };
   }
@@ -2848,7 +2894,8 @@ function freeSpot(awayFrom) {
 async function startGame() {
   GM.keysBusy = true;
   GM.on = true; GM.paused = false; GM.over = '';
-  GM.score = 0; GM.lives = 3;
+  GM.score = 0; GM.lives = 3; GM.mult = 1; GM.coinsTaken = 0; GM.target = null;
+  dying = null;
   gameHud();
   showTopic('p-game');
   stopOrbit();
@@ -2859,9 +2906,9 @@ async function startGame() {
   const c = map.getCenter();
   GM.from = { lon: c.lng, lat: c.lat };
   dropMarker(c.lng, c.lat);
-  setMarkerKind('pacman');
   autoWalk = false;
   GM.dots = layDots();
+  newTarget();
   const me = map.project([c.lng, c.lat]);
   GM.foes = FOE_HUES.map(([lit, dk], i) => {
     const at = freeSpot(me) || { lon: c.lng, lat: c.lat };
@@ -2917,12 +2964,43 @@ function walkOn(e, speed, dt, chase) {
   e.lon = ll.lng; e.lat = ll.lat;
 }
 
+/* Caught. It comes apart into its own pixels, which fall to the ground and go out -
+   and only then does it start again from where it started. Everything here is screen
+   space and lasts 900 ms, so it costs nothing and never has to be cleaned up. */
+const MELT_MS = 900;
+function melt(x, y, lit) {
+  const bits = [];
+  for (let i = 0; i < 46; i++) {
+    bits.push({ x: x + (Math.random() - 0.5) * 16 * DPR,
+                y: y - Math.random() * 26 * DPR,
+                vx: (Math.random() - 0.5) * 38 * DPR,
+                vy: (Math.random() - 1.2) * 46 * DPR,
+                s: (0.8 + Math.random() * 1.6) * DPR });
+  }
+  dying = { bits, t0: performance.now(), ground: y, lit };
+}
+function drawMelt() {
+  if (!dying) return;
+  const t = (performance.now() - dying.t0) / MELT_MS;
+  if (t >= 1) { dying = null; return; }
+  lctx.save();
+  lctx.globalAlpha = 1 - t * t;
+  lctx.fillStyle = dying.lit;
+  for (const b of dying.bits) {
+    const s = t * MELT_MS / 1000;
+    const x = b.x + b.vx * s;
+    let y = b.y + b.vy * s + 260 * DPR * s * s;     // the same gravity the jump uses
+    if (y > dying.ground) y = dying.ground;         // and it settles on the ground
+    lctx.fillRect(x, y, b.s, b.s);
+  }
+  lctx.restore();
+}
+
 function stepGame(now) {
   if (!GM.on || GM.paused || GM.over || !markerAt) { GM.last = now; return; }
   const dt = GM.last ? Math.min(0.06, (now - GM.last) / 1000) : 0;
   GM.last = now;
   if (!dt) return;
-  pacGap = 0.28 + 0.42 * Math.abs(Math.sin(now / 150));   // chomp
 
   let me;
   try { me = map.project([markerAt.lon, markerAt.lat]); } catch (e) { return; }
@@ -2930,17 +3008,42 @@ function stepGame(now) {
   for (const d of GM.dots) {
     if (d.eaten) continue;
     const q = map.project([d.lon, d.lat]);
-    if (Math.hypot(q.x - me.x, q.y - me.y) < 15) { d.eaten = true; GM.score += 10; }
+    /* Wide enough to be taken by walking past it rather than aimed at. On a 150 px
+       grid a 15 px reach meant threading a needle. */
+    if (Math.hypot(q.x - me.x, q.y - me.y) < 24) {
+      d.eaten = true;
+      if (d.coin) {
+        /* A coin is speed, and the steps get steeper: five per cent, then ten, then a
+           hundred, so the sixth one is the one you remember. */
+        const step = SPEED_STEP[Math.min(SPEED_STEP.length - 1, GM.coinsTaken++)] || 100;
+        GM.mult *= 1 + step / 100;
+        GM.score += 100;
+      } else GM.score += 10;
+    }
   }
   if (!GM.dots.some(d => !d.eaten)) { endGame('ALL OF IT EATEN'); return; }
+
+  // Somewhere to be. Arrive and there is somewhere else to be.
+  if (GM.target) {
+    const t = GM.target;
+    const km = Math.hypot((t.lon - markerAt.lon) * Math.cos(markerAt.lat * RAD),
+                          t.lat - markerAt.lat) * 111.32;
+    if (km < 0.03) { GM.score += 500; newTarget(); }
+  }
 
   for (const f of GM.foes) {
     walkOn(f, FOE_SPEED, dt, me);
     const q = map.project([f.lon, f.lat]);
+    // Stuck in a courtyard with no way out is not chasing anybody: put it back in play.
+    if (f.was && Math.hypot(q.x - f.was.x, q.y - f.was.y) < 6) {
+      if ((f.stuck = (f.stuck || 0) + dt) > 3) { Object.assign(f, freeSpot(me) || f); f.stuck = 0; }
+    } else f.stuck = 0;
+    f.was = { x: q.x, y: q.y };
     if (jumpY < 6 && Math.hypot(q.x - me.x, q.y - me.y) < 19) {
+      melt(me.x * DPR, me.y * DPR, '#ffe74d');
       GM.lives--;
       if (GM.lives <= 0) { endGame('CAUGHT'); return; }
-      markerAt.lon = GM.from.lon; markerAt.lat = GM.from.lat;    // back to the start
+      markerAt.lon = GM.from.lon; markerAt.lat = GM.from.lat;    // back to where it began
       jumpY = 0; jumpV = 0;
       const back = map.project([GM.from.lon, GM.from.lat]);
       for (const g of GM.foes) Object.assign(g, freeSpot(back) || g);
@@ -2959,14 +3062,53 @@ function drawGame() {
     try { q = map.project([d.lon, d.lat]); } catch (e) { continue; }
     const x = q.x * DPR, y = q.y * DPR;
     if (!(x > 0 && y > 0 && x < labels.width && y < labels.height)) continue;
+    if (hiddenBehind(q.x, q.y)) continue;            // a solid is a solid, for dots too
     lctx.beginPath();
-    lctx.arc(x, y, 2.6 * DPR, 0, Math.PI * 2);
-    lctx.fillStyle = '#ffd400';
+    lctx.arc(x, y, (d.coin ? 4.4 : 2.2) * DPR, 0, Math.PI * 2);
+    lctx.fillStyle = d.coin ? '#ff8c00' : '#ffd400';
     lctx.fill();
+    if (d.coin) { lctx.strokeStyle = '#ffe74d'; lctx.lineWidth = 1 * DPR; lctx.stroke(); }
   }
   lctx.restore();
   const t = performance.now() / 1000;
   for (const f of GM.foes) drawFigure(f, 'ghost', null, 0, t + f.t0, f.lit, f.dk, f.lit);
+  drawTarget();
+  drawMelt();
+}
+
+/* Where to go, when it is not on screen: an arrow at the edge, pointing at it. A
+   destination twelve thousand kilometres away is still a direction. */
+function drawTarget() {
+  if (!GM.target || !markerAt) return;
+  let me, to;
+  try {
+    me = map.project([markerAt.lon, markerAt.lat]);
+    to = map.project([GM.target.lon, GM.target.lat]);
+  } catch (e) { return; }
+  const W = labels.width / DPR, H = labels.height / DPR;
+  const inView = to.x > 0 && to.y > 0 && to.x < W && to.y < H;
+  lctx.save();
+  lctx.strokeStyle = '#7ec8a9'; lctx.fillStyle = '#7ec8a9';
+  if (inView) {
+    lctx.globalAlpha = 0.9;
+    lctx.lineWidth = 1.4 * DPR;
+    lctx.beginPath();
+    lctx.arc(to.x * DPR, to.y * DPR, 9 * DPR, 0, Math.PI * 2);
+    lctx.stroke();
+    lctx.beginPath();
+    lctx.arc(to.x * DPR, to.y * DPR, 2.4 * DPR, 0, Math.PI * 2);
+    lctx.fill();
+  } else {
+    const a = Math.atan2(to.y - me.y, to.x - me.x);
+    const r = Math.min(W, H) * 0.34 * DPR;
+    const cx = me.x * DPR + Math.cos(a) * r, cy = me.y * DPR + Math.sin(a) * r;
+    lctx.globalAlpha = 0.75;
+    lctx.translate(cx, cy); lctx.rotate(a);
+    lctx.beginPath();
+    lctx.moveTo(7 * DPR, 0); lctx.lineTo(-5 * DPR, 4.5 * DPR); lctx.lineTo(-5 * DPR, -4.5 * DPR);
+    lctx.closePath(); lctx.fill();
+  }
+  lctx.restore();
 }
 
 const bPlay = document.getElementById('b-play');
@@ -2985,23 +3127,40 @@ function tickMarker() {
 }
 
 function drawMarker() {
-  if (!markerAt || markerKind === 'none') return;
-  // In the game he is the one colour nobody has to be told: Pac-Man yellow.
-  const pac = markerKind === 'pacman';
+  if (!markerAt || markerKind === 'none' || dying) return;
+  // In the game you are the warm one and the four chasing you are not.
+  const me = GM.on;
   drawFigure(markerAt, markerKind, markerHead, jumpY,
              (performance.now() - markerT0) / 1000,
-             pac ? '#ffe74d' : MARK_LIT, pac ? '#6b5200' : MARK_DARK,
-             pac ? '#ffd400' : MARK_GLOW);
+             me ? '#ffe74d' : MARK_LIT, me ? '#6b5200' : MARK_DARK,
+             me ? '#ffd400' : MARK_GLOW);
+  /* Behind a building you cannot see it, which is the point - but losing yourself
+     entirely is not a rule, it is a bug. A thin ring says where you are without
+     drawing you through the wall. */
+  if (hidden) {
+    lctx.save();
+    lctx.globalAlpha = 0.5;
+    lctx.strokeStyle = hidden.gl;
+    lctx.lineWidth = 1.2 * DPR;
+    lctx.setLineDash([2.5 * DPR, 3.5 * DPR]);
+    lctx.beginPath();
+    lctx.arc(hidden.x, hidden.y, 9 * DPR, 0, Math.PI * 2);
+    lctx.stroke();
+    lctx.restore();
+  }
 }
 
 /* One figure, anywhere: the player, and every one of the four that is chasing it. The
    colours are arguments because in the game they are the only thing telling them apart. */
+let hidden = null;      // where the last figure would have been, had it been in sight
 function drawFigure(at, kind, head, jump, t, lit, dk, gl) {
+  hidden = null;
   let p;
   try { p = map.project([at.lon, at.lat]); } catch (e) { return; }
   const gx = p.x * DPR, gy = p.y * DPR;
   const S = MARK_PX * DPR, lift = MARK_LIFT * DPR;
   if (!(gx > -S * 2 && gy > -S * 3 && gx < labels.width + S * 2 && gy < labels.height + S * 2)) return;
+  if (hiddenBehind(p.x, p.y)) { hidden = { x: gx, y: gy, gl }; return; }   // a solid is a solid
 
   const S2 = S * (MARK_SCALE[kind] || 1);
   const bob = Math.sin(t * 2.2) * MARK_BOB * DPR;
@@ -3019,12 +3178,12 @@ function drawFigure(at, kind, head, jump, t, lit, dk, gl) {
   // What it stands on, and what tells you the height is real: a shadow that tightens
   // as it comes down, and a dotted line back to the exact point on the ground.
   const near = (MARK_BOB * DPR - bob) / (MARK_BOB * 2 * DPR);   // 0 high, 1 low
-  lctx.globalAlpha = 0.16 + 0.2 * near;
+  lctx.globalAlpha = 0.10 + 0.13 * near;
   lctx.fillStyle = gl;
   lctx.beginPath();
   lctx.ellipse(gx, gy, S * (0.30 + 0.06 * near), S * (0.10 + 0.02 * near), 0, 0, Math.PI * 2);
   lctx.fill();
-  lctx.globalAlpha = 0.5;
+  lctx.globalAlpha = 0.32;
   lctx.strokeStyle = gl;
   lctx.lineWidth = 1 * DPR;
   lctx.setLineDash([2 * DPR, 3 * DPR]);
@@ -3032,7 +3191,7 @@ function drawFigure(at, kind, head, jump, t, lit, dk, gl) {
   lctx.setLineDash([]);
 
   const glow = lctx.createRadialGradient(gx, hy - S * 0.5, S * 0.1, gx, hy - S * 0.5, S * 0.95);
-  glow.addColorStop(0, hexA(gl, 0.30));
+  glow.addColorStop(0, hexA(gl, 0.16));
   glow.addColorStop(1, hexA(gl, 0));
   lctx.globalAlpha = 1;
   lctx.fillStyle = glow;
