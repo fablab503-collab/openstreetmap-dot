@@ -5,6 +5,50 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — Someone floats over the place you looked for
+
+Daniel asked for a small 3D figure hanging a millimetre or two above the map, breathing
+up and down, in a colour the map does not already use, appearing where a search lands -
+a ghost by default, changeable in the settings to a person, a car, a van, a bus, a
+motorbike, a bicycle, a dog. Detailed, but not complex.
+
+### Added
+
+- **Eight small solids, built from three primitives.** A box, a cylinder and a sphere,
+  placed against each other in a box one unit tall: ghost (a lathe with a hem that goes
+  up and down around the circle, a dome and two dark eyes), person, dog, bicycle,
+  motorbike, car, van, bus - or NOBODY. `WHO FLOATS OVER A PLACE YOU FIND` in the
+  settings, and it changes what is already hanging there.
+- **Its own renderer, about 30-75 faces.** Painter's order, back faces dropped by the
+  sign of the screen-space cross product, flat shading from one light. It turns with
+  the map's bearing and holds its size at every zoom, because a marker is a thing you
+  look at, not a thing that scales with the ground. A shadow that tightens as it comes
+  down and a dotted line back to the exact point say the height is real.
+- **An ice blue nothing else uses:** `#eaf4ff` down to `#3d4f6e`, lit by `#9dc4ff`.
+  Every layer here already owns a hue - YlOrRd for people, silver for the chosen
+  country, amber for the border light, cyan for monuments - so the one who floats
+  needed its own or it would read as another measurement.
+
+### Measured
+
+- **The bob costs no map redraws at all.** The label canvas was split out of
+  `halftone()` into `paintLabels()`, and the marker asks for that alone: over 2 seconds
+  and 289 browser frames with the ghost breathing, the halftone ran **0 times**. The
+  whole label canvas, ghost included, is 0.4 ms.
+- `window.__marker` gives `.at`, `.kind`, `.faces` and `.size(px)` - blowing it up to
+  170 px is how the wireframe-globe sphere and the eyes on the wrong side were found.
+
+### Found by looking at it
+
+- Edges drawn on every face turned a 74-face sphere into a wireframe globe. Flat-sided
+  parts are stroked dark now; curved ones are stroked in their own colour, only to close
+  the hairline the filler leaves between faces.
+- At 15° above the horizon and nose-on, a car is a rectangle. 32° and a 36° turn made it
+  a car; a face is turned much less, because the ghost at 36° showed one eye and gazed
+  off past your shoulder.
+
+---
+
 ## 2026-09-15 — And then its ten biggest cities, one by one
 
 Daniel: "in the same way but a bit smaller make appear for 5 seconds after the country

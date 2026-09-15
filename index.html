@@ -592,6 +592,18 @@
   <input id="s-colours" type="range" min="0" max="6" step="1" value="6">
   <label>MIN POPULATION <span id="l-minpop">15 K</span></label>
   <input id="s-minpop" type="range" min="0" max="100" step="1" value="0">
+  <label>WHO FLOATS OVER A PLACE YOU FIND</label>
+  <select id="s-marker" aria-label="What floats over a place you search for">
+    <option value="ghost" selected>GHOST</option>
+    <option value="person">PERSON</option>
+    <option value="dog">DOG</option>
+    <option value="bicycle">BICYCLE</option>
+    <option value="moto">MOTORBIKE</option>
+    <option value="car">CAR</option>
+    <option value="van">VAN</option>
+    <option value="bus">BUS</option>
+    <option value="none">NOBODY</option>
+  </select>
   <button id="b-all" aria-pressed="true">ALL DATA</button>
   <button id="b-caps" aria-pressed="true">CAPITAL NAMES</button>
   <button id="b-capmon" aria-pressed="true">CAPITAL MONUMENTS</button>
@@ -1279,6 +1291,7 @@ let showCapMon = true;
 let picked = null;       // the country chosen in the picker, declared here for the same reason
 let nameFX = null, cityFX = null, fxRAF = 0;   // the reveal, same reason; see showCountryName
 const labelBoxes = [];   // what drawCapitals put on the label canvas this frame
+let markerAt = null, markerKind = 'ghost', markerRAF = 0, markerT0 = 0, markerBuilt = null;
 let dirty = true;
 
 /* Dot pitch is a function of zoom, and it is the whole LOD story:
@@ -1483,12 +1496,21 @@ function halftone() {
     return;                                // GL context lost, not yet restored
   }
 
+  paintLabels();
+  recordFrame(performance.now() - t0);
+}
+
+/* Everything drawn as text or shapes over the lattice, in one pass. It is its own
+   function because some of it moves while the map does not: a marker bobbing on the
+   spot needs this canvas again every frame, and nothing else - calling the whole of
+   halftone() would put the GPU through a lattice that has not changed. */
+function paintLabels() {
   lctx.clearRect(0, 0, labels.width, labels.height);
   labelBoxes.length = 0;
   if (showCapitals || showCapMon || picked) drawCapitals();
   drawCountryName();
   drawCityNames();
-  recordFrame(performance.now() - t0);
+  drawMarker();
 }
 
 /* Frame cost, measured rather than claimed. The HUD shows the median of the
@@ -1521,10 +1543,7 @@ window.__bench = (n = 20) => {
       if (gl && glr) { drawGL(src, step); gl.finish(); }
       else if (ctx) drawCPU(px, cols, rows, step);
     }));
-    text.push(time(() => {
-      lctx.clearRect(0, 0, labels.width, labels.height);
-      if (showCapitals || showCapMon || picked) drawCapitals();
-    }));
+    text.push(time(paintLabels));
   }
   const med = a => +[...a].sort((x, y) => x - y)[a.length >> 1].toFixed(2);
   return { renderer: window.__renderer, zoom: +zoom.toFixed(2), cells: cols * rows,
@@ -2367,6 +2386,265 @@ function drawCountryName() {
   lctx.restore();
 }
 
+/* ── the one who floats over a place you looked for ─────────────────────────────
+   A small solid standing a finger's width above the map, breathing up and down.
+   It is not a map feature: it is drawn on the label canvas by a painter's-order
+   renderer of about eighty faces, so it turns with the map's bearing and keeps its
+   size whatever the zoom - a marker is a thing you look at, not a thing that scales
+   with the ground.
+
+   The colour is an ice blue the rest of the map never uses. Every data layer here
+   already owns a hue - YlOrRd for people, silver for the chosen country, amber for
+   the border light, cyan for monuments - so the one who floats needed one of its
+   own, or it would read as another measurement. */
+const MARK_LIT  = '#eaf4ff', MARK_DARK = '#3d4f6e', MARK_GLOW = '#9dc4ff';
+let   MARK_PX   = 34;                  // CSS px tall, at every zoom
+const MARK_LIFT = 15;                  // how far above the ground it hangs
+const MARK_BOB  = 3.4;                 // and how far it drifts while it hangs
+/* Seen from above and off one corner. Straight on and nearly level, a car is a
+   rectangle and nothing else: it took a three-quarter view to make one read as a car
+   at thirty pixels. */
+const MARK_ELEV = 32 * RAD;
+/* A vehicle wants the corner view; a face wants to be looked at. The ghost turned
+   36 degrees showed one eye and gazed off past your shoulder. */
+const MARK_YAW  = 36 * RAD;
+const MARK_TURN = { ghost: 8 * RAD, person: 15 * RAD, dog: 26 * RAD };
+// The ones that are long and low need more of the box than a standing figure does.
+const MARK_SCALE = { car: 1.45, van: 1.4, bus: 1.3, moto: 1.3, bicycle: 1.3, dog: 1.3 };
+
+/* Three primitives. Everything is modelled in a box one unit tall standing on y = 0;
+   -z is north, which is up the screen, so a vehicle built nose-to--z drives north and
+   a face built at +z looks back at the reader. A part can carry a `tone` under 1 to
+   come out darker than the light says, which is how a ghost gets eyes. */
+function mBox(x, y, z, w, h, d) {
+  const X = w / 2, Z = d / 2, v = [];
+  for (const sy of [0, h]) for (const sz of [-Z, Z]) for (const sx of [-X, X])
+    v.push([x + sx, y + sy, z + sz]);
+  // `hard` means flat-sided: its edges get drawn, which is what separates a cabin
+  // from the roof it sits on. Curved parts are left smooth or they turn to wireframe.
+  return { v, f: [[0,2,3,1],[4,5,7,6],[0,1,5,4],[2,6,7,3],[1,3,7,5],[0,4,6,2]], hard: true };
+}
+/* A cylinder on any axis: 'x' lies it down like a wheel, 'y' stands it up like a
+   leg. Both end caps are kept - a wheel seen head-on is a disc, not a hoop. */
+function mCyl(x, y, z, r, len, axis, seg) {
+  const v = [], f = [];
+  for (let e = 0; e < 2; e++) for (let i = 0; i < seg; i++) {
+    const a = i / seg * Math.PI * 2, c = Math.cos(a) * r, s = Math.sin(a) * r;
+    const o = e ? len / 2 : -len / 2;
+    v.push(axis === 'x' ? [x + o, y + c, z + s]
+         : axis === 'y' ? [x + c, y + len / 2 + o, z + s]
+                        : [x + c, y + s, z + o]);
+  }
+  for (let i = 0; i < seg; i++) {
+    const j = (i + 1) % seg;
+    f.push([i, j, seg + j, seg + i]);
+  }
+  f.push(Array.from({ length: seg }, (_, i) => seg - 1 - i));
+  f.push(Array.from({ length: seg }, (_, i) => seg + i));
+  return { v, f };
+}
+function mBall(x, y, z, r, seg, rings) {
+  const v = [], f = [];
+  for (let j = 0; j <= rings; j++) {
+    const p = j / rings * Math.PI, sy = Math.cos(p) * r, rr = Math.sin(p) * r;
+    for (let i = 0; i < seg; i++) {
+      const a = i / seg * Math.PI * 2;
+      v.push([x + Math.cos(a) * rr, y + sy, z + Math.sin(a) * rr]);
+    }
+  }
+  for (let j = 0; j < rings; j++) for (let i = 0; i < seg; i++) {
+    const i2 = (i + 1) % seg, a = j * seg, b = (j + 1) * seg;
+    f.push([a + i, a + i2, b + i2, b + i]);
+  }
+  return { v, f };
+}
+/* The ghost's hem. A cylinder whose bottom ring goes up and down around the circle,
+   which is the whole difference between a sheet and a bucket. */
+function mGhostBody(r, top, seg) {
+  const v = [], f = [];
+  for (let i = 0; i < seg; i++) {
+    const a = i / seg * Math.PI * 2, c = Math.cos(a) * r, s = Math.sin(a) * r;
+    v.push([c, top, s]);
+    v.push([c, i % 2 ? 0.11 : 0.00, s]);
+  }
+  for (let i = 0; i < seg; i++) {
+    const j = (i + 1) % seg;
+    f.push([i * 2, j * 2, j * 2 + 1, i * 2 + 1]);
+  }
+  f.push(Array.from({ length: seg }, (_, i) => i * 2));
+  return { v, f };
+}
+
+const dark = (part, tone) => Object.assign(part, { tone });
+const wheel = (x, z, r) => dark(mCyl(x, r, z, r, 0.13, 'x', 9), 0.42);
+const MODELS = {
+  ghost:  () => [mGhostBody(0.30, 0.70, 14), mBall(0, 0.70, 0, 0.30, 12, 7),
+                 dark(mBall(-0.12, 0.74, 0.26, 0.055, 6, 4), 0.06),
+                 dark(mBall(0.12, 0.74, 0.26, 0.055, 6, 4), 0.06)],
+  person: () => [mBall(0, 0.86, 0, 0.14, 9, 5), mBox(0, 0.42, 0, 0.30, 0.32, 0.18),
+                 mCyl(-0.21, 0.42, 0, 0.055, 0.30, 'y', 6), mCyl(0.21, 0.42, 0, 0.055, 0.30, 'y', 6),
+                 dark(mCyl(-0.09, 0.02, 0, 0.065, 0.40, 'y', 6), 0.5),
+                 dark(mCyl(0.09, 0.02, 0, 0.065, 0.40, 'y', 6), 0.5)],
+  dog:    () => [mBox(0, 0.30, -0.04, 0.26, 0.24, 0.52), mBox(0, 0.42, 0.30, 0.22, 0.20, 0.16),
+                 mBox(0, 0.44, 0.42, 0.13, 0.11, 0.12),
+                 dark(mBox(0, 0.47, 0.49, 0.07, 0.05, 0.04), 0.06),
+                 mBox(-0.08, 0.58, 0.30, 0.06, 0.10, 0.04), mBox(0.08, 0.58, 0.30, 0.06, 0.10, 0.04),
+                 dark(mCyl(-0.09, 0, 0.12, 0.045, 0.30, 'y', 5), 0.55),
+                 dark(mCyl(0.09, 0, 0.12, 0.045, 0.30, 'y', 5), 0.55),
+                 dark(mCyl(-0.09, 0, -0.20, 0.045, 0.30, 'y', 5), 0.55),
+                 dark(mCyl(0.09, 0, -0.20, 0.045, 0.30, 'y', 5), 0.55),
+                 mBox(0, 0.46, -0.30, 0.05, 0.24, 0.05)],
+  bicycle:() => [wheel(0, -0.32, 0.26), wheel(0, 0.32, 0.26),
+                 mBox(0, 0.38, 0, 0.04, 0.04, 0.58), mBox(0, 0.26, 0.18, 0.04, 0.30, 0.04),
+                 mBox(0, 0.26, -0.22, 0.04, 0.30, 0.04), mBox(0, 0.68, -0.30, 0.30, 0.04, 0.04),
+                 mBox(0, 0.56, 0.20, 0.11, 0.04, 0.17)],
+  moto:   () => [wheel(0, -0.34, 0.27), wheel(0, 0.34, 0.27),
+                 mBox(0, 0.32, 0, 0.18, 0.22, 0.50), mBox(0, 0.54, 0.10, 0.20, 0.10, 0.30),
+                 mBox(0, 0.60, -0.30, 0.34, 0.05, 0.05), mBox(0, 0.38, -0.30, 0.10, 0.26, 0.10)],
+  car:    () => [mBox(0, 0.18, 0, 0.50, 0.20, 0.98), mBox(0, 0.38, 0.06, 0.44, 0.20, 0.50),
+                 dark(mBox(0, 0.40, -0.16, 0.45, 0.14, 0.02), 0.28),
+                 wheel(-0.25, -0.30, 0.15), wheel(0.25, -0.30, 0.15),
+                 wheel(-0.25, 0.30, 0.15), wheel(0.25, 0.30, 0.15)],
+  van:    () => [mBox(0, 0.16, 0.10, 0.52, 0.52, 0.86), mBox(0, 0.16, -0.42, 0.50, 0.34, 0.20),
+                 dark(mBox(0, 0.34, -0.33, 0.46, 0.16, 0.02), 0.28),
+                 wheel(-0.26, -0.32, 0.15), wheel(0.26, -0.32, 0.15),
+                 wheel(-0.26, 0.32, 0.15), wheel(0.26, 0.32, 0.15)],
+  bus:    () => [mBox(0, 0.14, 0, 0.54, 0.64, 1.26),
+                 dark(mBox(0, 0.48, 0, 0.56, 0.16, 1.12), 0.28),
+                 wheel(-0.27, -0.42, 0.14), wheel(0.27, -0.42, 0.14),
+                 wheel(-0.27, 0.44, 0.14), wheel(0.27, 0.44, 0.14)],
+};
+const MARK_NAMES = { ghost: 'GHOST', person: 'PERSON', dog: 'DOG', bicycle: 'BICYCLE',
+                     moto: 'MOTORBIKE', car: 'CAR', van: 'VAN', bus: 'BUS' };
+
+/* A window on the puppet, since none of this is reachable from outside the module:
+   window.__marker.at, .kind, .faces after a frame, and .size(px) to blow it up when
+   you need to see whether a wheel is round. */
+window.__marker = {
+  get at() { return markerAt; },
+  get kind() { return markerKind; },
+  faces: 0,
+  size(px) { MARK_PX = px; paintLabels(); return px; },
+};
+
+function markerModel() {
+  if (!markerBuilt || markerBuilt.kind !== markerKind) {
+    markerBuilt = { kind: markerKind, parts: (MODELS[markerKind] || MODELS.ghost)() };
+  }
+  return markerBuilt.parts;
+}
+
+function dropMarker(lon, lat) {
+  markerAt = { lon, lat };
+  markerT0 = performance.now();
+  if (!markerRAF) markerRAF = requestAnimationFrame(tickMarker);
+  paintLabels();
+}
+/* Its own frames, and only this canvas: the lattice underneath has not changed,
+   so putting the whole of halftone() through the GPU to move a ghost 3 px would be
+   paying map prices for a puppet. */
+function tickMarker() {
+  if (!markerAt || markerKind === 'none') { markerRAF = 0; return; }
+  paintLabels();
+  markerRAF = requestAnimationFrame(tickMarker);
+}
+
+function drawMarker() {
+  if (!markerAt || markerKind === 'none') return;
+  let p;
+  try { p = map.project([markerAt.lon, markerAt.lat]); } catch (e) { return; }
+  const gx = p.x * DPR, gy = p.y * DPR;
+  const S = MARK_PX * DPR, lift = MARK_LIFT * DPR;
+  if (!(gx > -S * 2 && gy > -S * 3 && gx < labels.width + S * 2 && gy < labels.height + S * 2)) return;
+
+  const t = (performance.now() - markerT0) / 1000;
+  const S2 = S * (MARK_SCALE[markerKind] || 1);
+  const bob = Math.sin(t * 2.2) * MARK_BOB * DPR;
+  const hy = gy - lift - bob;                    // where the feet hang
+  // Turning with the map keeps it part of the world; the slow sway keeps it alive.
+  const turn = MARK_TURN[markerKind] == null ? MARK_YAW : MARK_TURN[markerKind];
+  const yaw = turn - map.getBearing() * RAD + Math.sin(t * 0.7) * 0.22;
+  const ca = Math.cos(yaw), sa = Math.sin(yaw);
+  const ce = Math.cos(MARK_ELEV), se = Math.sin(MARK_ELEV);
+
+  lctx.save();
+  // What it stands on, and what tells you the height is real: a shadow that tightens
+  // as it comes down, and a dotted line back to the exact point on the ground.
+  const near = (MARK_BOB * DPR - bob) / (MARK_BOB * 2 * DPR);   // 0 high, 1 low
+  lctx.globalAlpha = 0.16 + 0.2 * near;
+  lctx.fillStyle = MARK_GLOW;
+  lctx.beginPath();
+  lctx.ellipse(gx, gy, S * (0.30 + 0.06 * near), S * (0.10 + 0.02 * near), 0, 0, Math.PI * 2);
+  lctx.fill();
+  lctx.globalAlpha = 0.5;
+  lctx.strokeStyle = MARK_GLOW;
+  lctx.lineWidth = 1 * DPR;
+  lctx.setLineDash([2 * DPR, 3 * DPR]);
+  lctx.beginPath(); lctx.moveTo(gx, gy); lctx.lineTo(gx, hy); lctx.stroke();
+  lctx.setLineDash([]);
+
+  const glow = lctx.createRadialGradient(gx, hy - S * 0.5, S * 0.1, gx, hy - S * 0.5, S * 0.95);
+  glow.addColorStop(0, 'rgba(157,196,255,.30)');
+  glow.addColorStop(1, 'rgba(157,196,255,0)');
+  lctx.globalAlpha = 1;
+  lctx.fillStyle = glow;
+  lctx.beginPath(); lctx.arc(gx, hy - S * 0.5, S * 0.95, 0, Math.PI * 2); lctx.fill();
+
+  /* Painter's order over the whole model, faces away from the eye dropped. Every
+     solid here is closed, so a dropped face is one that could not have been seen. */
+  const faces = [];
+  for (const part of markerModel()) {
+    const pts = part.v.map(([x, y, z]) => {
+      const rx = x * ca + z * sa, rz = -x * sa + z * ca;      // yaw
+      const ry = y * ce - rz * se, dz = y * se + rz * ce;     // and look down a little
+      return [gx + rx * S2, hy - ry * S2, dz];
+    });
+    for (const f of part.f) {
+      const a = pts[f[0]], b = pts[f[1]], c = pts[f[2]];
+      // Screen-space cross product: positive means the face is turned towards us.
+      const nz = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+      if (nz <= 0) continue;
+      let d = 0; for (const i of f) d += pts[i][2];
+      faces.push([d / f.length, f.map(i => pts[i]), part.tone == null ? 1 : part.tone, part.hard]);
+    }
+  }
+  faces.sort((a, b) => a[0] - b[0]);
+  window.__marker.faces = faces.length;
+  const L = [-0.42, 0.72, 0.55], ln = Math.hypot(L[0], L[1], L[2]);
+  for (const [, poly, tone, hard] of faces) {
+    /* Shade by how square the face is to the light. The normal is rebuilt in the
+       drawn space, which is all the shading needs: a flat face here is a flat face
+       there, and the eye only asks for the difference between the sides. */
+    const [a, b, c] = poly;
+    const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+    const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+    let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nzz = ux * vy - uy * vx;
+    const nl = Math.hypot(nx, ny, nzz) || 1;
+    nx /= nl; ny /= -nl; nzz /= nl;               // canvas y runs down, the light does not
+    const k = Math.max(0, (nx * L[0] + ny * L[1] + nzz * L[2]) / ln);
+    lctx.fillStyle = mixHex(MARK_DARK, MARK_LIT, (0.08 + 0.92 * k * k) * tone);
+    lctx.beginPath();
+    lctx.moveTo(poly[0][0], poly[0][1]);
+    for (let i = 1; i < poly.length; i++) lctx.lineTo(poly[i][0], poly[i][1]);
+    lctx.closePath();
+    lctx.fill();
+    /* A curved part is stroked in its own colour - only to close the hairline the
+       filler leaves between two faces that share a side, since a drawn edge turns a
+       sphere of eighty faces into a wireframe globe. A flat-sided one is stroked
+       dark, because without it a cabin and the roof under it are one pale lump. */
+    lctx.strokeStyle = hard ? 'rgba(14,20,34,.7)' : lctx.fillStyle;
+    lctx.lineWidth = (hard ? 0.7 : 0.8) * DPR;
+    lctx.stroke();
+  }
+  lctx.restore();
+}
+
+function mixHex(a, b, k) {
+  const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16);
+  const m = s => Math.round(((A >> s) & 255) + (((B >> s) & 255) - ((A >> s) & 255)) * k);
+  return 'rgb(' + m(16) + ',' + m(8) + ',' + m(0) + ')';
+}
+
 function traceCountry(cc, name) {
   if (!cc) return;
   ensureCountries().then(() => {
@@ -2724,6 +3002,14 @@ map.on('click', e => {
 map.on('mousemove', e => {
   if (!CAPITALS.length) return;
   map.getCanvas().style.cursor = capitalAt(e.point) ? 'pointer' : '';
+});
+
+const selMarker = document.getElementById('s-marker');
+selMarker.addEventListener('change', () => {
+  markerKind = selMarker.value;
+  if (markerKind === 'none') { cancelAnimationFrame(markerRAF); markerRAF = 0; }
+  else if (markerAt && !markerRAF) markerRAF = requestAnimationFrame(tickMarker);
+  paintLabels();
 });
 
 selCountry.addEventListener('change', () => {
@@ -3570,6 +3856,7 @@ function showResults(items) {
         results.style.display = 'none';
         q.value = '';
         stopOrbit();
+        dropMarker(+it.lon, +it.lat);   // someone is waiting for you there
         // A bounding box frames a country properly; a point needs a zoom.
         if (it.boundingbox) {
           const [s, n, w, e] = it.boundingbox.map(Number);
