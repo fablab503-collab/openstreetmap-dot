@@ -130,7 +130,8 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | --- | --- |
 | The `DOTWORLD` wordmark | Flies back out to the whole globe, turning, with the day's news on it |
 | The panel list (left) | Thirteen rows, one per panel, each 17 px tall. Click a row and it opens; every other one folds, so only ever one is open and the whole list fits on a laptop screen. The red dot on the right of a panel folds it again. A folded row is half transparent — the map runs under it |
-| The `?` beside a red dot | Shows that panel's prose. It is hidden until you ask: 2,015 px of it across six panels, 409 of them in `SETTINGS` alone |
+| The `?` beside a red dot | Everything that panel keeps back — its prose, and the readouts that answer a second question rather than the first. `VIEW` shows zoom, dots lit and frame time, and holds five more behind the mark: 61 px instead of 285. `LIVE` shows the source, the count and the time, and holds eight: 180 px instead of 418 |
+| `THEME` (top of `SETTINGS`) | `DARK`, `LIGHT` or `AUTO`. Auto follows the system and keeps following it — change the system's mind with the page open and the menu changes with it. The menu is black and white either way: there is no third colour in it any more. The map keeps its own `DOT COLOUR` |
 | `WHERE AM I` (bottom centre) | Marks where you are, rounded to about a kilometre, and flies there |
 | `WHERE YOU ARE` (left column) | The same thing with its numbers showing — latitude, longitude, how close it is and the place name — plus `KEEP UP WITH ME` to follow you while you move, and `FORGET IT` to clear it. Nothing is asked for until you press a button, and the position is rounded to two decimal places before anything is done with it, the name lookup included |
 | The story line | The headline of whichever year the bar is on, with month and day. Click it for everything from the Big Bang to that year | Wikidata + linked articles |

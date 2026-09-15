@@ -5,6 +5,54 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — Black and white, dark or light, and a map drawn at a ninth the size
+
+Daniel: "make everything faster, smoother, simplify it with less front-end information.
+The main colour of the menu should be black and white, with the possibility to add dark
+mode or white mode and auto mode added to the menu. The map is complete but needs to be
+smoother and simpler to run."
+
+### Added
+
+- **`THEME` at the top of `SETTINGS`: `DARK`, `LIGHT`, `AUTO`.** Auto follows the system
+  and keeps following it — change the system's mind with the page open and the menu turns
+  over with it. Dark and light do not listen. Kept in `dotworld.theme.v1`.
+- Light reads as well as dark. Measured against the folded strip flattened onto the map:
+  panel text **6.05:1 dark, 8.78:1 light**; values **17.04 and 14.69**; a folded panel's
+  own name **4.75 and 5.52** — that last one was 3.77 and needed the lighter grey.
+
+### Changed
+
+- **The menu has no third colour.** Every grey in it is a variable now — 134 references
+  moved — and the amber that marked a pressed button is gone: `--hi` is `#e8e8e8` in dark
+  and `#000000` in light. The map is untouched; its colours were never in the stylesheet.
+- **The basemap is drawn at about two device pixels per dot cell, not three per CSS
+  pixel.** It is never looked at — it is read back as cells and thrown away — so at a dot
+  pitch of 5 CSS px, rendering it at 4096 × 2127 is eight times the fragments and eight
+  times the per-frame texture upload for detail the lattice destroys on arrival. It
+  renders **1371 × 712, 0.98 Mpx against 8.71 — 8.9× fewer** — at every ordinary view, and
+  asks for the pixels straight back at a fine dot scale (0.05 → 8.71 Mpx again, checked).
+  **Proof it costs nothing to look at:** the dot canvas read back at both ratios, at a
+  pitch of 5.2 CSS px, **0 of 540,000 pixels differed, mean difference 0.00.** At 1.6 px,
+  still 0 above threshold.
+- **`VIEW` is three rows, was eight: 61 px against 285.** Zoom, dots lit, frame. Dot
+  pitch, places, people shown, lit area and pixels dark are behind the `?`.
+- **`LIVE` is three rows, was eleven: 180 px against 418.** The source, the count, the
+  time. Born today, died today, countries, zone, ahead of, behind, urban and land area
+  are behind the `?`. The country finder stays, and so does everything it answers with.
+- The `?` now means *everything else* — the prose and the second-order numbers together,
+  one mark instead of two.
+
+### Said plainly
+
+- **I cannot show the pixel-ratio win in milliseconds on this Mac.** Every view was
+  already inside one 8.3 ms vsync slot at 120 Hz before the change and is after it —
+  median 8.3 ms at zoom 6, 14, and at zoom 15.2 with 75° of tilt and 3D buildings. What I
+  can show is the work: **0.98 Mpx per frame instead of 8.71.** On a GPU that is not
+  keeping up, that is the whole difference; on this one there was nothing to win.
+
+---
+
 ## 2026-09-15 — A test of every menu, and four things it found
 
 Daniel: "do a test now on all the menus to maximise the compactness, opacity, functions,

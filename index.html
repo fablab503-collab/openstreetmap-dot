@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <title>DotWorld</title>
-<meta name="color-scheme" content="dark">
+<meta name="color-scheme" content="dark light">
 <style>
   /* Dotwork is the shippable dot face (OFL) with Ndot 57's metrics; Ndot
      itself is licensed to Nothing brand materials only and cannot be served
@@ -12,18 +12,38 @@
   @font-face { font-family:"Space Grotesk"; font-weight:400; font-display:swap;
     src:url("fonts/SpaceGrotesk-Regular.otf") format("opentype"); }
 
-  :root { --lit: #ffffff; }
+  /* One palette, two ways round. Every grey the menu uses is a variable now, so the
+     whole of it turns over with one class on <body> — and the amber that used to mark a
+     pressed button is gone with it, because a menu in black and white has no third
+     colour to spend. AUTO follows the system; DARK and LIGHT do not. */
+  :root {
+    --lit: #ffffff;                 /* the dot colour: the map's, not the menu's */
+    --c0:#000000; --c05:#0a0a0a; --c1:#141414; --c2:#1e1e1e; --c3:#2a2a2a;
+    --c4:#3e3e3e; --c5:#4a4a4a; --c6:#5a5a5a; --c7:#6a6a6a; --c8:#7a7a7a;
+    --ink:#8a8a8a; --ink-2:#d8d8d8; --ink-hi:#e8e8e8;
+    --hi:#e8e8e8; --hi-dim:#8a8a8a;
+    --pane:rgba(0,0,0,.86); --pane-solid:rgba(0,0,0,.94);
+    --pane-min:rgba(0,0,0,.5); --pane-hover:rgba(0,0,0,.72);
+  }
+  body.light {
+    --c0:#ffffff; --c05:#f6f6f6; --c1:#ededed; --c2:#d4d4d4; --c3:#c4c4c4;
+    --c4:#9a9a9a; --c5:#8a8a8a; --c6:#707070; --c7:#585858; --c8:#484848;
+    --ink:#3a3a3a; --ink-2:#202020; --ink-hi:#101010;
+    --hi:#000000; --hi-dim:#5a5a5a;
+    --pane:rgba(255,255,255,.88); --pane-solid:rgba(255,255,255,.95);
+    --pane-min:rgba(255,255,255,.78); --pane-hover:rgba(255,255,255,.9);
+  }
   * { box-sizing: border-box; }
-  html, body { margin:0; height:100%; background:#000; overflow:hidden;
+  html, body { margin:0; height:100%; background:var(--c0); overflow:hidden;
     font: 10px/1.45 "Space Mono", ui-monospace, Menlo, Consolas, monospace;
-    color:#8a8a8a; -webkit-font-smoothing:antialiased; }
+    color:var(--ink); -webkit-font-smoothing:antialiased; }
 
   /* Dots are display-only — they visibly merge below ~24px, so the wordmark
      gets the dot face and every small readout stays in Space Mono. */
   #brand { font-family:"Dotwork", monospace; font-size:19px; letter-spacing:.13em;
     color:var(--lit); line-height:1; user-select:none; padding:2px 0 2px 2px; }
   #brand .r { font-family:"Space Mono", monospace; font-size:10px;
-    letter-spacing:.14em; color:#6a6a6a; vertical-align:top; margin-left:6px; }
+    letter-spacing:.14em; color:var(--c7); vertical-align:top; margin-left:6px; }
 
   /* MapLibre renders underneath; it is never seen directly. The dot canvas
      on top is fully opaque and is the only thing the user looks at. */
@@ -50,22 +70,22 @@
   body.space .space-only { display:block; }
   #p-space .big { font-family:"Dotwork", monospace; font-size:19px; color:var(--lit);
     letter-spacing:.08em; line-height:1.2; margin:2px 0 6px; }
-  #p-space .gbar { height:3px; background:#141414; margin:3px 0 7px; }
+  #p-space .gbar { height:3px; background:var(--c1); margin:3px 0 7px; }
   #p-space .gbar i { display:block; height:100%; background:var(--lit); }
 
   /* The space controls are one small block of parameters rather than a stack of
      buttons: name on the left, the thing that changes it on the right, nothing
      shouting. It reads like a config, which is what it is. */
   #sp-params .prow { display:flex; align-items:center; gap:6px; margin:5px 0;
-    font-size:10px; letter-spacing:.08em; color:#6a6a6a; }
+    font-size:10px; letter-spacing:.08em; color:var(--c7); }
   #sp-params .prow > span { flex:0 0 86px; text-transform:lowercase; }
   #sp-params .prow > b { flex:0 0 62px; text-align:right; color:var(--lit);
     font-weight:400; text-transform:lowercase; }
   #sp-params .prow input[type=range] { flex:1 1 auto; margin:0; min-width:0; }
-  #sp-params .prow select, #sp-params .pval { flex:1 1 auto; background:#000;
-    color:var(--lit); border:1px solid #1e1e1e; font:inherit; letter-spacing:.08em;
+  #sp-params .prow select, #sp-params .pval { flex:1 1 auto; background:var(--c0);
+    color:var(--lit); border:1px solid var(--c2); font:inherit; letter-spacing:.08em;
     padding:3px 5px; cursor:pointer; text-transform:lowercase; text-align:left; }
-  #sp-params .pval:hover, #sp-params .prow select:hover { border-color:#4a4a4a; }
+  #sp-params .pval:hover, #sp-params .prow select:hover { border-color:var(--c5); }
   #sp-params #sp-back { margin-top:9px; }
 
   /* One panel width for everything, and two columns that lay their panels out
@@ -73,8 +93,8 @@
      grows, and both slide away together. */
   :root { --panel: 206px; }
   .panel { position:relative; z-index:10; width:100%;
-    background:rgba(0,0,0,.86);
-    border:1px solid #1e1e1e; padding:7px 9px 8px; letter-spacing:.05em;
+    background:var(--pane);
+    border:1px solid var(--c2); padding:7px 9px 8px; letter-spacing:.05em;
     /* Never shrink. In one long column with a 2,000 px news panel in it, a shrinkable
        panel gets squashed to its padding: LIVE and SETTINGS were 17 px tall with all
        their content still inside them, which read as a fold that would not open. */
@@ -88,27 +108,30 @@
     padding:0; border:0; border-radius:50%; background:#ff5f57; opacity:.5;
     cursor:pointer; z-index:13; }
   .panel .min-dot:hover, .panel.min .min-dot { opacity:1; }
-  .panel > .cap { display:none; font-size:9px; letter-spacing:.14em; color:#6a6a6a;
+  .panel > .cap { display:none; font-size:9px; letter-spacing:.14em; color:var(--c7);
     line-height:1.1; }
   /* A folded panel is a label, not a panel. It was 26 px tall and as solid black as an
      open one, and thirteen of them came to 613 px of the map covered up by names. Two
      pixels of padding and half the black: 18 px, and you can see through it. */
-  .panel.min { padding:2px 9px 3px; background:rgba(0,0,0,.5); }
+  .panel.min { padding:2px 9px 3px; background:var(--pane-min); }
   .panel.min .min-dot { top:4px; width:7px; height:7px; }
   /* !important because half these children are styled by id, and an id beats a class
      however the rule is written. A fold that folds most of the way is not a fold. */
   .panel.min > *:not(.cap):not(.min-dot) { display:none !important; }
-  .panel.min > .cap { display:block; }
+  /* A folded name sits on half a pane over a near-black map, so it needs the lighter
+     grey to clear 4.5:1 — measured 3.77 at the old one, 4.7 at this. */
+  .panel.min > .cap { display:block; color:var(--c8); }
 
   /* The prose sits behind a question mark. SETTINGS alone carried 496 px of it — 30% of
      that panel's height — explaining why the greens are out and what the detail level is
      for. All of it is worth keeping and none of it is worth scrolling past every time
      you reach for a slider. The mark only appears on a panel that has something to say. */
   .panel .note { display:none; }
+  .panel:not(.why) .deep { display:none !important; }
   .panel.why .note { display:block; margin-top:7px; font-size:9px; line-height:1.45;
-    color:#4a4a4a; letter-spacing:.03em; text-transform:none; }
+    color:var(--c5); letter-spacing:.03em; text-transform:none; }
   .panel .why-dot { position:absolute; top:5px; right:19px; width:9px; height:9px;
-    padding:0; border:0; border-radius:50%; background:#5a5a5a; opacity:.45;
+    padding:0; border:0; border-radius:50%; background:var(--c6); opacity:.45;
     cursor:pointer; z-index:13; font-size:0; color:transparent; }
   .panel .why-dot:hover { opacity:1; }
   .panel.why .why-dot { opacity:1; background:var(--lit); }
@@ -127,8 +150,8 @@
     pointer-events:none; }
 
   #ui-toggle { position:absolute; bottom:30px; right:12px; z-index:14;
-    padding:8px 14px; cursor:pointer; background:rgba(0,0,0,.86);
-    color:#8a8a8a; border:1px solid #1e1e1e; font:inherit;
+    padding:8px 14px; cursor:pointer; background:var(--pane);
+    color:var(--ink); border:1px solid var(--c2); font:inherit;
     letter-spacing:.1em; text-transform:uppercase; }
   #ui-toggle:hover { border-color:var(--lit); color:var(--lit); }
 
@@ -140,7 +163,7 @@
   #brandrow { display:flex; align-items:center; gap:6px; }
   #brandrow #brand { flex:1 1 auto; min-width:0; }
   #b-col { flex:0 0 auto; width:18px; height:18px; padding:0; line-height:1;
-    cursor:pointer; background:#000; color:#8a8a8a; border:1px solid #2a2a2a;
+    cursor:pointer; background:var(--c0); color:var(--ink); border:1px solid var(--c3);
     font:inherit; font-size:12px; }
   #b-col:hover { border-color:var(--lit); color:var(--lit); }
   body.col-small #ui-left { width:auto; }
@@ -150,73 +173,81 @@
   body.col-small #brand .r { display:none; }
 
   #ui-left { overflow-y:auto; overflow-x:hidden; scroll-behavior:smooth;
-    scrollbar-width:thin; scrollbar-color:#2a2a2a transparent; padding-bottom:40px; }
+    scrollbar-width:thin; scrollbar-color:var(--c3) transparent; padding-bottom:40px; }
   #ui-left::-webkit-scrollbar { width:6px; }
-  #ui-left::-webkit-scrollbar-thumb { background:#2a2a2a; }
+  #ui-left::-webkit-scrollbar-thumb { background:var(--c3); }
+  /* Three buttons on one row, because three words fit and a dropdown does not. */
+  #theme-pick { display:flex; gap:3px; margin-top:4px; }
+  #theme-pick button { flex:1 1 0; padding:4px 2px; cursor:pointer; background:var(--c0);
+    color:var(--c7); border:1px solid var(--c2); font:inherit; font-size:9px;
+    letter-spacing:.08em; text-transform:uppercase; }
+  #theme-pick button:hover { border-color:var(--c5); color:var(--ink-hi); }
+  #theme-pick button[aria-pressed=true] { border-color:var(--hi); color:var(--hi); }
+
   /* A folded row is a menu item, so it says so under the pointer. */
   .panel.min { cursor:pointer; }
-  .panel.min:hover { border-color:#4a4a4a; background:rgba(0,0,0,.72); }
-  .panel.min:hover > .cap { color:#e8e8e8; }
+  .panel.min:hover { border-color:var(--c5); background:var(--pane-hover); }
+  .panel.min:hover > .cap { color:var(--ink-hi); }
 
   /* Charts: a label, a bar, a number. No axes - at this width they would cost more
      room than they explain. */
   #n-cats { display:flex; flex-wrap:wrap; gap:3px; margin:3px 0 5px; }
-  #n-cats button { flex:1 1 auto; cursor:pointer; background:#000;
-    border:1px solid #1e1e1e; }
+  #n-cats button { flex:1 1 auto; cursor:pointer; background:var(--c0);
+    border:1px solid var(--c2); }
 
   /* The little window a held story opens, once the map has flown to the place. Small on
      purpose: enough to know whether it is worth the click. */
   #n-card { position:absolute; left:50%; top:52%; transform:translate(-50%, 0);
     z-index:16; width:min(320px, calc(100vw - 40px)); padding:10px 12px;
-    background:rgba(0,0,0,.94); border:1px solid #2a2a2a; cursor:pointer;
+    background:var(--pane-solid); border:1px solid var(--c3); cursor:pointer;
     letter-spacing:.04em; }
   #n-card:hover { border-color:var(--lit); }
   #n-card-where { color:#9dc4ff; font-size:9px; letter-spacing:.12em;
     text-transform:uppercase; }
-  #n-card-text { color:#e8e8e8; font-size:11px; line-height:1.5; margin:5px 0 7px;
+  #n-card-text { color:var(--ink-hi); font-size:11px; line-height:1.5; margin:5px 0 7px;
     text-transform:none; letter-spacing:.02em; }
   #n-card-foot { display:flex; justify-content:space-between; font-size:9px;
-    color:#6a6a6a; letter-spacing:.1em; }
-  #n-card-foot b { color:#c98500; font-weight:400; }
+    color:var(--c7); letter-spacing:.1em; }
+  #n-card-foot b { color:var(--hi-dim); font-weight:400; }
 
-  .moodbar { display:flex; height:7px; margin:3px 0 6px; background:#141414; }
+  .moodbar { display:flex; height:7px; margin:3px 0 6px; background:var(--c1); }
   .moodbar i { display:block; height:100%; }
-  #n-bar-bad { background:#ff6b6b; } #n-bar-flat { background:#3e3e3e; }
+  #n-bar-bad { background:#ff6b6b; } #n-bar-flat { background:var(--c4); }
   #n-bar-good { background:#35e07f; }
 
   .chart { display:grid; gap:3px; margin:5px 0 2px; }
   .chart .crow { display:grid; grid-template-columns:1fr auto; gap:6px;
-    align-items:center; font-size:9px; letter-spacing:.03em; color:#8a8a8a; }
-  .chart .cbar { grid-column:1 / -1; height:6px; background:#141414; }
+    align-items:center; font-size:9px; letter-spacing:.03em; color:var(--ink); }
+  .chart .cbar { grid-column:1 / -1; height:6px; background:var(--c1); }
   .chart .cbar i { display:block; height:100%; }
-  .chart b { color:#e8e8e8; font-weight:400; letter-spacing:0; }
-  #n-list a.sub { color:#8a8a8a; text-decoration:none; border-bottom:1px solid #1e1e1e;
+  .chart b { color:var(--ink-hi); font-weight:400; letter-spacing:0; }
+  #n-list a.sub { color:var(--ink); text-decoration:none; border-bottom:1px solid var(--c2);
     padding-bottom:5px; }
-  #n-list a.sub:hover { color:#e8e8e8; }
-  .panel .sub { display:block; color:#4a4a4a; font-size:9px; line-height:1.45;
+  #n-list a.sub:hover { color:var(--ink-hi); }
+  .panel .sub { display:block; color:var(--c5); font-size:9px; line-height:1.45;
     letter-spacing:.03em; text-transform:none; margin-top:7px; }
 
   #hud { flex:0 0 auto; }
-  #hud b { color:#e8e8e8; font-weight:500; float:right; letter-spacing:0; }
+  #hud b { color:var(--ink-hi); font-weight:500; float:right; letter-spacing:0; }
   /* Every panel's rows and headings are blocks. Only VIEW, LIVE and the COLOURS heading
      ever said so, which left 87 rows and titles across nine other panels running together
      into one paragraph: WHERE YOU ARE read as "WHERE YOU ARE LATITUDE — LONGITUDE — TO
      ABOUT — PLACE —" on three wrapped lines instead of four rows with their values. */
   .panel .row, .panel .ttl { display:block; }
-  .panel .row > b { float:right; font-weight:400; color:#e8e8e8; letter-spacing:0; }
+  .panel .row > b { float:right; font-weight:400; color:var(--ink-hi); letter-spacing:0; }
   #hud .row { display:block; }
-  #hud .sep { height:1px; background:#1e1e1e; margin:8px -12px; }
+  #hud .sep { height:1px; background:var(--c2); margin:8px -12px; }
   #hud .oled { color:#7ec8a9; }
   /* How much the screen is actually telling you, on a log scale to a milliard. */
-  #infobar { height:4px; background:#1a1a1a; margin:5px 0 2px; }
+  #infobar { height:4px; background:var(--c1); margin:5px 0 2px; }
   #infobar i { display:block; height:100%; width:0;
     background:linear-gradient(90deg,#8b0000,#ff4500,#ffd700); transition:width .3s ease; }
-  #hud .infoends { display:flex; justify-content:space-between; color:#3e3e3e;
+  #hud .infoends { display:flex; justify-content:space-between; color:var(--c4);
     font-size:9px; letter-spacing:.03em; }
 
   #stats .row { display:block; }
-  #stats b { color:#e8e8e8; font-weight:400; float:right; letter-spacing:0; }
-  #stats .sep { height:1px; background:#1e1e1e; margin:8px -12px; }
+  #stats b { color:var(--ink-hi); font-weight:400; float:right; letter-spacing:0; }
+  #stats .sep { height:1px; background:var(--c2); margin:8px -12px; }
   #stats .pop { display:block; margin:6px 0 3px; font-size:17px; line-height:1.1;
     color:var(--lit); letter-spacing:.01em; font-variant-numeric:tabular-nums; }
   #stats.why .note { margin-top:9px; }
@@ -224,20 +255,20 @@
      type-to-find over 195 options for free, which a custom list reinvents
      badly. Styled to match, with its own chevron since appearance is off. */
   #s-country { width:100%; margin:7px 0 3px; padding:7px 22px 7px 8px;
-    color:#e8e8e8; border:1px solid #2a2a2a; font:inherit; letter-spacing:.06em;
+    color:var(--ink-hi); border:1px solid var(--c3); font:inherit; letter-spacing:.06em;
     text-transform:uppercase; cursor:pointer; outline:none;
     -webkit-appearance:none; appearance:none;
-    background:#000 no-repeat right 8px center/9px 5px
+    background:var(--c0) no-repeat right 8px center/9px 5px
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0h10L5 6z' fill='%236a6a6a'/%3E%3C/svg%3E"); }
-  #s-country:hover { border-color:#4a4a4a; }
+  #s-country:hover { border-color:var(--c5); }
   #s-country:focus { border-color:var(--lit); }
-  #s-country option { background:#0a0a0a; color:#e8e8e8; text-transform:none; }
-  #stats .picked { margin:5px 0 2px; padding-top:7px; border-top:1px solid #1e1e1e; }
+  #s-country option { background:var(--c05); color:var(--ink-hi); text-transform:none; }
+  #stats .picked { margin:5px 0 2px; padding-top:7px; border-top:1px solid var(--c2); }
   /* Legend is not optional: two encodings on screen, so identity is never
      carried by colour alone. */
   #legend { flex:0 0 auto; }
-  #legend .ttl { color:#6a6a6a; display:block; margin-bottom:5px; }
-  #legend .src { color:#4a4a4a; font-size:9px; letter-spacing:.03em;
+  #legend .ttl { color:var(--c7); display:block; margin-bottom:5px; }
+  #legend .src { color:var(--c5); font-size:9px; letter-spacing:.03em;
     text-transform:none; display:block; margin-top:4px; }
   #legend .cats { margin-top:9px; display:grid; gap:3px; }
   /* One row per band: swatch, the colour's own name, the range it stands for. */
@@ -245,16 +276,16 @@
   #bands .band { display:grid; grid-template-columns:9px 1fr auto; gap:7px;
     align-items:center; font-size:10px; letter-spacing:.03em; }
   #bands .band i { width:9px; height:9px; border-radius:50%; }
-  #bands .band b { color:#8a8a8a; font-weight:400; text-transform:none; }
-  #bands .band em { color:#6a6a6a; font-style:normal; letter-spacing:0; }
+  #bands .band b { color:var(--ink); font-weight:400; text-transform:none; }
+  #bands .band em { color:var(--c7); font-style:normal; letter-spacing:0; }
   #legend .cat { display:flex; align-items:center; gap:7px; font-size:10px;
-    color:#8a8a8a; letter-spacing:.04em; }
+    color:var(--ink); letter-spacing:.04em; }
   #legend .cat i { width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
 
   #live-dot { display:inline-block; width:7px; height:7px; border-radius:50%;
     background:#35e07f; margin-right:7px; vertical-align:middle;
     animation:pulse 2.4s ease-in-out infinite; }
-  #live-dot.stale { background:#ffb000; animation:none; }
+  #live-dot.stale { background:var(--hi); animation:none; }
   @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.2 } }
 
   /* The settings panel used to be a column of its own and scrolled inside itself. In the
@@ -266,13 +297,13 @@
      anywhere on the left collides with the readouts. */
   #search { position:absolute; top:12px; left:50%; transform:translateX(-50%);
     z-index:12; width:min(380px, calc(100vw - 500px)); }
-  #q { width:100%; padding:9px 12px; background:rgba(0,0,0,.94); color:#e8e8e8;
+  #q { width:100%; padding:9px 12px; background:var(--pane-solid); color:var(--ink-hi);
     text-align:center;
-    border:1px solid #1e1e1e; font:inherit; letter-spacing:.1em;
+    border:1px solid var(--c2); font:inherit; letter-spacing:.1em;
     text-transform:uppercase; outline:none; }
   #q:focus { border-color:var(--lit); }
-  #q::placeholder { color:#4a4a4a; }
-  #results { margin-top:4px; background:rgba(0,0,0,.94); border:1px solid #1e1e1e;
+  #q::placeholder { color:var(--c5); }
+  #results { margin-top:4px; background:var(--pane-solid); border:1px solid var(--c2);
     max-height:210px; overflow-y:auto; display:none; text-align:left; }
 
   /* Too narrow to sit between the wordmark and settings: drop it to its own
@@ -282,24 +313,24 @@
       width:auto; max-width:none; }
     #hud { top:96px; }
   }
-  #results div { padding:7px 10px; cursor:pointer; color:#8a8a8a;
-    border-bottom:1px solid #141414; font-size:10px; letter-spacing:.03em;
+  #results div { padding:7px 10px; cursor:pointer; color:var(--ink);
+    border-bottom:1px solid var(--c1); font-size:10px; letter-spacing:.03em;
     text-transform:none; }
-  #results div:hover { background:#101010; color:var(--lit); }
-  #results .none { cursor:default; color:#5a5a5a; }
+  #results div:hover { background:var(--c05); color:var(--lit); }
+  #results .none { cursor:default; color:var(--c6); }
 
   /* 16 dot colours. Swatch shows the actual lit colour against the black it
      will sit on, which is the only fair preview. */
   #pal { display:grid; grid-template-columns:repeat(8, 1fr); gap:3px;
     margin-top:5px; }
-  #pal button { width:100%; aspect-ratio:1; padding:0; border:1px solid #222;
-    background:#000; cursor:pointer; position:relative; }
+  #pal button { width:100%; aspect-ratio:1; padding:0; border:1px solid var(--c3);
+    background:var(--c0); cursor:pointer; position:relative; }
   #pal button i { display:block; position:absolute; inset:22%; border-radius:50%; }
   #pal button[aria-pressed=true] { border-color:var(--lit); }
-  #swatch-name { color:#6a6a6a; margin-top:5px; display:block; font-size:10px; }
-  #ctl label { display:block; margin:9px 0 3px; color:#6a6a6a; }
-  #ctl .hint { color:#4a4a4a; }
-  #ctl input[type=range] { width:100%; accent-color:#8a8a8a; height:14px; }
+  #swatch-name { color:var(--c7); margin-top:5px; display:block; font-size:10px; }
+  #ctl label { display:block; margin:9px 0 3px; color:var(--c7); }
+  #ctl .hint { color:var(--c5); }
+  #ctl input[type=range] { width:100%; accent-color:var(--ink); height:14px; }
   /* Every button in a panel, not only the ones in the settings. `font:inherit` is the
      whole point of the rule - a button does not inherit the page's type on its own, and
      the ones added later were coming out in the browser's own face, twice the size and
@@ -308,73 +339,73 @@
      picker was the last control still in the browser's own face. */
   .panel button:not(.min-dot):not(.why-dot), #n-cats button,
   .panel select, .panel input[type=range] { font:inherit; }
-  .panel select { width:100%; margin-top:4px; padding:5px 6px; background:#000;
-    color:#c98500; border:1px solid #2a2a2a; letter-spacing:.08em; }
-  .panel select:hover { border-color:#ffb000; color:#ffb000; }
+  .panel select { width:100%; margin-top:4px; padding:5px 6px; background:var(--c0);
+    color:var(--hi-dim); border:1px solid var(--c3); letter-spacing:.08em; }
+  .panel select:hover { border-color:var(--hi); color:var(--hi); }
   .panel button:not(.min-dot):not(.why-dot) { width:100%; margin-top:9px; padding:7px; cursor:pointer;
-    background:#000; color:#c98500; border:1px solid #2a2a2a;
+    background:var(--c0); color:var(--hi-dim); border:1px solid var(--c3);
     letter-spacing:.08em; text-transform:uppercase; }
-  .panel button:not(.min-dot):not(.why-dot):hover { border-color:#ffb000; color:#ffb000; }
+  .panel button:not(.min-dot):not(.why-dot):hover { border-color:var(--hi); color:var(--hi); }
   .panel button[aria-pressed=true]:not(.min-dot):not(.why-dot) { border-color:var(--lit); color:var(--lit); }
   /* The small ones set their own size, so take the panel rule back off them. */
   #n-cats button, #pal button { width:auto; margin-top:0; padding:2px 4px;
-    color:#4a4a4a; text-transform:none; }
+    color:var(--c5); text-transform:none; }
   #n-cats button { font-size:8px; letter-spacing:.08em; text-transform:uppercase; }
-  #n-cats button[aria-pressed="true"] { color:#e8e8e8; border-color:#4a4a4a; }
+  #n-cats button[aria-pressed="true"] { color:var(--ink-hi); border-color:var(--c5); }
 
   #err { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
     z-index:30; max-width:520px; display:none; border-color:#5a2020;
-    color:#d8d8d8; text-transform:none; letter-spacing:0; line-height:1.6; }
+    color:var(--ink-2); text-transform:none; letter-spacing:0; line-height:1.6; }
   #err h3 { margin:0 0 8px; font-size:11px; letter-spacing:.1em;
     text-transform:uppercase; color:#ff6b6b; font-weight:500; }
   #err code { color:#7ec8a9; }
-  #err .cmd { display:block; margin-top:10px; padding:8px; background:#0a0a0a;
-    border:1px solid #1e1e1e; color:#7ec8a9; user-select:all; }
+  #err .cmd { display:block; margin-top:10px; padding:8px; background:var(--c05);
+    border:1px solid var(--c2); color:#7ec8a9; user-select:all; }
 
   #boot { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-    z-index:20; color:#4a4a4a; letter-spacing:.2em; text-transform:uppercase; }
+    z-index:20; color:var(--c5); letter-spacing:.2em; text-transform:uppercase; }
 
   /* Credit and disclaimer, in the app itself — not only in the repo. */
   #story { position:absolute; inset:0; z-index:40; display:none;
-    background:rgba(0,0,0,.96); overflow-y:auto; padding:44px 20px 60px; }
-  #story .box { max-width:640px; margin:0 auto; color:#8a8a8a; font-size:12px;
+    background:var(--pane-solid); overflow-y:auto; padding:44px 20px 60px; }
+  #story .box { max-width:640px; margin:0 auto; color:var(--ink); font-size:12px;
     line-height:1.7; letter-spacing:.02em; }
   #story h2 { font-family:"Dotwork", monospace; font-size:22px; color:var(--lit);
     letter-spacing:.12em; margin:0 0 16px; font-weight:400; }
   #story h3 { font-size:10px; letter-spacing:.14em; text-transform:uppercase;
-    color:#6a6a6a; margin:22px 0 8px; font-weight:400; }
-  #story .lead { color:#d8d8d8; margin:0 0 14px; }
-  #story .sub { color:#4a4a4a; font-size:11px; margin-top:16px; }
+    color:var(--c7); margin:22px 0 8px; font-weight:400; }
+  #story .lead { color:var(--ink-2); margin:0 0 14px; }
+  #story .sub { color:var(--c5); font-size:11px; margin-top:16px; }
   #story .ch { display:grid; grid-template-columns:104px 1fr; gap:10px;
-    padding:5px 0; border-bottom:1px solid #141414; }
-  #story .ch b { color:#e8e8e8; font-weight:400; letter-spacing:0; }
+    padding:5px 0; border-bottom:1px solid var(--c1); }
+  #story .ch b { color:var(--ink-hi); font-weight:400; letter-spacing:0; }
   #story .ch a { color:#ffd700; text-decoration:none;
     border-bottom:1px solid #4a4118; }
   #story .ch a:hover { border-bottom-color:#ffd700; }
   #story-close { position:fixed; top:14px; right:16px; z-index:41; cursor:pointer;
-    background:#000; color:#8a8a8a; border:1px solid #2a2a2a; padding:7px 13px;
+    background:var(--c0); color:var(--ink); border:1px solid var(--c3); padding:7px 13px;
     font:inherit; letter-spacing:.1em; text-transform:uppercase; }
   #story-close:hover { border-color:var(--lit); color:var(--lit); }
 
   #about { position:absolute; inset:0; z-index:40; display:none;
-    background:rgba(0,0,0,.96); overflow-y:auto; padding:44px 20px 60px; }
-  #about .box { max-width:620px; margin:0 auto; color:#8a8a8a; font-size:12px;
+    background:var(--pane-solid); overflow-y:auto; padding:44px 20px 60px; }
+  #about .box { max-width:620px; margin:0 auto; color:var(--ink); font-size:12px;
     line-height:1.7; letter-spacing:.02em; text-transform:none; }
   #about h2 { font-family:"Dotwork", monospace; font-size:22px; color:var(--lit);
     letter-spacing:.12em; margin:0 0 16px; font-weight:400; }
   #about h3 { font-size:10px; letter-spacing:.14em; text-transform:uppercase;
-    color:#6a6a6a; margin:24px 0 6px; font-weight:400; }
+    color:var(--c7); margin:24px 0 6px; font-weight:400; }
   #about p { margin:0 0 11px; }
-  #about .lead { color:#d8d8d8; }
+  #about .lead { color:var(--ink-2); }
   #about a { color:#ffeda0; text-decoration:none; border-bottom:1px solid #4a4118; }
   #about a:hover { border-bottom-color:#ffeda0; }
   #about ul { margin:0 0 10px; padding-left:18px; }
   #about li { margin:3px 0; }
   #about-close { position:fixed; top:14px; right:16px; z-index:41; cursor:pointer;
-    background:#000; color:#8a8a8a; border:1px solid #2a2a2a; padding:7px 13px;
+    background:var(--c0); color:var(--ink); border:1px solid var(--c3); padding:7px 13px;
     font:inherit; letter-spacing:.1em; text-transform:uppercase; }
   #about-close:hover { border-color:var(--lit); color:var(--lit); }
-  #b-about { background:none; border:0; color:#7a7a7a; font:inherit; cursor:pointer;
+  #b-about { background:none; border:0; color:var(--c8); font:inherit; cursor:pointer;
     padding:0; text-decoration:underline; letter-spacing:.04em; }
   #b-about:hover { color:var(--lit); }
 
@@ -384,35 +415,35 @@
      one gesture. */
   #zoombar { position:absolute; bottom:26px; left:50%; transform:translateX(-50%);
     z-index:12; width:min(420px, calc(100vw - 320px)); padding:7px 12px 5px;
-    background:rgba(0,0,0,.86); border:1px solid #1e1e1e;
+    background:var(--pane); border:1px solid var(--c2);
     transition:transform .38s cubic-bezier(.4,0,.2,1), opacity .38s ease; }
   body.ui-hidden #zoombar { transform:translate(-50%, 90px); opacity:0;
     pointer-events:none; }
   /* The headline of whatever year the bar is on - a story title above the dials. */
   #eventline { display:block; width:100%; text-align:left; cursor:pointer;
-    background:none; border:0; border-bottom:1px solid #1e1e1e; color:#e8e8e8;
+    background:none; border:0; border-bottom:1px solid var(--c2); color:var(--ink-hi);
     font:inherit; font-size:11px; letter-spacing:.06em; text-transform:uppercase;
     padding:0 0 7px; margin-bottom:7px; }
   #eventline:hover { color:var(--lit); }
-  #eventline .when { color:#6a6a6a; margin-right:8px; }
-  #eventline .more { color:#4a4a4a; font-size:9px; margin-left:6px;
+  #eventline .when { color:var(--c7); margin-right:8px; }
+  #eventline .more { color:var(--c5); font-size:9px; margin-left:6px;
     text-transform:none; letter-spacing:.02em; }
   #datepick { display:flex; gap:4px; align-items:center; }
-  #datepick select { background:#000; color:#8a8a8a; border:1px solid #1e1e1e;
+  #datepick select { background:var(--c0); color:var(--ink); border:1px solid var(--c2);
     font:inherit; font-size:9px; letter-spacing:.06em; text-transform:uppercase;
     padding:1px 3px; }
 
-  #zoombar .top { display:flex; justify-content:space-between; color:#6a6a6a;
+  #zoombar .top { display:flex; justify-content:space-between; color:var(--c7);
     letter-spacing:.1em; text-transform:uppercase; font-size:10px; }
-  #zoombar .top b { color:#e8e8e8; font-weight:400; letter-spacing:0; }
-  #s-zoom, #s-year { width:100%; accent-color:#8a8a8a; height:16px; margin:2px 0 0; }
-  #b-now { background:#000; color:#6a6a6a; border:1px solid #1e1e1e; font:inherit;
+  #zoombar .top b { color:var(--ink-hi); font-weight:400; letter-spacing:0; }
+  #s-zoom, #s-year { width:100%; accent-color:var(--ink); height:16px; margin:2px 0 0; }
+  #b-now { background:var(--c0); color:var(--c7); border:1px solid var(--c2); font:inherit;
     font-size:9px; letter-spacing:.08em; text-transform:uppercase; cursor:pointer;
     padding:1px 6px; margin-left:6px; }
   #b-now:hover { border-color:var(--lit); color:var(--lit); }
   /* Placed at the zoom each word actually means, not spread evenly: the scale is
      -2 to 22, so even spacing would put "city" at z14, which is a rooftop. */
-  #zoombar .marks { position:relative; height:12px; color:#3e3e3e;
+  #zoombar .marks { position:relative; height:12px; color:var(--c4);
     font-size:9px; letter-spacing:.08em; text-transform:uppercase; }
   #zoombar .marks span { position:absolute; transform:translateX(-50%);
     white-space:nowrap; }
@@ -425,8 +456,8 @@
      corner it sat on top of whichever panel had grown that far, belonged to no section,
      and was the last thing anyone found. */
   #b-here { position:absolute; top:12px; right:12px;
-    z-index:15; padding:8px 16px; cursor:pointer; background:rgba(0,0,0,.86);
-    color:#8a8a8a; border:1px solid #1e1e1e; font:inherit; letter-spacing:.1em;
+    z-index:15; padding:8px 16px; cursor:pointer; background:var(--pane);
+    color:var(--ink); border:1px solid var(--c2); font:inherit; letter-spacing:.1em;
     text-transform:uppercase; white-space:nowrap;
     transition:transform .38s cubic-bezier(.4,0,.2,1), opacity .38s ease; }
   #b-here:hover { border-color:var(--lit); color:var(--lit); }
@@ -435,10 +466,10 @@
     pointer-events:none; }
 
   #attr { position:absolute; bottom:8px; left:12px; z-index:10; font-size:10px;
-    color:#5a5a5a; letter-spacing:.04em; }
-  #attr a { color:#7a7a7a; }
+    color:var(--c6); letter-spacing:.04em; }
+  #attr a { color:var(--c8); }
   #hint { position:absolute; bottom:8px; right:12px; z-index:10; font-size:10px;
-    color:#3e3e3e; letter-spacing:.08em; text-transform:uppercase; }
+    color:var(--c4); letter-spacing:.08em; text-transform:uppercase; }
 </style>
 
 <div id="map"></div>
@@ -471,6 +502,12 @@
 
 
 <div id="ctl" class="panel">
+  <label>THEME</label>
+  <div id="theme-pick">
+    <button type="button" data-theme="dark" aria-pressed="true">Dark</button>
+    <button type="button" data-theme="light" aria-pressed="false">Light</button>
+    <button type="button" data-theme="auto" aria-pressed="false">Auto</button>
+  </div>
   <label>DOT SCALE <span id="l-scale">0.65</span></label>
   <input id="s-scale" type="range" min="0.01" max="2" step="0.01" value="0.65">
   <label>GAIN <span id="l-gain">2.05</span></label>
@@ -557,27 +594,29 @@
 </div>
 <div id="hud" class="panel">
   <span class="row">ZOOM <b id="h-zoom">—</b></span>
-  <span class="row">DOT PITCH <b id="h-pitch">—</b></span>
   <span class="row">DOTS LIT <b id="h-dots">—</b></span>
   <span class="row">FRAME <b id="h-frame">—</b></span>
-  <div class="sep"></div>
-  <span class="row">PLACES <b id="h-places">—</b></span>
-  <span class="row">PEOPLE SHOWN <b id="h-people">—</b></span>
-  <div id="infobar"><i></i></div>
-  <div class="infoends"><span>0</span><span>1 G</span></div>
-  <div class="sep"></div>
-  <span class="row oled">LIT AREA <b id="h-lit" class="oled">—</b></span>
-  <span class="row oled">PIXELS DARK <b id="h-dark" class="oled">—</b></span>
+  <div class="sep deep"></div>
+  <span class="row deep">DOT PITCH <b id="h-pitch">—</b></span>
+  <span class="row deep">PLACES <b id="h-places">—</b></span>
+  <span class="row deep">PEOPLE SHOWN <b id="h-people">—</b></span>
+  <div id="infobar" class="deep"><i></i></div>
+  <div class="infoends deep"><span>0</span><span>1 G</span></div>
+  <span class="row oled deep">LIT AREA <b id="h-lit" class="oled">—</b></span>
+  <span class="row oled deep">PIXELS DARK <b id="h-dark" class="oled">—</b></span>
+  <span class="note">Everything above the line is what the frame cost and how much of it
+    is lit. Below it: how fine the lattice is, how many places are on screen and how many
+    people they stand for, and what an OLED is actually paying to show it.</span>
 </div>
 
 <div id="stats" class="panel">
   <span class="row"><span id="live-dot"></span>LIVE <b id="s-src">—</b></span>
   <span class="pop" id="s-pop">—</span>
   <span class="row">PEOPLE ON EARTH <b id="s-net">—</b></span>
-  <span class="row">BORN TODAY <b id="s-born">—</b></span>
-  <span class="row">DIED TODAY <b id="s-died">—</b></span>
+  <span class="row deep">BORN TODAY <b id="s-born">—</b></span>
+  <span class="row deep">DIED TODAY <b id="s-died">—</b></span>
   <div class="sep"></div>
-  <span class="row">COUNTRIES <b id="s-cty">195</b></span>
+  <span class="row deep">COUNTRIES <b id="s-cty">195</b></span>
   <select id="s-country" aria-label="Find a country and show it on the map">
     <option value="">FIND A COUNTRY</option>
   </select>
@@ -595,13 +634,13 @@
   </div>
   <div class="sep"></div>
   <span class="row">TIME <b id="s-time">—</b></span>
-  <span class="row">ZONE <b id="s-zone">—</b></span>
-  <span class="row">AHEAD OF <b id="s-ahead">—</b></span>
-  <span class="row">BEHIND <b id="s-behind">—</b></span>
+  <span class="row deep">ZONE <b id="s-zone">—</b></span>
+  <span class="row deep">AHEAD OF <b id="s-ahead">—</b></span>
+  <span class="row deep">BEHIND <b id="s-behind">—</b></span>
   <span class="note" id="s-tznote"></span>
   <div class="sep"></div>
-  <span class="row">URBAN <b id="s-urb">—</b></span>
-  <span class="row">LAND AREA <b id="s-land">—</b></span>
+  <span class="row deep">URBAN <b id="s-urb">—</b></span>
+  <span class="row deep">LAND AREA <b id="s-land">—</b></span>
   <span class="note" id="s-note">Projected from a periodic estimate. Nobody counts
     people in real time.</span>
 </div>
@@ -1763,6 +1802,23 @@ function countInformation() {
   document.querySelector('#infobar i').style.width = (frac * 100).toFixed(1) + '%';
 }
 
+/* The basemap is never looked at. It is read back as dot cells and thrown away, so
+   drawing it at three device pixels to the CSS pixel while a dot is five CSS pixels
+   across is eight times the fragments and eight times the texture upload, every frame,
+   for detail the lattice destroys on arrival. Render it at about two device pixels per
+   cell instead. Checked by reading the dot canvas back at both ratios: at a pitch of
+   5.2 CSS px, 0 of 540,000 pixels differed, mean difference 0.00. At 1.6 px, still 0
+   above threshold. A fine dot scale asks for the pixels back and gets them. */
+let mapRatio = -1;
+function fitPixelRatio(pitch) {
+  if (typeof map.setPixelRatio !== 'function') return;
+  const want = Math.max(1, Math.min(window.devicePixelRatio || 1, 2 / Math.max(pitch, 0.05)));
+  const r = Math.round(want * 4) / 4;      // quarter steps, so a slow zoom cannot thrash it
+  if (Math.abs(r - mapRatio) < 0.2) return;
+  mapRatio = r;
+  map.setPixelRatio(r);
+}
+
 function halftone() {
   const src = map.getCanvas();
   if (!src.width || !src.height) return;
@@ -1772,6 +1828,7 @@ function halftone() {
   const zoom  = map.getZoom();
   const pitch = pitchFor(zoom);            // CSS px between dot centres
   const step  = pitch * DPR;               // device px
+  fitPixelRatio(pitch);
 
   if (gl && glr && src.width <= glr.maxTex && src.height <= glr.maxTex) {
     drawGL(src, step);                     // no readback anywhere on this path
@@ -3345,6 +3402,35 @@ function applyDetail() {
 
    Only the controls are kept - not where you were looking. The wordmark is the way home,
    and home is the whole world, with your settings still on it. */
+/* ── dark, light, or whatever the machine is doing ───────────────────────────────
+   Only the menu turns over. The map is a halftone of a dark basemap and has its own
+   DOT COLOUR; a white map is a different piece of work, not a class on <body>.
+   AUTO follows the system and keeps following it - change the system's mind with the
+   page open and the menu changes with it. DARK and LIGHT do not listen. */
+const THEME_KEY = 'dotworld.theme.v1';
+const themeMQ = window.matchMedia('(prefers-color-scheme: light)');
+let themeMode = 'dark';
+function paintTheme() {
+  const light = themeMode === 'light' || (themeMode === 'auto' && themeMQ.matches);
+  document.body.classList.toggle('light', light);
+  document.documentElement.style.colorScheme = light ? 'light' : 'dark';
+  for (const b of document.querySelectorAll('#theme-pick button')) {
+    b.setAttribute('aria-pressed', String(b.dataset.theme === themeMode));
+  }
+}
+function setTheme(mode) {
+  themeMode = mode;
+  try { localStorage.setItem(THEME_KEY, mode); } catch (e) { /* private mode */ }
+  paintTheme();
+}
+document.getElementById('theme-pick').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (b && b.dataset.theme) setTheme(b.dataset.theme);
+});
+themeMQ.addEventListener('change', () => { if (themeMode === 'auto') paintTheme(); });
+try { themeMode = localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) { /* ignore */ }
+paintTheme();
+
 const KEEP = 'dotworld.settings.v1';
 const COLOURS_START_OFF = 'dotworld.colours-off-once.v1';
 const KEPT = ['s-scale', 's-gain', 's-cut', 's-tilt', 's-bear', 's-sun', 's-colours',
@@ -4162,7 +4248,7 @@ function followCam() {
     panel.prepend(cap);
     panel.prepend(dot);
     // and a grey one beside it, but only where there is prose to unfold
-    if (panel.querySelector('.note')) {
+    if (panel.querySelector('.note, .deep')) {
       const why = document.createElement('button');
       why.type = 'button';
       why.className = 'why-dot';
