@@ -453,7 +453,8 @@
   <button id="b-news-now" type="button">LOOK AGAIN NOW</button>
   <div id="n-list"></div>
   <span class="note">Only from far out — zoom past the whole world and it all goes away,
-    and they sit in a rail down the side of the map on lines back to their own places. Put
+    and they sit in two rails, one each side of the map, whichever half of the globe each
+    one is on, on lines back to their own places. They grow and shrink with the zoom. Put
     the pointer on one and the words walk along until the end of the sentence; click and
     the story opens at its source.
     and the wordmark at the top brings you back. Two free sources, no key and no account:
@@ -2287,82 +2288,117 @@ function newsInView() { return map.getZoom() <= NEWS_ZOOM && NEWS.items.length >
    text is clipped to the rail's width. Put the pointer on one and the words walk left
    until the end of the sentence, then stop; take it away and they walk back. Click and
    the story opens at its source. */
-const RAIL_W = 200, RAIL_ROW = 19, RAIL_PAD = 18;
+const RAIL_PAD = 18;
 let newsHover = null, newsHoverAt = 0;
 
 function drawNews() {
   if (!newsInView()) { NEWS.hot = []; return; }
-  const fs = Math.max(8, Math.round(8.5 * DPR));
+  const W = labels.width, H = labels.height;
+  const ctr = map.getCenter();
+
+  /* Everything about the rails follows the zoom. Far out the globe is a coin and the
+     words should not shout over it; coming in, the globe grows and so do they. The zoom
+     runs 0 to NEWS_ZOOM and everything here is a straight line along it. */
+  const k = Math.max(0, Math.min(1, map.getZoom() / NEWS_ZOOM));
+  const fs = Math.max(7, Math.round((7 + 4.5 * k) * DPR));
+  const rowH = (15.5 + 6 * k) * DPR;
+
   lctx.save();
   lctx.font = fs + 'px "Space Mono", ui-monospace, monospace';
   lctx.textBaseline = 'middle';
-  const ctr = map.getCenter();
-  const W = labels.width, H = labels.height;
-  // Clear of the left column of panels, whatever width they happen to be.
-  const railX = (12 + (getComputedStyle(document.documentElement)
-                .getPropertyValue('--panel').trim().replace('px', '') | 0) + RAIL_PAD) * DPR;
 
-  // Who is on this side of the world, nearest the top first, so the lines do not cross.
-  const seen = [];
+  // Clear of the panel columns, whichever side, whatever width they are set to.
+  const colW = (getComputedStyle(document.documentElement)
+                .getPropertyValue('--panel').trim().replace('px', '') | 0);
+  const edge = (12 + colW + RAIL_PAD) * DPR;
+  /* Two rails and a globe have to share the width. On a narrow window the rails give way
+     rather than closing over the Earth: what is left after a 150 px gap in the middle,
+     split in two, and never wider than the zoom asked for. */
+  const want = (150 + 95 * k) * DPR;
+  const free = W - 2 * edge - 150 * DPR;          // what is left once the globe has its gap
+  const MIN = 130 * DPR;
+  /* Two rails, one, or none. Squeezing two 90 px rails onto an 800 px window with both
+     panel columns open just put the words back over the Earth, which is what the rails
+     were for. Fold a panel with its red dot and they come back. */
+  const rails = free / 2 >= MIN ? 2 : free >= MIN ? 1 : 0;
+  const railW = rails ? Math.min(want, rails === 2 ? free / 2 : free) : 0;
+  const leftX  = edge;
+  const rightX = W - edge - railW;
+
+  // Who is on this side of the world, and which half of it they are on.
+  const left = [], right = [];
   for (const it of NEWS.items) {
-    if (seen.length >= 14) break;
+    if (left.length + right.length >= 20) break;
     if (angularDist(ctr.lat, ctr.lng, it.lat, it.lon) > 82) continue;
     let p;
     try { p = map.project([it.lon, it.lat]); } catch (e) { continue; }
     const x = p.x * DPR, y = p.y * DPR;
     if (!(x > 0 && y > 0 && x < W && y < H)) continue;
-    seen.push({ it, x, y });
+    (x < W / 2 ? left : right).push({ it, x, y });
   }
-  seen.sort((a, b) => a.y - b.y);
-
-  const rowH = RAIL_ROW * DPR;
-  const top = Math.max(rowH, H / 2 - seen.length * rowH / 2);
   const hot = [];
-  for (let i = 0; i < seen.length; i++) {
-    const { it, x, y } = seen[i];
-    const ry = top + i * rowH;
-    const hue = it.kind === 'quake' ? '#ff7a1a' : '#9dc4ff';
-
-    lctx.globalAlpha = 0.9;
-    lctx.fillStyle = hue;
-    lctx.beginPath(); lctx.arc(x, y, 2.6 * DPR, 0, Math.PI * 2); lctx.fill();
-
-    lctx.globalAlpha = 0.5;
-    lctx.strokeStyle = hue;
-    lctx.lineWidth = 1 * DPR;
-    lctx.beginPath();
-    lctx.moveTo(x, y);
-    lctx.lineTo(railX + RAIL_W * DPR + 8 * DPR, ry);   // into the end of its row
-    lctx.stroke();
-
-    const box = [railX - 4 * DPR, ry - fs, railX + RAIL_W * DPR + 4 * DPR, ry + fs];
-    hot.push({ box, url: it.url, id: newsKey(it) });
-
-    const line = it.where + ' — ' + it.text;
-    const full = lctx.measureText(line).width;
-    const room = RAIL_W * DPR;
-    /* The walk: a second of stillness, then 40 px a second until the end is showing.
-       It only ever moves under the pointer, so nothing on screen crawls on its own. */
-    let off = 0;
-    if (newsHover === newsKey(it) && full > room) {
-      const t = (performance.now() - newsHoverAt) / 1000;
-      off = Math.max(0, Math.min(full - room, (t - 1) * 40 * DPR));
-      dirty = true;
+  if (!rails) {          // no room for words: the marks still go down, the panel has the text
+    for (const { x, y, it } of [...left, ...right]) {
+      lctx.globalAlpha = 0.9;
+      lctx.fillStyle = it.kind === 'quake' ? '#ff7a1a' : '#9dc4ff';
+      lctx.beginPath(); lctx.arc(x, y, 2.6 * DPR, 0, Math.PI * 2); lctx.fill();
     }
-
-    lctx.globalAlpha = 1;
-    lctx.fillStyle = newsHover === newsKey(it) ? 'rgba(20,26,38,.96)' : 'rgba(0,0,0,.85)';
-    lctx.fillRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
-    lctx.save();
-    lctx.beginPath();
-    lctx.rect(railX, box[1], room, box[3] - box[1]);
-    lctx.clip();
-    lctx.fillStyle = newsHover === newsKey(it) ? '#ffffff' : '#d8d8d8';
-    lctx.fillText(line, railX - off, ry);
     lctx.restore();
-    // a nick of colour at the head of the row, so the kind reads without the line
-    lctx.fillStyle = hue;
-    lctx.fillRect(railX - 4 * DPR, box[1], 2 * DPR, box[3] - box[1]);
+    NEWS.hot = [];
+    return;
+  }
+  const lanes = rails === 2 ? [[left, leftX, -1], [right, rightX, 1]]
+                            : [[[...left, ...right], leftX, -1]];
+  for (const [rows, railX, side] of lanes) {
+    rows.sort((a, b) => a.y - b.y);
+    const top = Math.max(rowH, H / 2 - rows.length * rowH / 2);
+    for (let i = 0; i < rows.length; i++) {
+      const { it, x, y } = rows[i];
+      const ry = top + i * rowH;
+      const hue = it.kind === 'quake' ? '#ff7a1a' : '#9dc4ff';
+      const id = newsKey(it);
+      const on = newsHover === id;
+
+      lctx.globalAlpha = 0.9;
+      lctx.fillStyle = hue;
+      lctx.beginPath(); lctx.arc(x, y, 2.6 * DPR, 0, Math.PI * 2); lctx.fill();
+
+      // the line leaves the row on the side facing the globe
+      const tie = side < 0 ? railX + railW + 8 * DPR : railX - 8 * DPR;
+      lctx.globalAlpha = on ? 0.9 : 0.45;
+      lctx.strokeStyle = hue;
+      lctx.lineWidth = 1 * DPR;
+      lctx.beginPath(); lctx.moveTo(x, y); lctx.lineTo(tie, ry); lctx.stroke();
+
+      const box = [railX - 4 * DPR, ry - fs, railX + railW + 4 * DPR, ry + fs];
+      hot.push({ box, url: it.url, id });
+
+      const line = it.where + ' — ' + it.text;
+      const full = lctx.measureText(line).width;
+      /* The walk: a second of stillness, then 40 px a second until the end is showing.
+         It only ever moves under the pointer, so nothing on screen crawls on its own. */
+      let off = 0;
+      if (on && full > railW) {
+        const t = (performance.now() - newsHoverAt) / 1000;
+        off = Math.max(0, Math.min(full - railW, (t - 1) * 40 * DPR));
+        dirty = true;
+      }
+
+      lctx.globalAlpha = 1;
+      lctx.fillStyle = on ? 'rgba(20,26,38,.96)' : 'rgba(0,0,0,.85)';
+      lctx.fillRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
+      lctx.save();
+      lctx.beginPath();
+      lctx.rect(railX, box[1], railW, box[3] - box[1]);
+      lctx.clip();
+      lctx.fillStyle = on ? '#ffffff' : '#d8d8d8';
+      lctx.fillText(line, railX - off, ry);
+      lctx.restore();
+      // a nick of colour on the outside edge, so the kind reads without the line
+      lctx.fillStyle = hue;
+      lctx.fillRect(side < 0 ? railX - 4 * DPR : railX + railW + 2 * DPR, box[1],
+                    2 * DPR, box[3] - box[1]);
+    }
   }
   lctx.restore();
   NEWS.hot = hot;

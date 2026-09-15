@@ -5,6 +5,29 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — Two rails, and they follow the zoom
+
+Daniel: "you could go back having some on the left and some on the right, half side parts
+of the word on the left and half on the right... and if the zoom is in and out, could you
+also make the information go smaller and bigger in base of how the zoom is going."
+
+### Changed
+
+- **Two rails, one each side.** A story goes to the rail on whichever half of the globe it
+  is on, so the lines fan out instead of all reaching across. Measured on a 1400 px
+  window: 4 on the left, 5 on the right.
+- **Everything about them follows the zoom.** The rail runs 150 px wide at the far end of
+  the range to 245 at the near one, the type 7 px to 11.5, the rows 15.5 px to 21.5 -
+  all straight lines along the zoom, so far out the words do not shout over a globe the
+  size of a coin. Measured rail width: **172 px at zoom 0.3, 206 at 1.0, 248 at 1.9**.
+- **And they give way when there is no room.** Two rails and a globe have to share the
+  width. Under about 130 px each they fall back to one rail, and under that to the marks
+  alone — the panel carries the text either way. Squeezing two 90 px rails onto a narrow
+  window just put the words back over the Earth, which is what the rails were for.
+  Folding a panel with its red dot gives the width back.
+
+---
+
 ## 2026-09-15 — A rail for the news, and a shadow on the roof
 
 Daniel: "the physics should match and not be suspended, but be on the top of the building
