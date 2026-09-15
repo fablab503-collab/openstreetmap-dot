@@ -470,6 +470,9 @@
   <input id="s-bear" type="range" min="0" max="359" step="1" value="0">
   <label>SUN <span id="l-sun">210</span>° <span class="hint">— 3D ONLY</span></label>
   <input id="s-sun" type="range" min="0" max="359" step="1" value="210">
+  <span class="note">The greens are out for now — the big park and landuse fills were
+    reading as slabs of colour over whole regions. They are neutral greys until the
+    texture work below can carry them properly.</span>
   <label>DOT COLOUR <span id="swatch-name">WHITE</span></label>
   <div id="pal"></div>
   <label>COLOURS <span id="l-colours">—</span></label>
@@ -499,6 +502,13 @@
   <input id="s-data" type="range" min="0" max="100" step="1" value="100">
   <label>NEWS ON THE GLOBE <span id="l-newsn">ALL</span></label>
   <input id="s-newsn" type="range" min="0" max="30" step="1" value="30">
+  <label>DETAIL — TEXTURE <span id="l-detail">OFF</span></label>
+  <input id="s-detail" type="range" min="0" max="100" step="1" value="0">
+  <span class="note" id="detail-note">Off, on purpose. This is the groundwork for real
+    ground: the map's flat fills get a repeating texture instead of a colour, which is the
+    same mechanism a downloaded texture would use. The patterns here are drawn in the page
+    so there is nothing to fetch and nothing to license. Turn it up and watch the FRAME
+    reading in VIEW — that is what tells you whether the world can carry it.</span>
   <button id="b-locate">ILLUMINATE MY COUNTRY</button>
   <button id="b-globe" aria-pressed="true">WORLD: ROUND</button>
   <button id="b-world" aria-pressed="false">WHOLE EARTH</button>
@@ -1145,22 +1155,22 @@ const style = {
     { id:'green', type:'fill', source:'ofm', 'source-layer':'landcover',
       paint:{
         'fill-color':['match',['get','class'],
-          'wood','#006400',        // darkgreen
-          'forest','#006400',
-          'scrub','#6b8e23',       // olivedrab
-          'grass','#556b2f',       // darkolivegreen
-          'meadow','#556b2f',
+          'wood','#2a2a2a',        // the greens are out for now: see the note below
+          'forest','#2a2a2a',
+          'scrub','#333333',
+          'grass','#2e2e2e',
+          'meadow','#2e2e2e',
           'farmland','#808000',    // olive
-          'wetland','#8fbc8f',     // darkseagreen
+          'wetland','#3a3a3a',
           'sand','#bdb76b',        // darkkhaki
           'ice','#b0c4de',         // lightsteelblue
           'glacier','#b0c4de',
-          '#556b2f'],
+          '#2e2e2e'],
         'fill-opacity':['match',['get','class'],
           'ice',0.30, 'glacier',0.30, 'sand',0.22, 'wetland',0.16,
           'farmland',0.13, 'scrub',0.16, 0.22] } },
     { id:'park', type:'fill', source:'ofm', 'source-layer':'park',
-      paint:{ 'fill-color':'#228b22', 'fill-opacity':0.22 } },   // forestgreen
+      paint:{ 'fill-color':'#303030', 'fill-opacity':0.16 } },
 
     /* What people put on the land. Purples and browns, because every other family
        is spoken for - warm is population, blue is water, turquoise is a monument -
@@ -1179,7 +1189,7 @@ const style = {
           'kindergarten','#9370db',
           'stadium','#800080',       // purple
           'quarry','#d2b48c',        // tan
-          'allotments','#8fbc8f',    // darkseagreen
+          'allotments','#3a3a3a',
           '#696969'],
         'fill-opacity':['match',['get','class'],
           'residential',0.10, 'commercial',0.14, 'industrial',0.16,
@@ -2888,7 +2898,7 @@ document.getElementById('b-news-now').addEventListener('click', () => loadNews('
    with the whole day on the globe. */
 const brand = document.getElementById('brand');
 brand.style.cursor = 'pointer';
-brand.title = 'Back out to the whole world';
+brand.title = 'Home: the whole world, with your settings kept';
 brand.addEventListener('click', () => {
   stopOrbit();
   /* Stop the turn first. A spin that sets the centre every frame interrupts an easeTo
@@ -3223,6 +3233,116 @@ levelBar('s-data', 'l-data', v => v === 0 ? 'OFF' : v === 100 ? 'FULL' : v + '%'
   v => { dataLevel = v / 100; applyLevels(); });
 levelBar('s-newsn', 'l-newsn', v => v === 0 ? 'NONE' : v >= 30 ? 'ALL' : String(v),
   v => { newsMax = v; newsHud(); dirty = true; });
+
+/* ── detail: texture instead of colour ──────────────────────────────────────────
+   Groundwork, off by default, and the reason it is off is at the end of this comment.
+
+   A MapLibre fill can take a repeating image instead of a flat colour - `fill-pattern`
+   against an image registered with `map.addImage`. That is the whole mechanism, and it is
+   the same one a real texture would use: swap the little canvas below for a downloaded
+   PNG and everything else here stays as it is. Which is the point of building it now.
+
+   The patterns are drawn in the page - 32 px of speckle for ground, 32 px of courses for
+   walls - so nothing is fetched, nothing is licensed and nothing can 404. A Fab or Unreal
+   texture would come in as an ImageBitmap at this same call.
+
+   Why it is off: a pattern fill is resampled per tile per frame, and this map then reads
+   the whole frame back into a lattice. On a big screen at street zoom that is the one
+   thing here that could make the frame time run away. Turn it up and watch FRAME in the
+   VIEW panel - if it climbs, that is the answer, and it is better to find out on purpose
+   than by shipping it on. */
+const TEXTURED = ['landuse', 'park', 'land'];
+let detailLevel = 0, texturesMade = false;
+
+function makeTexture(kind) {
+  const n = 32, c = document.createElement('canvas');
+  c.width = c.height = n;
+  const x = c.getContext('2d');
+  if (kind === 'ground') {
+    x.fillStyle = '#2e2e2e'; x.fillRect(0, 0, n, n);
+    // speckle, not noise: a fixed pattern tiles without seams and never shimmers
+    x.fillStyle = '#3a3a3a';
+    for (let i = 0; i < 40; i++) {
+      const px = (i * 7 + (i % 5) * 3) % n, py = (i * 11 + (i % 3) * 5) % n;
+      x.fillRect(px, py, 1, 1);
+    }
+  } else {
+    x.fillStyle = '#333333'; x.fillRect(0, 0, n, n);
+    x.strokeStyle = '#3e3e3e'; x.lineWidth = 1;
+    for (let y = 4; y < n; y += 8) { x.beginPath(); x.moveTo(0, y); x.lineTo(n, y); x.stroke(); }
+    for (let y = 0; y < n; y += 8) {
+      const off = (y / 8) % 2 ? 4 : 0;
+      for (let px = off; px < n; px += 8) { x.beginPath(); x.moveTo(px, y); x.lineTo(px, y + 8); x.stroke(); }
+    }
+  }
+  return x.getImageData(0, 0, n, n);
+}
+
+function applyDetail() {
+  const on = detailLevel > 0;
+  if (on && !texturesMade) {
+    try {
+      if (!map.hasImage('tex-ground')) map.addImage('tex-ground', makeTexture('ground'));
+      if (!map.hasImage('tex-wall')) map.addImage('tex-wall', makeTexture('wall'));
+      texturesMade = true;
+    } catch (e) { texturesMade = false; }
+  }
+  const set = (id, prop, v) => { if (map.getLayer(id)) map.setPaintProperty(id, prop, v); };
+  for (const id of TEXTURED) {
+    if (!map.getLayer(id)) continue;
+    map.setPaintProperty(id, 'fill-pattern', on && texturesMade ? 'tex-ground' : undefined);
+    // the level is how much of the texture shows through, so it can be barely there
+    set(id, 'fill-opacity', on ? Math.min(1, 0.16 + 0.6 * detailLevel) : undefined);
+  }
+  if (map.getLayer('building')) {
+    map.setPaintProperty('building', 'fill-pattern',
+      on && texturesMade && buildingLevel <= 0 ? 'tex-wall' : undefined);
+  }
+  dirty = true;
+}
+
+/* ── the settings keep ───────────────────────────────────────────────────────────
+   Every slider and picker in the settings panel is written down when you move it and put
+   back when you return. A map you have tuned and then reloaded used to come back as
+   somebody else's map, which made the panel feel disposable.
+
+   Only the controls are kept - not where you were looking. The wordmark is the way home,
+   and home is the whole world, with your settings still on it. */
+const KEEP = 'dotworld.settings.v1';
+const KEPT = ['s-scale', 's-gain', 's-cut', 's-tilt', 's-bear', 's-sun', 's-colours',
+              's-minpop', 's-marker', 's-all', 's-caps', 's-capmon', 's-data', 's-newsn',
+              's-detail', 's-3d', 's-orbit', 's-sunlit'];
+
+function saveSettings() {
+  try {
+    const o = {};
+    for (const id of KEPT) { const e = document.getElementById(id); if (e) o[id] = e.value; }
+    localStorage.setItem(KEEP, JSON.stringify(o));
+  } catch (e) { /* private mode, or a full store: the map still works */ }
+}
+function loadSettings() {
+  let o;
+  try { o = JSON.parse(localStorage.getItem(KEEP) || 'null'); } catch (e) { return; }
+  if (!o) return;
+  for (const id of KEPT) {
+    const e = document.getElementById(id);
+    if (!e || o[id] == null) continue;
+    e.value = o[id];
+    /* `input` for the sliders and `change` for the picker - each control is listening for
+       its own event, and firing the wrong one puts the number back without doing the
+       work behind it. */
+    e.dispatchEvent(new Event(e.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }));
+  }
+}
+for (const id of KEPT) {
+  const e = document.getElementById(id);
+  if (e) e.addEventListener(e.tagName === 'SELECT' ? 'change' : 'input', saveSettings);
+}
+map.once('load', () => setTimeout(loadSettings, 60));
+
+levelBar('s-detail', 'l-detail',
+  v => v === 0 ? 'OFF' : v === 100 ? 'FULL — WATCH THE FRAME' : v + '%',
+  v => { detailLevel = v / 100; applyDetail(); });
 levelBar('s-3d', 'l-3d', v => v === 0 ? 'FLAT' : v === 100 ? 'FULL HEIGHT' : v + '%',
   v => { buildingLevel = v / 100; applyBuildings(); });
 levelBar('s-orbit', 'l-orbit', v => v === 0 ? 'STILL' : (v * 0.0024).toFixed(3) + '°/FRAME',
@@ -4941,7 +5061,7 @@ const COLOUR_GROUPS = [
       paint('monument-top', 'fill-extrusion-color', on ? '#e0ffff' : '#e8e8e8'); } },
   { name: 'LAND', colours: 9, apply: on => {
       paint('green', 'fill-color', on ? LAND_FILL : '#0d0d0d');
-      paint('park', 'fill-color', on ? '#228b22' : '#0d0d0d'); } },
+      paint('park', 'fill-color', on ? '#303030' : '#0d0d0d'); } },
   { name: 'BUILT', colours: 11, apply: on => {
       paint('landuse', 'fill-color', on ? BUILT_FILL : '#141414'); } },
   { name: 'TRANSPORT', colours: 2, apply: on => {
@@ -5276,9 +5396,9 @@ const WATER_KEY = [
   ['swimming pool', 'royalblue', '#4169e1']
 ];
 const LAND_KEY = [
-  ['wood / forest', 'darkgreen', '#006400'], ['scrub', 'olivedrab', '#6b8e23'],
-  ['grass / meadow', 'darkolivegreen', '#556b2f'], ['park', 'forestgreen', '#228b22'],
-  ['farmland', 'olive', '#808000'], ['wetland', 'darkseagreen', '#8fbc8f'],
+  ['wood / forest', 'grey, greens out', '#2a2a2a'], ['scrub', 'grey, greens out', '#333333'],
+  ['grass / meadow', 'grey, greens out', '#2e2e2e'], ['park', 'grey, greens out', '#303030'],
+  ['farmland', 'olive', '#808000'], ['wetland', 'grey, greens out', '#3a3a3a'],
   ['sand', 'darkkhaki', '#bdb76b'], ['ice / glacier', 'lightsteelblue', '#b0c4de'],
   ['residential', 'dimgray', '#696969'], ['commercial', 'rosybrown', '#bc8f8f'],
   ['industrial', 'sienna', '#a0522d'], ['military', 'indigo', '#4b0082'],
@@ -5574,7 +5694,7 @@ async function loadWorldAverages() {
       { label: 'IN TOWNS AND CITIES', text: (100 - got.rural.value).toFixed(1) + '%',
         value: 100 - got.rural.value, hex: '#dc143c' },
       { label: 'IN THE COUNTRY', text: got.rural.value.toFixed(1) + '%',
-        value: got.rural.value, hex: '#556b2f' }
+        value: got.rural.value, hex: '#2e2e2e' }
     ], 100);
   }
   const years = [...new Set(Object.values(got).filter(Boolean).map(v => v.year))].sort();
