@@ -5,6 +5,39 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — One column, and the buttons in the right face
+
+Daniel: "could you refresh the settings so it's going to be just on the left side and not
+on the right... all in line scrollable, and add the function to minimise, but really
+minimise, to have a really small menu, and maximise to take it out. Let the hide panels as
+well on the bottom right... there are some writings like EVERYTHING, LOOK AGAIN NOW, FIND
+ME, KEEP UP WITH ME, FORGET IT — they have a different font."
+
+### Changed
+
+- **One column, on the left, all of it.** WHERE YOU ARE and SETTINGS have come over from
+  the right; the right column is gone. Everything is in one scrolling list, so nothing
+  depends on knowing which side a thing lived on. HIDE PANELS stays bottom right and the
+  zoom and year bar stays bottom centre, both untouched — checked, 12 px and 30 px from
+  the corner, and the bar still centred.
+- **The whole column folds to a strip.** The button beside the wordmark takes 206 × 1776
+  down to **47 × 59** — two letters and a plus sign — and one press brings all of it back
+  exactly as it was. The panels' own red dots are for tidying one at a time; this is for
+  getting the lot out of the way, and it does not disturb them.
+- **The news rails now use the room the right column left**, since only the left one has
+  panels to clear. The right rail starts 224 px from the edge where it was 430.
+
+### Fixed
+
+- **The buttons added over the last few rounds were in the browser's own face**, twice the
+  size and nothing like the rest: EVERYTHING, LOOK AGAIN NOW, FIND ME, KEEP UP WITH ME,
+  FORGET IT. The rule that sets the type was written `#ctl button` — only the settings
+  panel — and a button does not inherit the page's font on its own. It is `.panel button`
+  now, so every panel's buttons match, and they are the map's amber rather than grey.
+  Checked: all four report **Space Mono 10px**.
+
+---
+
 ## 2026-09-15 — Country, place, and only the kinds you want
 
 Daniel: "I need to understand at the beginning of the news the place where it's happening,
