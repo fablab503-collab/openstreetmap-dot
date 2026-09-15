@@ -1319,10 +1319,22 @@ addEventListener('hashchange', () => {
 
 map.on('error', e => {
   const m = String(e && e.error && e.error.message || e);
+  const url = String((e && e.error && e.error.url) || m);
   // A missing individual tile at the edge of coverage is not fatal, but a
   // blanket fetch-error filter would also hide a dead tile source — which is
   // exactly the failure that leaves the screen black. Only ignore tile 404s.
   if (/404/.test(m) && /\.pbf/.test(m)) return;
+  /* And one of this app's own extra layers failing is not fatal either. The monuments,
+     the country outlines, the city names: the map is a map without any of them, and a
+     full-screen MAP ERROR over a working globe is worse than the missing layer. It says
+     so in the corner instead. Only the tiles and the style are worth stopping for. */
+  if (/\/data\/[^?]*\.(geojson|json)/.test(url)) {
+    const file = (url.match(/\/data\/([^?]*)/) || [, url])[1];
+    const b = document.getElementById('boot');
+    if (b && b.style.display !== 'none') b.textContent = 'MISSING ' + file.toUpperCase();
+    console.warn('DotWorld: could not load data/' + file + ' — carrying on without it');
+    return;
+  }
   fail('Map error', m);
 });
 /* LOADING TILES… used to wait for `idle`, which means every tile in the viewport has
