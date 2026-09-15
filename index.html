@@ -619,6 +619,21 @@
 
 <div id="ui-right" class="col">
 <button id="b-set" aria-pressed="true">SETTINGS</button>
+<div id="p-me" class="panel">
+  <span class="ttl">WHERE YOU ARE</span>
+  <span class="row">LATITUDE <b id="me-lat">—</b></span>
+  <span class="row">LONGITUDE <b id="me-lon">—</b></span>
+  <span class="row">TO ABOUT <b id="me-acc">—</b></span>
+  <span class="row">PLACE <b id="me-place">—</b></span>
+  <button id="b-me-find" type="button">FIND ME</button>
+  <button id="b-me-keep" type="button" aria-pressed="false">KEEP UP WITH ME</button>
+  <button id="b-me-clear" type="button">FORGET IT</button>
+  <span class="note" id="me-note">Nothing is asked for until you press the button, and
+    your browser asks you first. What comes back is rounded to two decimal places — about
+    a kilometre — before anything at all is done with it, including the lookup of the
+    town name, which is the one request that leaves this page. Nothing is stored and
+    nothing is sent anywhere else.</span>
+</div>
 <div id="ctl" class="panel">
   <label>DOT SCALE <span id="l-scale">0.65</span></label>
   <input id="s-scale" type="range" min="0.01" max="2" step="0.01" value="0.65">
@@ -2001,6 +2016,7 @@ bHere.addEventListener('click', () => {
     map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 10.5), duration: 1800 });
     bHere.setAttribute('aria-pressed', 'true');
     bHere.textContent = 'YOU ARE HERE';
+    showMe(lat, lon, pos.coords.accuracy);     // the side panel says the same thing
     dirty = true;
     try {
       const r = await fetch('https://nominatim.openstreetmap.org/reverse'
@@ -2009,10 +2025,118 @@ bHere.addEventListener('click', () => {
       const a = j.address || {};
       const place = a.city || a.town || a.village || a.county || a.state || '';
       if (place) bHere.textContent = 'YOU: ' + place.toUpperCase();
+      const country = a.country || '';
+      const line = [place, country].filter(Boolean).join(', ');
+      if (line) meSet('me-place', line.toUpperCase());
     } catch (e) { /* the dot is on the map either way */ }
   }, err => {
     bHere.textContent = err.code === 1 ? 'PERMISSION DENIED' : 'LOCATION UNAVAILABLE';
   }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 600000 });
+});
+
+/* ── where you are, on the side ──────────────────────────────────────────────────
+   The same geolocation the WHERE AM I button has always used, given a panel of its own
+   so you can see what it actually got rather than a word on a button. Two rules it does
+   not bend: nothing is asked for until a button is pressed, and the position is rounded
+   to two decimal places - about a kilometre - before anything is done with it at all,
+   the name lookup included. That rounding happens here, once, and every later use reads
+   the rounded pair. */
+const meSet = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+let meWatch = 0;
+
+function showMe(lat, lon, accM) {
+  const src = map.getSource('me');
+  if (src) src.setData({ type: 'FeatureCollection', features: [
+    { type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] },
+      properties: {} }] });
+  meSet('me-lat', lat.toFixed(2) + '°');
+  meSet('me-lon', lon.toFixed(2) + '°');
+  /* What the browser reports and what is drawn are two different accuracies: a phone
+     may know you to five metres, and it is still put on the map to the nearest
+     kilometre, because that is all that was kept. Say both rather than the flattering
+     one. */
+  meSet('me-acc', accM ? '1 KM, ROUNDED (DEVICE SAID ' + Math.round(accM) + ' M)'
+                       : '1 KM, ROUNDED');
+  dirty = true;
+}
+
+async function namePlace(lat, lon) {
+  try {
+    const r = await fetch('https://nominatim.openstreetmap.org/reverse'
+                        + `?format=jsonv2&zoom=10&lat=${lat}&lon=${lon}`);
+    const j = await r.json();
+    const a = j.address || {};
+    const place = a.city || a.town || a.village || a.county || a.state || '';
+    const country = a.country || '';
+    const line = [place, country].filter(Boolean).join(', ');
+    if (line) { meSet('me-place', line.toUpperCase()); return line; }
+  } catch (e) { /* the dot is on the map either way */ }
+  return '';
+}
+
+function locateOnce(then) {
+  if (!navigator.geolocation) { meSet('me-place', 'NO GEOLOCATION HERE'); return; }
+  meSet('me-place', 'ASKING…');
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const lat = +pos.coords.latitude.toFixed(2);
+    const lon = +pos.coords.longitude.toFixed(2);
+    showMe(lat, lon, pos.coords.accuracy);
+    meSet('me-place', '—');
+    const name = await namePlace(lat, lon);
+    if (then) then(lat, lon, name);
+  }, err => {
+    meSet('me-place', err.code === 1 ? 'YOU SAID NO' : 'NOT AVAILABLE');
+  }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 600000 });
+}
+
+document.getElementById('b-me-find').addEventListener('click', () => {
+  locateOnce((lat, lon) => {
+    stopOrbit();
+    map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 10.5), duration: 1800 });
+  });
+});
+
+/* Keeping up is a watch rather than a poll: the browser tells us when it has moved,
+   and a kilometre of rounding means most real movement never produces a new pair at
+   all. It stays off until it is switched on and stops the moment it is switched off. */
+const bKeep = document.getElementById('b-me-keep');
+bKeep.addEventListener('click', () => {
+  if (meWatch) {
+    navigator.geolocation.clearWatch(meWatch); meWatch = 0;
+    bKeep.setAttribute('aria-pressed', 'false');
+    bKeep.textContent = 'KEEP UP WITH ME';
+    return;
+  }
+  if (!navigator.geolocation) { meSet('me-place', 'NO GEOLOCATION HERE'); return; }
+  let lastKey = '';
+  meWatch = navigator.geolocation.watchPosition(async pos => {
+    const lat = +pos.coords.latitude.toFixed(2);
+    const lon = +pos.coords.longitude.toFixed(2);
+    const key = lat + ',' + lon;
+    if (key === lastKey) return;              // same kilometre, nothing to do
+    lastKey = key;
+    showMe(lat, lon, pos.coords.accuracy);
+    namePlace(lat, lon);
+  }, err => {
+    meSet('me-place', err.code === 1 ? 'YOU SAID NO' : 'NOT AVAILABLE');
+    if (meWatch) { navigator.geolocation.clearWatch(meWatch); meWatch = 0; }
+    bKeep.setAttribute('aria-pressed', 'false');
+    bKeep.textContent = 'KEEP UP WITH ME';
+  }, { enableHighAccuracy: false, timeout: 20000, maximumAge: 30000 });
+  bKeep.setAttribute('aria-pressed', 'true');
+  bKeep.textContent = 'KEEPING UP — STOP';
+});
+
+document.getElementById('b-me-clear').addEventListener('click', () => {
+  if (meWatch) { navigator.geolocation.clearWatch(meWatch); meWatch = 0; }
+  bKeep.setAttribute('aria-pressed', 'false');
+  bKeep.textContent = 'KEEP UP WITH ME';
+  const src = map.getSource('me');
+  if (src) src.setData({ type: 'FeatureCollection', features: [] });
+  ['me-lat', 'me-lon', 'me-acc', 'me-place'].forEach(id => meSet(id, '—'));
+  bHere.setAttribute('aria-pressed', 'false');
+  bHere.textContent = 'WHERE AM I';
+  dirty = true;
 });
 
 /* Zoom bar. Dragging is a scrub: every input event jumps the camera with no
@@ -2801,6 +2925,7 @@ function followCam() {
     names[b.dataset.to] = b.textContent.trim().toUpperCase();
   });
   names.ctl = 'SETTINGS';
+  names['p-me'] = 'WHERE YOU ARE';
   for (const panel of document.querySelectorAll('.panel:not(#err)')) {
     const label = names[panel.id] || panel.id.replace(/^p-/, '').toUpperCase();
     const cap = document.createElement('span');

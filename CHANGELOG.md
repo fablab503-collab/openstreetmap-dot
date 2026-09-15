@@ -5,6 +5,35 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — WHERE YOU ARE, on the side
+
+Daniel: "add on the side the geolocalisation settings to localise you."
+
+### Added
+
+- **A panel of its own**, above SETTINGS in the right column: latitude, longitude, how
+  close it is, and the place name, with FIND ME, KEEP UP WITH ME and FORGET IT. The
+  WHERE AM I button at the bottom still works and now writes into the same panel, so
+  the two can never disagree.
+- **KEEP UP WITH ME** is a watch, not a poll: the browser says when it has moved, and a
+  kilometre of rounding means most real movement never produces a new reading at all. It
+  is off until pressed and the watch is cleared the moment it is pressed again -
+  checked, and the handle really is cleared.
+- **FORGET IT** takes the dot off the map and empties every readout.
+
+### The two rules it does not bend
+
+- Nothing is asked for until a button is pressed, and the browser asks you first.
+- **The position is rounded to two decimal places - about a kilometre - before anything
+  at all is done with it**, the town-name lookup included. Tested with a position of
+  43.6117294, 3.8767183: the panel reads 43.61° and 3.88°, the map flew to 43.61000 /
+  3.88000, and the only request that left the page carried the rounded pair.
+- The accuracy line says both numbers rather than the flattering one: `1 KM, ROUNDED
+  (DEVICE SAID 18 M)`. A phone may know you to five metres; what is kept is a kilometre,
+  and the panel should say so.
+
+---
+
 ## 2026-09-15 — Metres, not pixels, and a camera that sits on it
 
 Daniel: "the following camera should be and start from the center of the persona. check
