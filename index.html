@@ -371,6 +371,7 @@
   <button type="button" data-to="p-monuments">Monuments</button>
   <button type="button" data-to="legend">Colours</button>
   <button type="button" data-to="p-space">Space</button>
+  <button type="button" data-to="p-game">Game</button>
 </div>
 
 <div id="hud" class="panel">
@@ -503,6 +504,30 @@
   <span class="src">Top 3 per capital by Wikipedia coverage. Close in, the
     building's own edges are drawn from OpenStreetMap — its foot, and its roofline
     in 3D. The ranking is Wikipedia's editors' work, not mine.</span>
+</div>
+
+<div id="p-game" class="panel">
+  <span class="ttl">PAC-MAN, ON THE REAL STREETS</span>
+  <span class="big" id="g-state">NOT PLAYING</span>
+  <span class="row">SCORE <b id="g-score">0</b></span>
+  <span class="row">DOTS LEFT <b id="g-left">—</b></span>
+  <span class="row">LIVES <b id="g-lives">—</b></span>
+  <button id="b-play" type="button">PLAY GAME</button>
+  <span class="note">Montpellier, from above. Eat every dot without being caught by
+    the four. They cannot walk through a building and neither can you — but a jump
+    clears one, and a long press jumps further than a tap.</span>
+  <div class="sep"></div>
+  <span class="ttl">KEYS</span>
+  <span class="row">MOVE <b>W A S D · ARROWS</b></span>
+  <span class="row">JUMP <b>SPACE, HOLD FOR MORE</b></span>
+  <span class="row">PAUSE <b>P</b></span>
+  <span class="row">START OVER <b>R</b></span>
+  <span class="row">CHANGE SHAPE <b>T</b></span>
+  <span class="row">WALK ITSELF <b>SHIFT + A</b></span>
+  <span class="note">A on its own is already left, so walking itself is SHIFT + A.
+    The keys work outside the game too — that is where they came from.
+    Nothing here is loaded from anywhere: the streets are the gaps between the buildings
+    the map has already drawn, which is all a maze ever was.</span>
 </div>
 
 <div id="p-space" class="panel">
@@ -1315,6 +1340,9 @@ let nameFX = null, cityFX = null, fxRAF = 0;   // the reveal, same reason; see s
 const labelBoxes = [];   // what drawCapitals put on the label canvas this frame
 let markerAt = null, markerKind = 'ghost', markerRAF = 0, markerT0 = 0, markerBuilt = null;
 let markerHead = null, jumpY = 0;   // read while drawing, so declared up here with the rest
+let autoWalk = false, autoEnt = null;
+const GM = { on: false, paused: false, over: '', score: 0, lives: 3,
+             dots: [], foes: [], keysBusy: false, last: 0, from: null };
 let dirty = true;
 
 /* Dot pitch is a function of zoom, and it is the whole LOD story:
@@ -1533,6 +1561,7 @@ function paintLabels() {
   if (showCapitals || showCapMon || picked) drawCapitals();
   drawCountryName();
   drawCityNames();
+  drawGame();
   drawMarker();
 }
 
@@ -2427,11 +2456,11 @@ const MARK_BOB  = 3.4;                 // and how far it drifts while it hangs
 /* Seen from above and off one corner. Straight on and nearly level, a car is a
    rectangle and nothing else: it took a three-quarter view to make one read as a car
    at thirty pixels. */
-const MARK_ELEV = 32 * RAD;
+let   MARK_ELEV = 32 * RAD;            // the game looks almost straight down instead
 /* A vehicle wants the corner view; a face wants to be looked at. The ghost turned
    36 degrees showed one eye and gazed off past your shoulder. */
 const MARK_YAW  = 36 * RAD;
-const MARK_TURN = { ghost: 8 * RAD, person: 15 * RAD, dog: 26 * RAD };
+const MARK_TURN = { ghost: 8 * RAD, person: 15 * RAD, dog: 26 * RAD, pacman: 0 };
 // The ones that are long and low need more of the box than a standing figure does.
 const MARK_SCALE = { car: 1.45, van: 1.4, bus: 1.3, moto: 1.3, bicycle: 1.3, dog: 1.3 };
 
@@ -2498,9 +2527,37 @@ function mGhostBody(r, top, seg) {
   return { v, f };
 }
 
+/* Pac-Man: a ball with a wedge missing. The sweep stops short of the whole circle and
+   two flat faces close the gap, which is the mouth; `pacGap` opens and shuts it. The
+   mouth points at -z, the way everything else here faces. */
+let pacGap = 0.5;
+function mPac(r, seg, rings, gap) {
+  const v = [], f = [], span = Math.PI * 2 - gap;
+  for (let j = 0; j <= rings; j++) {
+    const t = j / rings * Math.PI, sy = Math.cos(t) * r, rr = Math.sin(t) * r;
+    for (let i = 0; i <= seg; i++) {
+      const a = Math.PI * 1.5 + gap / 2 + i / seg * span;
+      v.push([Math.cos(a) * rr, r + sy, Math.sin(a) * rr]);
+    }
+  }
+  const W = seg + 1;
+  for (let j = 0; j < rings; j++) for (let i = 0; i < seg; i++) {
+    const a = j * W, b = (j + 1) * W;
+    f.push([a + i, a + i + 1, b + i + 1, b + i]);
+  }
+  // the two cheeks of the mouth, each a fan back to the middle of the ball
+  const mid = v.push([0, r, 0]) - 1;
+  for (let j = 0; j < rings; j++) {
+    f.push([j * W, (j + 1) * W, mid]);
+    f.push([mid, (j + 1) * W + seg, j * W + seg]);
+  }
+  return { v, f };
+}
+
 const dark = (part, tone) => Object.assign(part, { tone });
 const wheel = (x, z, r) => dark(mCyl(x, r, z, r, 0.13, 'x', 9), 0.42);
 const MODELS = {
+  pacman: () => [mPac(0.42, 14, 8, pacGap)],
   ghost:  () => [mGhostBody(0.30, 0.70, 14), mBall(0, 0.70, 0, 0.30, 12, 7),
                  dark(mBall(-0.12, 0.74, 0.26, 0.055, 6, 4), 0.06),
                  dark(mBall(0.12, 0.74, 0.26, 0.055, 6, 4), 0.06)],
@@ -2538,7 +2595,9 @@ const MODELS = {
                  wheel(-0.27, 0.44, 0.14), wheel(0.27, 0.44, 0.14)],
 };
 const MARK_NAMES = { ghost: 'GHOST', person: 'PERSON', dog: 'DOG', bicycle: 'BICYCLE',
-                     moto: 'MOTORBIKE', car: 'CAR', van: 'VAN', bus: 'BUS' };
+                     moto: 'MOTORBIKE', car: 'CAR', van: 'VAN', bus: 'BUS', pacman: 'PAC-MAN' };
+// What T walks through. Pac-Man is not in it: he is what the game gives you.
+const MARK_CYCLE = ['ghost', 'person', 'dog', 'bicycle', 'moto', 'car', 'van', 'bus'];
 
 /* A window on the puppet, since none of this is reachable from outside the module:
    window.__marker.at, .kind, .faces after a frame, and .size(px) to blow it up when
@@ -2554,12 +2613,18 @@ window.__marker = {
   blocked: false,          // was the last step refused by a building
 };
 
-function markerModel() {
-  if (!markerBuilt || markerBuilt.kind !== markerKind) {
-    markerBuilt = { kind: markerKind, parts: (MODELS[markerKind] || MODELS.ghost)() };
+function markerModel(kind) {
+  if (kind === 'pacman') return MODELS.pacman();     // its mouth moves, so never cached
+  if (!markerBuilt || markerBuilt.kind !== kind) {
+    markerBuilt = { kind, parts: (MODELS[kind] || MODELS.ghost)() };
   }
   return markerBuilt.parts;
 }
+
+const hexA = (hex, a) => {
+  const v = parseInt(hex.slice(1), 16);
+  return 'rgba(' + (v >> 16 & 255) + ',' + (v >> 8 & 255) + ',' + (v & 255) + ',' + a + ')';
+};
 
 /* It stays where it was put - it went wandering on its own once and Daniel asked for
    that back, because a marker that wanders off is no longer marking anything. It moves
@@ -2605,6 +2670,20 @@ function driveMarker(now) {
     if (jumpY <= 0) { jumpY = 0; jumpV = 0; }
   }
 
+  /* Walking itself: the same rule the four in the game use - go on until a wall says
+     no, then take a turn that is open. Over a city that is indistinguishable from
+     following the streets, because the streets are the only places it can go. */
+  if (autoWalk && !keysDown.size) {
+    if (!autoEnt) autoEnt = { lon: markerAt.lon, lat: markerAt.lat, dir: DIRS[1] };
+    autoEnt.lon = markerAt.lon; autoEnt.lat = markerAt.lat;
+    walkOn(autoEnt, KEY_SPEED * 0.75, dt, null);
+    markerAt.lon = autoEnt.lon; markerAt.lat = autoEnt.lat;
+    markerHead = (map.getBearing()
+                + Math.atan2(autoEnt.dir[0], -autoEnt.dir[1]) / RAD + 360) % 360;
+    followEdge();
+    return;
+  }
+
   let dx = 0, dy = 0;
   if (keysDown.has('w')) dy -= 1;
   if (keysDown.has('s')) dy += 1;
@@ -2640,10 +2719,16 @@ function driveMarker(now) {
   // compass by the map's own bearing; the yaw the model wants is the difference again.
   markerHead = (map.getBearing() + Math.atan2(nx - p.x, p.y - ny) / RAD + 360) % 360;
 
-  // The map comes along rather than letting it walk off the edge.
+  followEdge();
+}
+
+// The map comes along rather than letting it walk off the edge.
+function followEdge() {
+  let p;
+  try { p = map.project([markerAt.lon, markerAt.lat]); } catch (e) { return; }
   const W = labels.width / DPR, H = labels.height / DPR;
-  const ox = nx < EDGE_PAD ? nx - EDGE_PAD : Math.max(0, nx - (W - EDGE_PAD));
-  const oy = ny < EDGE_PAD ? ny - EDGE_PAD : Math.max(0, ny - (H - EDGE_PAD));
+  const ox = p.x < EDGE_PAD ? p.x - EDGE_PAD : Math.max(0, p.x - (W - EDGE_PAD));
+  const oy = p.y < EDGE_PAD ? p.y - EDGE_PAD : Math.max(0, p.y - (H - EDGE_PAD));
   if (ox || oy) map.panBy([ox, oy], { duration: 0 });
 }
 
@@ -2651,53 +2736,282 @@ const typing = () => {
   const el = document.activeElement;
   return el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
 };
+/* The arrows say the same thing as W A S D, because half of everyone reaches for one
+   and half for the other and there is no reason to make anybody guess. */
+const ARROWS = { arrowup: 'w', arrowdown: 's', arrowleft: 'a', arrowright: 'd' };
 addEventListener('keydown', e => {
   if (typing() || e.metaKey || e.ctrlKey || e.altKey) return;
-  const k = e.key.toLowerCase();
-  if (k === ' ' || e.code === 'Space') {
+  const raw = e.key.toLowerCase();
+  const k = ARROWS[raw] || raw;
+
+  if (raw === ' ' || e.code === 'Space') {
     if (!markerAt || markerKind === 'none') return;
     e.preventDefault();                       // or the page scrolls and buttons fire
-    if (!jumpY && !jumpV) jumpV = JUMP_V;
+    /* A tap is a hop and a held key is a jump. The push is the same either way; letting
+       go while it is still going up cuts the rise short, which is how a platform game
+       has done variable height since 1985 and is far better to play than reading the
+       length of the press and only then leaving the ground. */
+    if (!jumpY && !jumpV && !e.repeat) jumpV = JUMP_V;
     return;
   }
+
+  if ('prta'.includes(raw) && !GM.keysBusy) {
+    if (raw === 'p') { e.preventDefault(); pauseGame(); return; }
+    if (raw === 'r') { e.preventDefault(); if (GM.on) startGame(); return; }
+    if (raw === 't') {
+      e.preventDefault();
+      if (markerKind === 'pacman') return;    // in the game you are Pac-Man, that is the game
+      const i = MARK_CYCLE.indexOf(markerKind);
+      setMarkerKind(MARK_CYCLE[(i + 1) % MARK_CYCLE.length]);
+      return;
+    }
+    // 'a' is both a direction and a command, so it is only the command on its own
+    if (raw === 'a' && e.shiftKey) { e.preventDefault(); autoWalk = !autoWalk; return; }
+  }
+
   if (!'wasd'.includes(k)) return;
   e.preventDefault();
   // Nothing dropped yet: start it in the middle of what you are looking at, or the
   // keys would do nothing at all and look broken.
   if (!markerAt) { const c = map.getCenter(); dropMarker(c.lng, c.lat); }
+  autoWalk = false;                           // a hand on the keys beats the autopilot
   keysDown.add(k);
 });
-addEventListener('keyup', e => keysDown.delete(e.key.toLowerCase()));
+addEventListener('keyup', e => {
+  const raw = e.key.toLowerCase();
+  if (raw === ' ' || e.code === 'Space') { if (jumpV > 0) jumpV *= 0.32; return; }
+  keysDown.delete(ARROWS[raw] || raw);
+});
 addEventListener('blur', () => keysDown.clear());
+
+function setMarkerKind(kind) {
+  markerKind = kind;
+  const sel = document.getElementById('s-marker');
+  if (sel && [...sel.options].some(o => o.value === kind)) sel.value = kind;
+  paintLabels();
+}
+
+/* ── Pac-Man, on the real streets ────────────────────────────────────────────────
+   No maze is drawn and none is loaded. The buildings the map has already put on screen
+   ARE the maze - the streets are the gaps between them - which is why this needs no
+   data of its own at all and would work over any city you point it at. It starts on
+   Montpellier because that is where this whole thing started.
+
+   The dots go on a grid over the view, and any that land inside a building are thrown
+   away; what survives is a dot in every street. The four chase by the same rule the
+   player walks by: go until a wall says no, then take a turn that is open, preferring
+   the one that closes the gap. That is the whole of it. */
+const GAME_AT   = [3.8797, 43.6086];   // Place de la Comedie
+const GAME_ZOOM = 17;
+const DOT_GAP   = 58;                  // screen px between dots when they are laid out
+const FOE_SPEED = 92;                  // px a second; the player has 135
+const FOE_HUES  = [['#ff5c5c', '#5a1b1b'], ['#ffb0d8', '#5a2c42'],
+                   ['#67e8ff', '#173f4a'], ['#ffc46b', '#4f3512']];
+
+const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];     // up, right, down, left
+const gset = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+
+function gameHud() {
+  gset('g-state', !GM.on ? 'NOT PLAYING' : GM.over ? GM.over : GM.paused ? 'PAUSED' : 'PLAYING');
+  gset('g-score', GM.score);
+  gset('g-left', GM.on ? GM.dots.filter(d => !d.eaten).length : '—');
+  gset('g-lives', GM.on ? '●'.repeat(Math.max(0, GM.lives)) || 'NONE' : '—');
+  const b = document.getElementById('b-play');
+  if (b) b.textContent = GM.on ? 'START OVER' : 'PLAY GAME';
+}
+
+// A dot every DOT_GAP across the view, minus the ones that landed indoors.
+function layDots() {
+  const W = labels.width / DPR, H = labels.height / DPR, out = [];
+  for (let x = DOT_GAP; x < W - DOT_GAP; x += DOT_GAP)
+    for (let y = DOT_GAP; y < H - DOT_GAP; y += DOT_GAP) {
+      if (blockedAt(x, y)) continue;
+      const ll = map.unproject([x, y]);
+      out.push({ lon: ll.lng, lat: ll.lat, eaten: false });
+    }
+  return out;
+}
+
+// Somewhere in the open, and not on top of the player.
+function freeSpot(awayFrom) {
+  const W = labels.width / DPR, H = labels.height / DPR;
+  for (let i = 0; i < 300; i++) {
+    const x = 60 + Math.random() * (W - 120), y = 60 + Math.random() * (H - 120);
+    if (blockedAt(x, y)) continue;
+    if (awayFrom && Math.hypot(x - awayFrom.x, y - awayFrom.y) < 220) continue;
+    const ll = map.unproject([x, y]);
+    return { lon: ll.lng, lat: ll.lat };
+  }
+  return null;
+}
+
+async function startGame() {
+  GM.keysBusy = true;
+  GM.on = true; GM.paused = false; GM.over = '';
+  GM.score = 0; GM.lives = 3;
+  gameHud();
+  showTopic('p-game');
+  stopOrbit();
+  // From above, north up: a maze read at an angle is not a maze.
+  MARK_ELEV = 74 * RAD;
+  map.jumpTo({ center: GAME_AT, zoom: GAME_ZOOM, pitch: 0, bearing: 0 });
+  await new Promise(r => map.once('idle', r));
+  const c = map.getCenter();
+  GM.from = { lon: c.lng, lat: c.lat };
+  dropMarker(c.lng, c.lat);
+  setMarkerKind('pacman');
+  autoWalk = false;
+  GM.dots = layDots();
+  const me = map.project([c.lng, c.lat]);
+  GM.foes = FOE_HUES.map(([lit, dk], i) => {
+    const at = freeSpot(me) || { lon: c.lng, lat: c.lat };
+    return { ...at, lit, dk, dir: DIRS[i % 4], t0: i * 0.4 };
+  });
+  GM.keysBusy = false;
+  gameHud();
+}
+
+function pauseGame() {
+  if (!GM.on || GM.over) return;
+  GM.paused = !GM.paused;
+  GM.last = 0;
+  gameHud();
+}
+
+function endGame(how) {
+  GM.over = how;
+  MARK_ELEV = 32 * RAD;
+  gameHud();
+}
+
+/* One step for anything that walks itself: keep going, and when the way ahead is shut
+   take one that is open. `chase` pulls the choice towards the player, which is the only
+   difference between a thing hunting you and a thing wandering. */
+function walkOn(e, speed, dt, chase) {
+  let p;
+  try { p = map.project([e.lon, e.lat]); } catch (err) { return; }
+  const step = speed * dt;
+  let nx = p.x + e.dir[0] * step, ny = p.y + e.dir[1] * step;
+  if (blockedAt(nx, ny) || Math.random() < 0.012) {
+    const open = DIRS.filter(d => {
+      if (d[0] === -e.dir[0] && d[1] === -e.dir[1]) return false;   // not straight back
+      return !blockedAt(p.x + d[0] * 26, p.y + d[1] * 26);
+    });
+    const pick = open.length ? open : DIRS;
+    if (chase) {
+      let best = pick[0], bd = Infinity;
+      for (const d of pick) {
+        const gap = Math.hypot(p.x + d[0] * 60 - chase.x, p.y + d[1] * 60 - chase.y);
+        // not always the best move, or four of them take the same corner every time
+        const score = gap + Math.random() * 90;
+        if (score < bd) { bd = score; best = d; }
+      }
+      e.dir = best;
+    } else {
+      e.dir = pick[Math.floor(Math.random() * pick.length)];
+    }
+    nx = p.x + e.dir[0] * step; ny = p.y + e.dir[1] * step;
+    if (blockedAt(nx, ny)) return;
+  }
+  const ll = map.unproject([nx, ny]);
+  e.lon = ll.lng; e.lat = ll.lat;
+}
+
+function stepGame(now) {
+  if (!GM.on || GM.paused || GM.over || !markerAt) { GM.last = now; return; }
+  const dt = GM.last ? Math.min(0.06, (now - GM.last) / 1000) : 0;
+  GM.last = now;
+  if (!dt) return;
+  pacGap = 0.28 + 0.42 * Math.abs(Math.sin(now / 150));   // chomp
+
+  let me;
+  try { me = map.project([markerAt.lon, markerAt.lat]); } catch (e) { return; }
+
+  for (const d of GM.dots) {
+    if (d.eaten) continue;
+    const q = map.project([d.lon, d.lat]);
+    if (Math.hypot(q.x - me.x, q.y - me.y) < 15) { d.eaten = true; GM.score += 10; }
+  }
+  if (!GM.dots.some(d => !d.eaten)) { endGame('ALL OF IT EATEN'); return; }
+
+  for (const f of GM.foes) {
+    walkOn(f, FOE_SPEED, dt, me);
+    const q = map.project([f.lon, f.lat]);
+    if (jumpY < 6 && Math.hypot(q.x - me.x, q.y - me.y) < 19) {
+      GM.lives--;
+      if (GM.lives <= 0) { endGame('CAUGHT'); return; }
+      markerAt.lon = GM.from.lon; markerAt.lat = GM.from.lat;    // back to the start
+      jumpY = 0; jumpV = 0;
+      const back = map.project([GM.from.lon, GM.from.lat]);
+      for (const g of GM.foes) Object.assign(g, freeSpot(back) || g);
+      break;
+    }
+  }
+  gameHud();
+}
+
+function drawGame() {
+  if (!GM.on) return;
+  lctx.save();
+  for (const d of GM.dots) {
+    if (d.eaten) continue;
+    let q;
+    try { q = map.project([d.lon, d.lat]); } catch (e) { continue; }
+    const x = q.x * DPR, y = q.y * DPR;
+    if (!(x > 0 && y > 0 && x < labels.width && y < labels.height)) continue;
+    lctx.beginPath();
+    lctx.arc(x, y, 2.6 * DPR, 0, Math.PI * 2);
+    lctx.fillStyle = '#ffd400';
+    lctx.fill();
+  }
+  lctx.restore();
+  const t = performance.now() / 1000;
+  for (const f of GM.foes) drawFigure(f, 'ghost', null, 0, t + f.t0, f.lit, f.dk, f.lit);
+}
+
+const bPlay = document.getElementById('b-play');
+if (bPlay) bPlay.addEventListener('click', () => startGame());
 
 /* Its own frames, and only this canvas: the lattice underneath has not changed,
    so putting the whole of halftone() through the GPU to move a ghost 3 px would be
    paying map prices for a puppet. */
 function tickMarker() {
   if (!markerAt || markerKind === 'none') { markerRAF = 0; markerLast = 0; return; }
-  driveMarker(performance.now());
+  const now = performance.now();
+  driveMarker(now);
+  stepGame(now);
   paintLabels();
   markerRAF = requestAnimationFrame(tickMarker);
 }
 
 function drawMarker() {
   if (!markerAt || markerKind === 'none') return;
+  // In the game he is the one colour nobody has to be told: Pac-Man yellow.
+  const pac = markerKind === 'pacman';
+  drawFigure(markerAt, markerKind, markerHead, jumpY,
+             (performance.now() - markerT0) / 1000,
+             pac ? '#ffe74d' : MARK_LIT, pac ? '#6b5200' : MARK_DARK,
+             pac ? '#ffd400' : MARK_GLOW);
+}
+
+/* One figure, anywhere: the player, and every one of the four that is chasing it. The
+   colours are arguments because in the game they are the only thing telling them apart. */
+function drawFigure(at, kind, head, jump, t, lit, dk, gl) {
   let p;
-  try { p = map.project([markerAt.lon, markerAt.lat]); } catch (e) { return; }
+  try { p = map.project([at.lon, at.lat]); } catch (e) { return; }
   const gx = p.x * DPR, gy = p.y * DPR;
   const S = MARK_PX * DPR, lift = MARK_LIFT * DPR;
   if (!(gx > -S * 2 && gy > -S * 3 && gx < labels.width + S * 2 && gy < labels.height + S * 2)) return;
 
-  const t = (performance.now() - markerT0) / 1000;
-  const S2 = S * (MARK_SCALE[markerKind] || 1);
+  const S2 = S * (MARK_SCALE[kind] || 1);
   const bob = Math.sin(t * 2.2) * MARK_BOB * DPR;
-  const hy = gy - lift - bob - jumpY * DPR;      // where the feet hang, jump included
+  const hy = gy - lift - bob - jump * DPR;       // where the feet hang, jump included
   /* Standing still it holds one angle, turning only with the map so that it stays part
      of the world. Driven, it faces the way it is being pushed, and keeps facing that way
      once you let go rather than snapping back. */
   const B = map.getBearing();
-  const turn = MARK_TURN[markerKind] == null ? MARK_YAW : MARK_TURN[markerKind];
-  const yaw = markerHead == null ? turn - B * RAD : (B - markerHead) * RAD;
+  const turn = MARK_TURN[kind] == null ? MARK_YAW : MARK_TURN[kind];
+  const yaw = head == null ? turn - B * RAD : (B - head) * RAD;
   const ca = Math.cos(yaw), sa = Math.sin(yaw);
   const ce = Math.cos(MARK_ELEV), se = Math.sin(MARK_ELEV);
 
@@ -2706,20 +3020,20 @@ function drawMarker() {
   // as it comes down, and a dotted line back to the exact point on the ground.
   const near = (MARK_BOB * DPR - bob) / (MARK_BOB * 2 * DPR);   // 0 high, 1 low
   lctx.globalAlpha = 0.16 + 0.2 * near;
-  lctx.fillStyle = MARK_GLOW;
+  lctx.fillStyle = gl;
   lctx.beginPath();
   lctx.ellipse(gx, gy, S * (0.30 + 0.06 * near), S * (0.10 + 0.02 * near), 0, 0, Math.PI * 2);
   lctx.fill();
   lctx.globalAlpha = 0.5;
-  lctx.strokeStyle = MARK_GLOW;
+  lctx.strokeStyle = gl;
   lctx.lineWidth = 1 * DPR;
   lctx.setLineDash([2 * DPR, 3 * DPR]);
   lctx.beginPath(); lctx.moveTo(gx, gy); lctx.lineTo(gx, hy); lctx.stroke();
   lctx.setLineDash([]);
 
   const glow = lctx.createRadialGradient(gx, hy - S * 0.5, S * 0.1, gx, hy - S * 0.5, S * 0.95);
-  glow.addColorStop(0, 'rgba(157,196,255,.30)');
-  glow.addColorStop(1, 'rgba(157,196,255,0)');
+  glow.addColorStop(0, hexA(gl, 0.30));
+  glow.addColorStop(1, hexA(gl, 0));
   lctx.globalAlpha = 1;
   lctx.fillStyle = glow;
   lctx.beginPath(); lctx.arc(gx, hy - S * 0.5, S * 0.95, 0, Math.PI * 2); lctx.fill();
@@ -2727,7 +3041,7 @@ function drawMarker() {
   /* Painter's order over the whole model, faces away from the eye dropped. Every
      solid here is closed, so a dropped face is one that could not have been seen. */
   const faces = [];
-  for (const part of markerModel()) {
+  for (const part of markerModel(kind)) {
     const pts = part.v.map(([x, y, z]) => {
       const rx = x * ca + z * sa, rz = -x * sa + z * ca;      // yaw
       const ry = y * ce - rz * se, dz = y * se + rz * ce;     // and look down a little
@@ -2756,7 +3070,7 @@ function drawMarker() {
     const nl = Math.hypot(nx, ny, nzz) || 1;
     nx /= nl; ny /= -nl; nzz /= nl;               // canvas y runs down, the light does not
     const k = Math.max(0, (nx * L[0] + ny * L[1] + nzz * L[2]) / ln);
-    lctx.fillStyle = mixHex(MARK_DARK, MARK_LIT, (0.08 + 0.92 * k * k) * tone);
+    lctx.fillStyle = mixHex(dk, lit, (0.08 + 0.92 * k * k) * tone);
     lctx.beginPath();
     lctx.moveTo(poly[0][0], poly[0][1]);
     for (let i = 1; i < poly.length; i++) lctx.lineTo(poly[i][0], poly[i][1]);

@@ -131,6 +131,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | `COLOURS` | How many colours the map may use, 1 to 43. Each step hands a group its own hues — water, population, monuments, land, built land, transport — and turning it down costs less power |
 | `ZOOM` bar (bottom centre) | Drag to go from a street to the whole globe in one gesture; it follows the map too, and slides away with the panels |
 | `SEARCH A PLACE` | Search by name; countries and regions frame to their bounds, and a small 3D figure hangs over the place with its shadow on the ground |
+| `GAME` → `PLAY GAME` | Pac-Man across Montpellier, from above. The dots go in every street, the four chase you, and the buildings are the maze — nothing is loaded for it. `P` pause, `R` start over, `T` change shape, `SHIFT`+`A` walk itself |
 | `WHO FLOATS OVER A PLACE YOU FIND` | What that figure is: a ghost, a person, a dog, a bicycle, a motorbike, a car, a van, a bus — or nobody. It holds the spot and breathes up and down. `W` `A` `S` `D` walk it around, `SPACE` jumps; it will not walk through a building, though it will clear one in mid-air, and the map pans to keep up |
 | `SETTINGS` | Show or hide the control panel |
 | `HIDE PANELS` | Slide every panel off the map and back |

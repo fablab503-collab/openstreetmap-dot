@@ -5,6 +5,51 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — Pac-Man, on the real streets
+
+Daniel: "add a little section called GAME, and when you press PLAY GAME it's gonna start
+a game of Pac-Man... in the area of Montpellier. It's gonna be the biggest game ever of
+Pac-Man, but make it really simple, that doesn't use any big data or anything at all."
+
+### Added
+
+- **A maze nobody drew and nobody loaded.** The buildings the map has already rendered
+  ARE the maze - the streets are the gaps between them - so the game needs no data of its
+  own at all and would work over any city you point it at. The dots go on a grid across
+  the view and any that land indoors are thrown away; what is left is a dot in every
+  street. Montpellier, from above, because that is where this whole thing started.
+- **Four of them, chasing.** Red, pink, cyan and orange, each walking the one rule the
+  player walks by: go on until a wall says no, then take a turn that is open - preferring,
+  if it is one of the four, the turn that closes the gap, with enough noise in the choice
+  that they do not all take the same corner. 92 px/s against the player's 135, or it
+  would not be a game.
+- **Pac-Man himself**, a ball with a wedge missing: the sweep stops short of the full
+  circle and two flat faces close the gap. `pacGap` opens and shuts it about three times
+  a second, so he chomps. Yellow, which is the one colour nobody needs told.
+- **Three lives, ten a dot**, caught sends you back to the start and scatters them again,
+  and every dot eaten wins it.
+
+### Keys, in and out of the game
+
+- `W A S D` **and the arrows** — half of everyone reaches for one and half for the other.
+- `SPACE` jumps, **and a held key jumps further than a tap**: the push is the same either
+  way, and letting go while it is still rising cuts the rise short. That is how a platform
+  game has done variable height since 1985, and it plays far better than timing the press
+  and only then leaving the ground.
+- `P` pause · `R` start over · `T` change shape · `SHIFT + A` walk itself.
+  **A on its own is already left**, which is a clash in the asking, so walking itself took
+  the shift.
+
+### Not built, on purpose
+
+Daniel: "it could transform maybe one day in the game of Pac-Man in real life, where you
+are Pac-Man and there are other people... but not for now, but saving the memory." Saved,
+not started. What would be needed is the position of real people, which means consent, a
+server, and a way to stop someone being tracked - none of which this app has, and all of
+which come before the code.
+
+---
+
 ## 2026-09-15 — W A S D, and space to jump
 
 Daniel: "add some command to make it move through the maps using W for forward S back A
