@@ -2460,6 +2460,58 @@ async function fetchQuakes() {
   });
 }
 
+/* ── the desk next door ────────────────────────────────────────────────────────
+   Adamandeva is a technology desk that runs on the same idea as this map: open,
+   and honest about where a thing came from. It publishes a small feed next to
+   this page - no key, no account, same rule as every other source here - and
+   every item in it says whether the desk wrote the story or relayed someone
+   else's, who the author was, and whether AI had a hand in it. Those words go
+   straight into the rail, because a reader deciding whether to click deserves
+   them before the click, not after.
+
+   Its geotagged stories carry real coordinates, so they sit exactly where they
+   happened. The Wikipedia lines above can only ever guess from the first country
+   they name. A desk story with no location falls back to the same guess, and is
+   dropped if even that finds nothing - a globe has nowhere to put it.
+
+   If the feed is not there yet, this rejects and allSettled shrugs it off. */
+/* quake orange, other people's reporting blue, the desk's own pink - so which
+   is which is readable on the globe without reading a word of it */
+const NEWS_HUE = { quake: '#ff7a1a', news: '#9dc4ff', desk: '#ff5cc8' };
+const DESK_FEED = 'news.json';
+const DESK_HOME = 'https://claude.ai/code/artifact/9a16b112-3624-4c4f-8adf-9453ca5779c3';
+
+async function fetchDesk() {
+  const j = await (await fetch(DESK_FEED, { cache: 'no-store' })).json();
+  const desk = String(j.desk || 'ADAMANDEVA').toUpperCase();
+  return (j.items || []).map(it => {
+    const blurb = it.headline + ' ' + (it.deck || '');
+    let lat, lon, where;
+    if (it.geo && isFinite(+it.geo.lat) && isFinite(+it.geo.lon)) {
+      lat = +it.geo.lat; lon = +it.geo.lon;
+      where = String(it.geo.place || desk).toUpperCase();
+    } else {
+      const p = placeOf(blurb);
+      if (!p) return null;
+      lat = p.cap.lat; lon = p.cap.lon;
+      where = (p.country + ' · ' + p.city).toUpperCase();
+    }
+    // said before the click: relayed or the desk's own, and whose hands were on it
+    const from = (it.origin === 'relayed' && it.source && it.source.name)
+      ? 'VIA ' + String(it.source.name).toUpperCase() : desk;
+    const by = it.madeBy === 'ai' ? 'AI' : it.madeBy === 'ai+human' ? 'AI, HUMAN-EDITED'
+             : it.madeBy === 'human' ? 'HUMAN' : '';
+    return {
+      t: Date.parse(it.published || '') || Date.now(),
+      lat, lon,
+      where: (where + ' · ' + from + (by ? ' · ' + by : '')).slice(0, 72),
+      text: it.headline + (it.deck ? ' — ' + it.deck : ''),
+      url: it.url || DESK_HOME, kind: 'desk',
+      mood: moodOf(blurb).kind, cats: catsOf(blurb),
+    };
+  }).filter(Boolean);
+}
+
 async function loadNews(why) {
   if (NEWS.busy) return;
   NEWS.busy = true;
@@ -2467,7 +2519,7 @@ async function loadNews(why) {
   const now = new Date();
   const yesterday = new Date(now.getTime() - 86400e3);
   const got = await Promise.allSettled([
-    fetchWikiDay(now), fetchWikiDay(yesterday), fetchQuakes(),
+    fetchWikiDay(now), fetchWikiDay(yesterday), fetchQuakes(), fetchDesk(),
   ]);
   const fresh = got.filter(r => r.status === 'fulfilled').flatMap(r => r.value);
   const seen = new Set();
@@ -2503,8 +2555,10 @@ function newsHud(state) {
     if (e) e.style.width = (n ? v / n * 100 : 0).toFixed(1) + '%';
   };
   bar('n-bar-bad', bad); bar('n-bar-flat', flat); bar('n-bar-good', good);
+  const fromDesk = shown.filter(i => i.kind === 'desk').length;
   set('n-placed', shown.filter(i => i.kind === 'quake').length + ' QUAKES · '
-                + shown.filter(i => i.kind === 'news').length + ' PLACED BY NAME');
+                + shown.filter(i => i.kind === 'news').length + ' PLACED BY NAME'
+                + (fromDesk ? ' · ' + fromDesk + ' FROM THE DESK' : ''));
   set('n-when', NEWS.at ? new Date(NEWS.at).toTimeString().slice(0, 5) : '—');
   set('n-next', NEWS.at ? new Date(NEWS.at + NEWS_EVERY).toTimeString().slice(0, 5) : '—');
   const list = document.getElementById('n-list');
@@ -2589,7 +2643,7 @@ function drawNews() {
   if (!rails) {          // no room for words: the marks still go down, the panel has the text
     for (const { x, y, it } of [...left, ...right]) {
       lctx.globalAlpha = 0.9;
-      lctx.fillStyle = it.kind === 'quake' ? '#ff7a1a' : '#9dc4ff';
+      lctx.fillStyle = NEWS_HUE[it.kind] || NEWS_HUE.news;
       lctx.beginPath(); lctx.arc(x, y, 2.6 * DPR, 0, Math.PI * 2); lctx.fill();
     }
     lctx.restore();
@@ -2604,7 +2658,7 @@ function drawNews() {
     for (let i = 0; i < rows.length; i++) {
       const { it, x, y } = rows[i];
       const ry = top + i * rowH;
-      const hue = it.kind === 'quake' ? '#ff7a1a' : '#9dc4ff';
+      const hue = NEWS_HUE[it.kind] || NEWS_HUE.news;
       const id = newsKey(it);
       const on = newsHover === id;
 
