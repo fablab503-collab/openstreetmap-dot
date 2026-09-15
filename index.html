@@ -2649,8 +2649,16 @@ const NEWS_HUE = { quake: '#ff7a1a', news: '#9dc4ff', desk: '#ff5cc8' };
 const DESK_FEED = 'news.json';
 const DESK_HOME = 'https://claude.ai/code/artifact/9a16b112-3624-4c4f-8adf-9453ca5779c3';
 
+/* Ask once. `news.json` is the desk's own feed and it is not in this repo, so every
+   news refresh fired a request that was always going to 404 - ten of them in one
+   session, for ever, for a file that is not coming. One probe a page load: if it is
+   there the desk appears as it always did, and if it is not, nothing asks again. */
+let deskGone = false;
 async function fetchDesk() {
-  const j = await (await fetch(DESK_FEED, { cache: 'no-store' })).json();
+  if (deskGone) return [];
+  const res = await fetch(DESK_FEED, { cache: 'no-store' });
+  if (!res.ok) { deskGone = true; return []; }
+  const j = await res.json();
   const desk = String(j.desk || 'ADAMANDEVA').toUpperCase();
   return (j.items || []).map(it => {
     const blurb = it.headline + ' ' + (it.deck || '');
