@@ -477,7 +477,7 @@
   <label>DOT COLOUR <span id="swatch-name">WHITE</span></label>
   <div id="pal"></div>
   <label>COLOURS <span id="l-colours">—</span></label>
-  <input id="s-colours" type="range" min="0" max="6" step="1" value="6">
+  <input id="s-colours" type="range" min="0" max="6" step="1" value="0">
   <label>MIN POPULATION <span id="l-minpop">15 K</span></label>
   <input id="s-minpop" type="range" min="0" max="100" step="1" value="0">
   <label>WHO FLOATS OVER A PLACE YOU FIND</label>
@@ -1700,6 +1700,13 @@ function drawCPU(px, cols, rows, step) {
    depending on what the GPU is still busy with. Counting on a timer while the
    map moved therefore meant a hitch a few times a second. So the count waits
    until the map is at rest; while moving, only zoom, pitch and frame update. */
+/* The lit-dot number is a statistic, not the picture, and it was being paid for like
+   the picture. On a 4096 px canvas at the finest dot scale the lattice is 3,904,608
+   cells, and walking all of them in JS took 59 ms of main thread plus 12 ms of
+   readback - a seventy-millisecond stall the moment the map came to rest, every time.
+   It samples at most STAT_CELLS of them now and multiplies back up. Same number to
+   within a percent or so, a fiftieth of the time. */
+const STAT_CELLS = 120000;
 let statsTimer = null;
 function countWhenStill() {
   clearTimeout(statsTimer);
@@ -1711,8 +1718,13 @@ function countWhenStill() {
     const step = Math.max(pitch * DPR, COUNT_MIN_STEP);   // never finer than a pixel
     const cols = Math.max(1, Math.ceil(dots.width / step));
     const rows = Math.max(1, Math.ceil(dots.height / step));
-    const s = measureCells(sampleCells(src, cols, rows), cols, rows, step);
-    hud(zoom, pitch, s.lit, cols * rows, s.coverage);
+    const cells = cols * rows;
+    // sample a coarser grid, but weigh each dot with the real lattice's radius
+    const k = cells > STAT_CELLS ? Math.sqrt(STAT_CELLS / cells) : 1;
+    const scols = Math.max(1, Math.round(cols * k)), srows = Math.max(1, Math.round(rows * k));
+    const s = measureCells(sampleCells(src, scols, srows), scols, srows, step);
+    const f = cells / (scols * srows);
+    hud(zoom, pitch, Math.round(s.lit * f), cells, Math.min(1, s.coverage * f));
     countInformation();
   }, 250);
 }
@@ -3321,6 +3333,7 @@ function applyDetail() {
    Only the controls are kept - not where you were looking. The wordmark is the way home,
    and home is the whole world, with your settings still on it. */
 const KEEP = 'dotworld.settings.v1';
+const COLOURS_START_OFF = 'dotworld.colours-off-once.v1';
 const KEPT = ['s-scale', 's-gain', 's-cut', 's-tilt', 's-bear', 's-sun', 's-colours',
               's-minpop', 's-marker', 's-all', 's-caps', 's-capmon', 's-data', 's-newsn',
               's-detail', 's-3d', 's-orbit', 's-sunlit'];
@@ -3336,6 +3349,15 @@ function loadSettings() {
   let o;
   try { o = JSON.parse(localStorage.getItem(KEEP) || 'null'); } catch (e) { return; }
   if (!o) return;
+  /* Colours used to start with all forty-three on, and a map tuned once kept that
+     for good. They start at none now, so the saved value is forgotten the first time
+     a map that has one is opened. Move the bar after that and it is yours again. */
+  try {
+    if (!localStorage.getItem(COLOURS_START_OFF)) {
+      localStorage.setItem(COLOURS_START_OFF, '1');
+      o['s-colours'] = '0';
+    }
+  } catch (e) { /* private mode: the default is already none */ }
   for (const id of KEPT) {
     const e = document.getElementById(id);
     if (!e || o[id] == null) continue;

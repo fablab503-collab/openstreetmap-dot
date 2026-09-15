@@ -5,6 +5,47 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — A grey map to start with, and the stall that was not the colours
+
+Daniel: "take out all the colours and add the level bar to add them if I need to. If I
+don't add them they are not present, and the map should be smoother — or? There is a lag."
+
+### Changed
+
+- **The map starts with no colour at all.** COLOURS was at 43 out of the box; it is at
+  none now — one colour, the dot colour, and nothing else. The bar was already there and
+  already worked, so it is only the starting point that moved. Checked on a fresh load:
+  the slider reads `NONE — ONE COLOUR` and **0 of 104,000 pixels** in the middle of the
+  map carry any saturation. At the top it says `43 — TO TRANSPORT` and 158 of them do.
+- **A map already tuned forgets its saved colour level once**, and only once, so this
+  change actually reaches a browser that has been here before. Everything else you have
+  set is left alone.
+
+### Fixed
+
+- **The lag was the lit-dot counter, not the colours.** At the finest dot scale on a
+  4096 px canvas the lattice is **3,904,608 cells**, and the number under the map was
+  walking every one of them in JavaScript: **62.4 ms of counting plus 17.7 ms of
+  readback**. The drawing itself is **0.1 ms** — the dots are a shader and always were.
+  So every time the map came to rest it paid seventy milliseconds for a statistic.
+- **It samples 120,000 cells now and multiplies back up.** Checked against a full count
+  of the same frame: **40,686 estimated against 39,435 true, 3.2% high**, coverage 0.38%
+  against 0.37%. Worst frame over four pans at tilt 78°, zoom 13.74: **30.2 ms, down from
+  53.8 ms.** What is left is MapLibre drawing tiles at that tilt, not DotWorld.
+
+### Measured, and worth saying plainly
+
+- **Colour costs nothing in time.** Whole lattice with all 43 on: **60.2 ms**. With none
+  on: **58.9 ms**. It is the same frame. Fewer colours means fewer lit subpixels, which
+  is real power on an OLED, but it is not speed.
+- **Dot scale is what costs.** Same view, same everything else: 0.65 → 43,941 cells,
+  3.3 ms. 0.3 → 206,010 cells, 5.9 ms. 0.1 → 1,853,109 cells, 34.7 ms. 0.05, 0.03 and
+  0.01 all → 3,904,608 cells, about 73 ms. **Below 0.05 the lattice is already finer
+  than a pixel, so 0.01 buys nothing 0.05 does not already give** — it costs the same and
+  looks the same.
+
+---
+
 ## 2026-09-15 — The grey slab over the sea by Italy
 
 Daniel sent a picture of the Ligurian Sea with a big dull quadrilateral across it and
