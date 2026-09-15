@@ -1277,6 +1277,7 @@ let CAPITALS = [];
 let CAPMON = [];
 let showCapMon = true;
 let picked = null;       // the country chosen in the picker, declared here for the same reason
+let nameFX = null, nameRAF = 0;   // the country-name reveal, same reason; see showCountryName
 let dirty = true;
 
 /* Dot pitch is a function of zoom, and it is the whole LOD story:
@@ -1483,6 +1484,7 @@ function halftone() {
 
   lctx.clearRect(0, 0, labels.width, labels.height);
   if (showCapitals || showCapMon || picked) drawCapitals();
+  drawCountryName();
   recordFrame(performance.now() - t0);
 }
 
@@ -2094,7 +2096,169 @@ function fadeTrace() {
   traceRAF = requestAnimationFrame(step);
 }
 
-function traceCountry(cc) {
+/* The country's name written across the middle of it when you pick one, decoded
+   letter by letter out of a scramble, held, then gone in a flash. It rides on the
+   label canvas, so it stays put over the country while the map moves under it.
+
+   The timings add up to 2.9 s, which ends before the border trace does (3.2 s):
+   the name introduces the country, the light finishes drawing it. */
+const NAME_SCRAMBLE = 900;             // letters lock in, left to right
+const NAME_HOLD     = 1700;            // the name simply stands there
+const NAME_FLASH    = 300;             // white, wider, gone
+const NAME_GLYPHS   = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#*+=<>/\\';
+
+/* Whether a point is inside a ring, by the even-odd rule: count the crossings of a
+   ray going east from it. */
+function inRing(x, y, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/* Where to write the name. The centre of the bounding box is no good on anything
+   bent: Azerbaijan's box centre lands in Armenia, and Norway's in Sweden. This is
+   the pole of inaccessibility, crudely - of a grid of points inside the country,
+   the one that is furthest from the border - so the name sits in the widest part
+   of the land it names. The ring is thinned to 600 points first, which costs a
+   little accuracy on a fjord and turns 6 million tests into 350 thousand. */
+function visualCentre(ring) {
+  const stride = Math.ceil(ring.length / 600);
+  const edge = stride > 1 ? ring.filter((_, i) => i % stride === 0) : ring;
+  let w = 180, e = -180, s = 90, n = -90;
+  for (const p of edge) {
+    if (p[0] < w) w = p[0];
+    if (p[0] > e) e = p[0];
+    if (p[1] < s) s = p[1];
+    if (p[1] > n) n = p[1];
+  }
+  const N = 24;
+  let best = null, bestD = -1;
+  for (let i = 0; i < N; i++) {
+    const x = w + (e - w) * (i + 0.5) / N;
+    for (let j = 0; j < N; j++) {
+      const y = s + (n - s) * (j + 0.5) / N;
+      if (!inRing(x, y, edge)) continue;
+      const k = Math.cos(y * RAD);
+      let d = Infinity;
+      for (const p of edge) {
+        const dx = (p[0] - x) * k, dy = p[1] - y;
+        const q = dx * dx + dy * dy;
+        if (q < d) d = q;
+      }
+      if (d > bestD) { bestD = d; best = [x, y]; }
+    }
+  }
+  return { lon: best ? best[0] : (w + e) / 2, lat: best ? best[1] : (s + n) / 2,
+           west: w, east: e };
+}
+
+function stopCountryName() {
+  cancelAnimationFrame(nameRAF); nameRAF = 0;
+  if (nameFX) { nameFX = window.__nameFX = null; dirty = true; }
+}
+
+function showCountryName(name, rings) {
+  stopCountryName();
+  if (!name || !rings.length) return;
+  // The name belongs on the mainland, which is the ring with the most ground under
+  // it - not the one with the most points, which is whichever coast is craggiest.
+  let main = null, bestArea = 0;
+  for (const r of rings) {
+    let w = 180, e = -180, s = 90, n = -90;
+    for (const p of r) {
+      if (p[0] < w) w = p[0];
+      if (p[0] > e) e = p[0];
+      if (p[1] < s) s = p[1];
+      if (p[1] > n) n = p[1];
+    }
+    if (e - w > 180) continue;             // wraps the antimeridian: not a place
+    const area = (e - w) * (n - s) * Math.cos((n + s) / 2 * RAD);
+    if (area > bestArea) { bestArea = area; main = r; }
+  }
+  if (!main) return;
+  const c = visualCentre(main);
+  nameFX = { text: name.toUpperCase(), lon: c.lon, lat: c.lat,
+             west: c.west, east: c.east, t0: performance.now() };
+  // None of this is reachable from outside the module; a window on it is how the
+  // last rendering bug was found in one run instead of three.
+  window.__nameFX = nameFX;
+  if (!nameRAF) nameRAF = requestAnimationFrame(tickName);
+  dirty = true;
+}
+
+// The map is only redrawn when it says it has a new frame, and a country sitting
+// still never does - so the reveal has to ask for its own frames.
+function tickName() {
+  if (!nameFX) { nameRAF = 0; return; }
+  dirty = true;
+  nameRAF = requestAnimationFrame(tickName);
+}
+
+function drawCountryName() {
+  if (!nameFX) return;
+  const fx = nameFX, txt = fx.text, n = txt.length;
+  const t = performance.now() - fx.t0;
+  if (t >= NAME_SCRAMBLE + NAME_HOLD + NAME_FLASH) { nameFX = window.__nameFX = null; return; }
+
+  let p, wx, ex;
+  try {
+    p = map.project([fx.lon, fx.lat]);
+    wx = map.project([fx.west, fx.lat]).x;
+    ex = map.project([fx.east, fx.lat]).x;
+  } catch (e) { return; }
+  const cx = p.x * DPR, cy = p.y * DPR;
+  if (!(cx > -400 && cy > -200 && cx < labels.width + 400 && cy < labels.height + 200)) return;
+
+  // Sized to the country: the name takes about half its width on screen, so it reads
+  // as a label on the land rather than a banner across the window. Never so small it
+  // cannot be read, and capped, or Russia would arrive in letters a hand high.
+  const span = Math.abs(ex - wx) * DPR;
+  const fs = Math.max(12 * DPR, Math.min(34 * DPR, span * 0.5 / (n * 0.78)));
+  lctx.save();
+  lctx.font = fs + 'px "Space Mono", ui-monospace, monospace';
+  lctx.textBaseline = 'middle';
+  lctx.textAlign = 'center';
+  const cw = lctx.measureText('M').width;
+  const adv = cw * 1.24;                          // monospace, with tracking
+
+  const flash = Math.max(0, (t - NAME_SCRAMBLE - NAME_HOLD) / NAME_FLASH);
+  const grow = 1 + flash * 0.16;
+  const alpha = 1 - flash * flash;
+  const x0 = cx - adv * (n - 1) / 2 * grow;
+
+  lctx.shadowColor = 'rgba(0,0,0,.9)';            // legible over the dot field
+  lctx.shadowBlur = 8 * DPR;
+  for (let i = 0; i < n; i++) {
+    const ch = txt[i];
+    if (ch === ' ') continue;
+    const lockAt = NAME_SCRAMBLE * (i + 1) / n;
+    const locked = t >= lockAt;
+    /* Rolling on the frame clock rather than on Math.random keeps every letter in
+       step, so it reads as one machine deciding rather than as static. */
+    const glyph = locked ? ch
+      : NAME_GLYPHS[(Math.floor(t / 55) + i * 7) % NAME_GLYPHS.length];
+    lctx.globalAlpha = alpha * (locked ? 1 : 0.5);
+    lctx.fillStyle = locked || flash > 0 ? '#ffffff' : '#ffeda0';
+    lctx.fillText(glyph, x0 + adv * i * grow, cy);
+  }
+
+  // The flash itself: a ring leaving the name as the name goes.
+  if (flash > 0) {
+    lctx.shadowBlur = 0;
+    lctx.globalAlpha = (1 - flash) * 0.8;
+    lctx.strokeStyle = '#ffffff';
+    lctx.lineWidth = 2 * DPR;
+    lctx.beginPath();
+    lctx.arc(cx, cy, adv * n * 0.5 * (0.7 + flash * 0.9), 0, Math.PI * 2);
+    lctx.stroke();
+  }
+  lctx.restore();
+}
+
+function traceCountry(cc, name) {
   if (!cc) return;
   ensureCountries().then(() => {
     const feat = ((COUNTRY_GEO && COUNTRY_GEO.features) || [])
@@ -2106,6 +2270,7 @@ function traceCountry(cc) {
     if (feat.geometry.type === 'Polygon') outer(feat.geometry.coordinates);
     else feat.geometry.coordinates.forEach(outer);
     rings.sort((a, b) => b.length - a.length);
+    if (name) showCountryName(name, rings);
     src.setData({ type: 'FeatureCollection',
       features: rings.slice(0, TRACE_RINGS).map(r => ({
         type: 'Feature', properties: {},
@@ -2309,7 +2474,7 @@ async function frameCountry(cap) {
     map.flyTo({ center: [cap.lon, cap.lat], zoom: 4.2, duration: 1600 });
   }
   // Trace once the camera has stopped: a light drawn during a flight is a smear.
-  map.once('moveend', () => { if (picked === cap) traceCountry(cap.cc); });
+  map.once('moveend', () => { if (picked === cap) traceCountry(cap.cc, cap.country); });
 }
 
 async function countryPop(cap) {
@@ -2352,8 +2517,9 @@ function pickCountry(cap, frame) {
   if (cap) {
     countryPop(cap);
     if (frame) { stopOrbit(); frameCountry(cap); }   // which traces on arrival
-    else traceCountry(cap.cc);
+    else traceCountry(cap.cc, cap.country);
   } else {
+    stopCountryName();
     cancelAnimationFrame(traceRAF);
     if (map.getLayer('country-trace'))
       map.setLayoutProperty('country-trace', 'visibility', 'none');

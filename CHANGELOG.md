@@ -5,6 +5,45 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — The country says its own name
+
+Daniel: "once i tap the capital and it's zooming in the country add the name of the
+country in the center of the country for a couple of seconds like the matrix movement
+and then disappear with a little flash."
+
+### Added
+
+- **The country's name, decoded across the middle of it.** Pick a country - tap its
+  capital, choose it in the picker, or press WHERE AM I - and once the camera has
+  stopped, the name is written over the land: each letter cycles through a scramble of
+  glyphs and locks into place left to right over 900 ms, holds for 1.7 s, then goes in
+  a 300 ms flash with a ring leaving the middle of the word. 2.9 s in all, which ends
+  before the border trace does at 3.2 s - the name introduces the country, the light
+  finishes drawing it. Locked letters are white, unlocked ones the same amber as the
+  border light, `#ffeda0`.
+- **It is placed where the country is widest, not at the centre of its box.** A
+  bounding-box centre lands outside anything bent: Azerbaijan's falls in Armenia and
+  Norway's in Sweden. This is the pole of inaccessibility, crudely - of a 24 x 24 grid
+  of points inside the mainland ring, the one furthest from the border. The ring is
+  thinned to 600 points first, which turns about 6 million distance tests into 350
+  thousand and costs a little accuracy on a fjord. Measured placements: Azerbaijan
+  47.13 E 40.37 N, Russia 106.86 E 61.68 N (central Siberia), Mongolia 104.49 E
+  46.20 N.
+- **Sized to the country it names.** The name takes about half the country's width on
+  screen, clamped to 12-34 CSS px, so it reads as a label on the land rather than a
+  banner across the window, and Russia does not arrive in letters a hand high.
+
+### Measured
+
+- Median frame during the reveal: **0.4 ms**, max 0.7 ms over 40 frames - it is text on
+  the label canvas, which was already being cleared and redrawn every frame.
+- The border trace still runs underneath it: lit area 13.1% while the light is on the
+  border, 12.5% once it has faded.
+- `window.__nameFX` carries the text, its position and its start time while the reveal
+  is on screen, and is null the rest of the time.
+
+---
+
 ## 2026-09-14 — The black when you zoom in: three faults, one symptom
 
 Daniel: "there is a black matter coming when zooming in." Three separate things

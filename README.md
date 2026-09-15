@@ -141,7 +141,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | `ALL DATA` | Everything the map can show, in one switch |
 | `CAPITAL NAMES` | The 195 capitals with their populations |
 | `CAPITAL MONUMENTS` | The best-known places of every capital, in cyan; the top one from the world view, all three and their names as you zoom in |
-| `FIND A COUNTRY` | Any of the 195, by name or by typing a few letters: the map frames it, a light runs round its border, and the panel reads out its capital and its population |
+| `FIND A COUNTRY` | Any of the 195, by name or by typing a few letters: the map frames it, its name is decoded across the middle of it and gone in a flash, a light runs round its border, and the panel reads out its capital and its population |
 | Click a capital | Same thing, straight from the map |
 | `DATA COLOUR` | Show or hide the data layers and their colours |
 | `ILLUMINATE MY COUNTRY` | Light up the border of the country you are in |
