@@ -5,6 +5,25 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — LOADING TILES… over a map that had already loaded
+
+Daniel sent a screenshot of the boot line sitting there. It was telling the truth about
+the wrong thing.
+
+### Fixed
+
+- **The line waited for `idle`, which means every tile in the viewport has arrived.**
+  One slow tile out of forty and it sat there over a map that was already drawn. It goes
+  on `load` now - the style ready and the first frame rendered, which is when there is
+  something to look at - and `idle` is kept as a second chance.
+- **And it now says what it is waiting for.** After 10 seconds: STILL WAITING FOR
+  OPENFREEMAP. After 25: that OpenFreeMap is a free service, is sometimes down, and to
+  try again in a minute. Staring at LOADING TILES with no idea whether it is your
+  connection, the app, or the tile server is the worst of the three. Capped at
+  `min(88vw, 560px)` so the longer line wraps on a phone instead of running off it.
+
+---
+
 ## 2026-09-15 — And it goes about its business
 
 Daniel: "so he can move a bit like slow but just between the buildings, just in the area

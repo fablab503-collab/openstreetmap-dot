@@ -1156,10 +1156,31 @@ map.on('error', e => {
   if (/404/.test(m) && /\.pbf/.test(m)) return;
   fail('Map error', m);
 });
-map.once('idle', () => {
+/* LOADING TILES… used to wait for `idle`, which means every tile in the viewport has
+   arrived. One slow tile out of forty and the line sat there over a map that was
+   already drawn and usable - Daniel watched it say LOADING TILES on a working screen.
+   It goes on `load` now, which is the style ready and the first frame drawn, and there
+   is a clock on it: if it is still up after ten seconds the line says what it is
+   actually waiting for instead of repeating itself. */
+(function bootLine() {
   const b = document.getElementById('boot');
-  if (b) b.style.display = 'none';
-});
+  if (!b) return;
+  const done = () => { b.style.display = 'none'; };
+  map.once('load', done);
+  map.once('idle', done);
+  setTimeout(() => {
+    if (b.style.display === 'none') return;
+    b.textContent = 'STILL WAITING FOR OPENFREEMAP…';
+  }, 10000);
+  setTimeout(() => {
+    if (b.style.display === 'none') return;
+    b.innerHTML = 'OPENFREEMAP IS NOT ANSWERING.<br>THE TILES ARE A FREE SERVICE '
+                + 'AND IT IS SOMETIMES DOWN — TRY AGAIN IN A MINUTE.';
+    b.style.textAlign = 'center';
+    b.style.lineHeight = '1.8';
+    b.style.maxWidth = 'min(88vw, 560px)';   // 560 px of it does not fit a phone
+  }, 25000);
+})();
 
 /* Two canvases sit over the map. #dots is the lattice; #labels holds text,
    which has to go ON the dot field because letterforms cannot survive it. */
