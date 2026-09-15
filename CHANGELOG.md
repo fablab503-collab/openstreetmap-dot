@@ -5,6 +5,42 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — W A S D, and space to jump
+
+Daniel: "add some command to make it move through the maps using W for forward S back A
+for left and D for right on the keyboard. add the functionality to move it through the
+map but don't make it pass through the 3D objects like buildings and stuff. use space to
+make it jump in the case."
+
+### Added
+
+- **W A S D walks it, at 135 screen pixels a second.** Across the screen, not across the
+  compass: W is away from you whichever way the map is turned, which is the only version
+  that stays predictable once you have rotated the map. A diagonal is not faster than a
+  straight. It faces the way it is being pushed, and keeps facing that way when you let
+  go rather than snapping back.
+- **It does not walk through buildings.** The wall test asks the map itself -
+  `queryRenderedFeatures` on whichever of the flat `building` layer and the extruded
+  `building-3d` is switched on, since a hidden layer is not rendered and cannot answer.
+  Blocked head-on it tries each axis on its own before giving up, so it slides along a
+  wall instead of sticking to it. Measured: **0 metres** in 0.9 s of pushing into one.
+- **Space jumps, and in the air it goes over the roof.** 210 px/s up against 560 px/s²
+  down, which is 39 px high and about three quarters of a second; measured peak 39.8 px,
+  back down to 0. Pushing into the same wall while airborne: **20.9 m in 0.5 s**.
+- **The map comes along.** Within 90 px of an edge it pans by the overshoot, so it
+  cannot be walked off the screen.
+- **W with nothing dropped starts it in the middle of the view**, or the keys would do
+  nothing at all and look broken. And they do nothing while you are typing in the search
+  box - measured, 0 metres with W and D held in the field.
+
+### Found by driving it
+
+- **A search lands on a building more often than not** - a named place usually IS a
+  building - so the first version put it inside one and it could never leave: 0 metres
+  in any direction, forever. A wall only stops something that is not already in it.
+
+---
+
 ## 2026-09-15 — Out: the wandering
 
 Daniel, on seeing it drive off: "the model should be static and not move."

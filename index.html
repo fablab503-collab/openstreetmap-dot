@@ -593,6 +593,7 @@
   <label>MIN POPULATION <span id="l-minpop">15 K</span></label>
   <input id="s-minpop" type="range" min="0" max="100" step="1" value="0">
   <label>WHO FLOATS OVER A PLACE YOU FIND</label>
+  <span class="note" id="s-marker-note">W A S D to walk it · SPACE to jump · it will not walk through a building</span>
   <select id="s-marker" aria-label="What floats over a place you search for">
     <option value="ghost" selected>GHOST</option>
     <option value="person">PERSON</option>
@@ -1313,6 +1314,7 @@ let picked = null;       // the country chosen in the picker, declared here for 
 let nameFX = null, cityFX = null, fxRAF = 0;   // the reveal, same reason; see showCountryName
 const labelBoxes = [];   // what drawCapitals put on the label canvas this frame
 let markerAt = null, markerKind = 'ghost', markerRAF = 0, markerT0 = 0, markerBuilt = null;
+let markerHead = null, jumpY = 0;   // read while drawing, so declared up here with the rest
 let dirty = true;
 
 /* Dot pitch is a function of zoom, and it is the whole LOD story:
@@ -2546,6 +2548,10 @@ window.__marker = {
   get kind() { return markerKind; },
   faces: 0,
   size(px) { MARK_PX = px; paintLabels(); return px; },
+  get keys() { return [...keysDown]; },
+  get jump() { return +jumpY.toFixed(1); },
+  get head() { return markerHead == null ? null : +markerHead.toFixed(1); },
+  blocked: false,          // was the last step refused by a building
 };
 
 function markerModel() {
@@ -2555,11 +2561,9 @@ function markerModel() {
   return markerBuilt.parts;
 }
 
-/* It stays where it was put. An earlier version sent it off along the streets - a car
-   down the road, a person along the footpath - and Daniel asked for it back: the point
-   of it is to mark the place, and a marker that wanders off is no longer marking
-   anything. All that is left of the motion is the breathing, which is what was asked
-   for in the first place. */
+/* It stays where it was put - it went wandering on its own once and Daniel asked for
+   that back, because a marker that wanders off is no longer marking anything. It moves
+   when you move it: W A S D across the screen, space to jump. */
 function dropMarker(lon, lat) {
   markerAt = { lon, lat };
   markerT0 = performance.now();
@@ -2567,11 +2571,111 @@ function dropMarker(lon, lat) {
   paintLabels();
 }
 
+/* ── driving it ─────────────────────────────────────────────────────────────────
+   The keys move it across the screen, not across the compass: W is away from you
+   whichever way the map is turned, which is the only version that stays predictable
+   once you have rotated the map. Screen pixels a second, so it handles the same at
+   street zoom and at country zoom - it is a puppet, not a vehicle with a speedometer. */
+const KEY_SPEED = 135;      // CSS px a second
+const JUMP_V    = 210;      // px a second, upwards
+const GRAVITY   = 560;      // px a second, a second
+const EDGE_PAD  = 90;       // how close to the edge before the map follows it
+const keysDown = new Set();
+let jumpV = 0, markerLast = 0;
+
+/* Buildings, asked of the map itself. Whichever of the flat layer and the extruded one
+   is switched on is the one that answers, because a hidden layer is not rendered and
+   `queryRenderedFeatures` only knows about what is. */
+function blockedAt(x, y) {
+  const layers = ['building-3d', 'building'].filter(id => map.getLayer(id));
+  if (!layers.length) return false;
+  try { return map.queryRenderedFeatures([x, y], { layers }).length > 0; }
+  catch (e) { return false; }
+}
+
+function driveMarker(now) {
+  if (!markerAt || markerKind === 'none') { markerLast = 0; return; }
+  const dt = markerLast ? Math.min(0.06, (now - markerLast) / 1000) : 0;
+  markerLast = now;
+  if (!dt) return;
+
+  if (jumpV || jumpY) {                       // up, then down, and no further
+    jumpY += jumpV * dt;
+    jumpV -= GRAVITY * dt;
+    if (jumpY <= 0) { jumpY = 0; jumpV = 0; }
+  }
+
+  let dx = 0, dy = 0;
+  if (keysDown.has('w')) dy -= 1;
+  if (keysDown.has('s')) dy += 1;
+  if (keysDown.has('a')) dx -= 1;
+  if (keysDown.has('d')) dx += 1;
+  if (!dx && !dy) return;
+  const len = Math.hypot(dx, dy);             // a diagonal is not faster than a straight
+  dx /= len; dy /= len;
+
+  let p;
+  try { p = map.project([markerAt.lon, markerAt.lat]); } catch (e) { return; }
+  const step = KEY_SPEED * dt;
+  let nx = p.x + dx * step, ny = p.y + dy * step;
+
+  /* Walls, unless it is over them. Blocked head-on, it tries each axis on its own
+     before giving up, which is what makes it slide along a wall instead of sticking to
+     it - and in the air it goes over the roof, which is what the jump is for. */
+  /* A search lands on a building more often than not - a named place usually IS a
+     building - so the first version put it inside one and it could never leave. A wall
+     only stops something that is not already in it. */
+  window.__marker.blocked = false;
+  if (!jumpY && !blockedAt(p.x, p.y) && blockedAt(nx, ny)) {
+    window.__marker.blocked = true;
+    if (!blockedAt(nx, p.y)) ny = p.y;
+    else if (!blockedAt(p.x, ny)) nx = p.x;
+    else { nx = p.x; ny = p.y; }
+  }
+  if (nx === p.x && ny === p.y) return;
+
+  const ll = map.unproject([nx, ny]);
+  markerAt.lon = ll.lng; markerAt.lat = ll.lat;
+  // Facing the way it is being pushed. Screen angle clockwise from up, put back on the
+  // compass by the map's own bearing; the yaw the model wants is the difference again.
+  markerHead = (map.getBearing() + Math.atan2(nx - p.x, p.y - ny) / RAD + 360) % 360;
+
+  // The map comes along rather than letting it walk off the edge.
+  const W = labels.width / DPR, H = labels.height / DPR;
+  const ox = nx < EDGE_PAD ? nx - EDGE_PAD : Math.max(0, nx - (W - EDGE_PAD));
+  const oy = ny < EDGE_PAD ? ny - EDGE_PAD : Math.max(0, ny - (H - EDGE_PAD));
+  if (ox || oy) map.panBy([ox, oy], { duration: 0 });
+}
+
+const typing = () => {
+  const el = document.activeElement;
+  return el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+};
+addEventListener('keydown', e => {
+  if (typing() || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === ' ' || e.code === 'Space') {
+    if (!markerAt || markerKind === 'none') return;
+    e.preventDefault();                       // or the page scrolls and buttons fire
+    if (!jumpY && !jumpV) jumpV = JUMP_V;
+    return;
+  }
+  if (!'wasd'.includes(k)) return;
+  e.preventDefault();
+  // Nothing dropped yet: start it in the middle of what you are looking at, or the
+  // keys would do nothing at all and look broken.
+  if (!markerAt) { const c = map.getCenter(); dropMarker(c.lng, c.lat); }
+  keysDown.add(k);
+});
+addEventListener('keyup', e => keysDown.delete(e.key.toLowerCase()));
+addEventListener('blur', () => keysDown.clear());
+
 /* Its own frames, and only this canvas: the lattice underneath has not changed,
    so putting the whole of halftone() through the GPU to move a ghost 3 px would be
    paying map prices for a puppet. */
 function tickMarker() {
-  if (!markerAt || markerKind === 'none') { markerRAF = 0; return; }
+  if (!markerAt || markerKind === 'none') { markerRAF = 0; markerLast = 0; return; }
+  driveMarker(performance.now());
   paintLabels();
   markerRAF = requestAnimationFrame(tickMarker);
 }
@@ -2587,12 +2691,13 @@ function drawMarker() {
   const t = (performance.now() - markerT0) / 1000;
   const S2 = S * (MARK_SCALE[markerKind] || 1);
   const bob = Math.sin(t * 2.2) * MARK_BOB * DPR;
-  const hy = gy - lift - bob;                    // where the feet hang
-  /* One fixed angle, turning only with the map so that it stays part of the world.
-     There was a slow sway here too; it went with the walking, because a thing asked to
-     hold still should hold still. */
+  const hy = gy - lift - bob - jumpY * DPR;      // where the feet hang, jump included
+  /* Standing still it holds one angle, turning only with the map so that it stays part
+     of the world. Driven, it faces the way it is being pushed, and keeps facing that way
+     once you let go rather than snapping back. */
+  const B = map.getBearing();
   const turn = MARK_TURN[markerKind] == null ? MARK_YAW : MARK_TURN[markerKind];
-  const yaw = turn - map.getBearing() * RAD;
+  const yaw = markerHead == null ? turn - B * RAD : (B - markerHead) * RAD;
   const ca = Math.cos(yaw), sa = Math.sin(yaw);
   const ce = Math.cos(MARK_ELEV), se = Math.sin(MARK_ELEV);
 
