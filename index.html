@@ -283,7 +283,13 @@
      whole point of the rule - a button does not inherit the page's type on its own, and
      the ones added later were coming out in the browser's own face, twice the size and
      nothing like the rest. Their colour is the amber the map uses for a live thing. */
-  .panel button:not(.min-dot), #topics button, #n-cats button { font:inherit; }
+  /* Selects do not inherit the page's type any more than buttons do. The WHO FLOATS
+     picker was the last control still in the browser's own face. */
+  .panel button:not(.min-dot), #topics button, #n-cats button,
+  .panel select, .panel input[type=range] { font:inherit; }
+  .panel select { width:100%; margin-top:4px; padding:5px 6px; background:#000;
+    color:#c98500; border:1px solid #2a2a2a; letter-spacing:.08em; }
+  .panel select:hover { border-color:#ffb000; color:#ffb000; }
   .panel button:not(.min-dot) { width:100%; margin-top:9px; padding:7px; cursor:pointer;
     background:#000; color:#c98500; border:1px solid #2a2a2a;
     letter-spacing:.08em; text-transform:uppercase; }
@@ -455,9 +461,9 @@
   <label>DOT SCALE <span id="l-scale">0.65</span></label>
   <input id="s-scale" type="range" min="0.01" max="2" step="0.01" value="0.65">
   <label>GAIN <span id="l-gain">2.05</span></label>
-  <input id="s-gain" type="range" min="0.4" max="2.2" step="0.05" value="2.05">
+  <input id="s-gain" type="range" min="0.01" max="2.2" step="0.01" value="2.05">
   <label>CUTOFF <span id="l-cut">0.03</span></label>
-  <input id="s-cut" type="range" min="0" max="0.4" step="0.01" value="0.03">
+  <input id="s-cut" type="range" min="0" max="1" step="0.01" value="0.03">
   <label>TILT <span id="l-tilt">0</span>°</label>
   <input id="s-tilt" type="range" min="0" max="85" step="1" value="0">
   <label>BEARING <span id="l-bear">0</span>°</label>
@@ -496,10 +502,13 @@
   <button id="b-locate">ILLUMINATE MY COUNTRY</button>
   <button id="b-globe" aria-pressed="true">WORLD: ROUND</button>
   <button id="b-world" aria-pressed="false">WHOLE EARTH</button>
-  <button id="b-3d" aria-pressed="false">3D DOT VIEW</button>
-  <button id="b-orbit" aria-pressed="false">ORBIT</button>
+  <label>BUILDINGS <span id="l-3d">FLAT</span></label>
+  <input id="s-3d" type="range" min="0" max="100" step="1" value="0">
+  <label>ORBIT <span id="l-orbit">STILL</span></label>
+  <input id="s-orbit" type="range" min="0" max="100" step="1" value="0">
   <button id="b-north" aria-pressed="false">RESET NORTH</button>
-  <button id="b-sun" aria-pressed="true">SUNLIGHT</button>
+  <label>SUNLIGHT <span id="l-sunlit">FULL</span></label>
+  <input id="s-sunlit" type="range" min="0" max="100" step="1" value="100">
   <button id="b-space" aria-pressed="false">LEAVE EARTH</button>
   <div class="space-only" id="sp-params">
     <div class="prow"><span>look at</span>
@@ -1742,9 +1751,47 @@ function halftone() {
    function because some of it moves while the map does not: a marker bobbing on the
    spot needs this canvas again every frame, and nothing else - calling the whole of
    halftone() would put the GPU through a lattice that has not changed. */
+/* ── the bare world ─────────────────────────────────────────────────────────────
+   With EVERYTHING at nothing and the lattice turned right down, the screen went black,
+   which is not a view of anything. Daniel asked for the round shape of the world and
+   nothing else, so that is what zero draws: the edge of the globe, traced by projecting a
+   ring of points a quarter turn away from wherever you are looking, and nothing inside
+   it. On the flat map there is no horizon to trace, so it draws the world's own frame. */
+function drawBareShape() {
+  if (everything > 0) return;
+  const proj = map.getProjection && map.getProjection();
+  lctx.save();
+  lctx.strokeStyle = '#4a4a4a';
+  lctx.lineWidth = 1.2 * DPR;
+  lctx.globalAlpha = 0.85;
+  lctx.beginPath();
+  if (proj && proj.type === 'globe') {
+    const c = map.getCenter();
+    let started = false;
+    for (let b = 0; b <= 360; b += 4) {
+      // a point 89 degrees away is as near the horizon as the projection stays honest
+      const d = 89 * RAD, br = b * RAD, la = c.lat * RAD, lo = c.lng * RAD;
+      const lat = Math.asin(Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(br));
+      const lon = lo + Math.atan2(Math.sin(br) * Math.sin(d) * Math.cos(la),
+                                  Math.cos(d) - Math.sin(la) * Math.sin(lat));
+      let p;
+      try { p = map.project([lon / RAD, lat / RAD]); } catch (e) { continue; }
+      const x = p.x * DPR, y = p.y * DPR;
+      if (!started) { lctx.moveTo(x, y); started = true; } else lctx.lineTo(x, y);
+    }
+    lctx.closePath();
+  } else {
+    const w = labels.width, h = labels.height, m = 8 * DPR;
+    lctx.rect(m, m, w - m * 2, h - m * 2);
+  }
+  lctx.stroke();
+  lctx.restore();
+}
+
 function paintLabels() {
   lctx.clearRect(0, 0, labels.width, labels.height);
   labelBoxes.length = 0;
+  drawBareShape();
   if (showCapitals || showCapMon || picked) drawCapitals();
   drawCountryName();
   drawCityNames();
@@ -1830,56 +1877,46 @@ bind('s-scale', 'l-scale', v => scale = v);
 bind('s-gain',  'l-gain',  v => gain = v);
 bind('s-cut',   'l-cut',   v => cutoff = v);
 
-const b3d = document.getElementById('b-3d');
-b3d.addEventListener('click', () => {
-  const on = b3d.getAttribute('aria-pressed') !== 'true';
-  b3d.setAttribute('aria-pressed', on);
-  map.setLayoutProperty('building-3d', 'visibility', on ? 'visible' : 'none');
-  /* The flat footprint is not hidden in 3D, only made invisible. A hidden layer is not
-     rendered and cannot be asked anything, and the footprint is the only honest answer
-     to "is there a wall here" - an extrusion's drawn shape covers the ground behind it
-     as well as the ground under it. */
-  map.setLayoutProperty('building', 'visibility', 'visible');
-  map.setPaintProperty('building', 'fill-opacity', on ? 0 : 1);
-  monumentVisibility();          // flat outline or cyan volume, to match
+/* Buildings, by how tall rather than on or off. Zero is the flat map; anything above it
+   raises them, and the level is how high they stand, so a city can be hinted at rather
+   than only shown in full relief. */
+const s3d = document.getElementById('s-3d');
+let buildingLevel = 0;
+function applyBuildings() {
+  const on = buildingLevel > 0;
+  if (map.getLayer('building-3d')) {
+    map.setLayoutProperty('building-3d', 'visibility', on ? 'visible' : 'none');
+    map.setPaintProperty('building-3d', 'fill-extrusion-height',
+      ['*', ['coalesce', ['get', 'render_height'], 5], buildingLevel]);
+  }
+  if (map.getLayer('building')) {
+    map.setLayoutProperty('building', 'visibility', 'visible');
+    map.setPaintProperty('building', 'fill-opacity', on ? 0 : 1);
+  }
+  monumentVisibility();
   if (!on) stopOrbit();
   map.easeTo({ pitch: on ? 60 : 0, bearing: on ? -22 : 0, duration: 900 });
-});
+}
 
 /* Turning the camera round the scene, Google-Earth style. Bearing is stepped
    per frame rather than eased, so it never fights a user drag: grabbing the
    map mid-orbit just takes over. */
-const bOrbit = document.getElementById('b-orbit');
 function stopOrbit() {
   if (orbitRAF) cancelAnimationFrame(orbitRAF);
   orbitRAF = null;
-  bOrbit.setAttribute('aria-pressed', 'false');
+  const bar = document.getElementById('s-orbit');
+  if (bar && +bar.value) { bar.value = 0; document.getElementById('l-orbit').textContent = 'STILL'; }
 }
 function startOrbit() {
   if (orbitRAF) return;
-  bOrbit.setAttribute('aria-pressed', 'true');
   // 0.12 deg/frame ~= a full turn per minute at 60fps: slow enough to read.
   const step = () => {
-    map.setBearing((map.getBearing() + 0.12) % 360);
+    map.setBearing((map.getBearing() + (orbitSpeed || 0.12)) % 360);
     orbitRAF = requestAnimationFrame(step);
   };
   orbitRAF = requestAnimationFrame(step);
 }
-bOrbit.addEventListener('click', () => {
-  if (orbitRAF) { stopOrbit(); return; }
-  // Orbiting a flat plan reads as nothing moving, so make sure we are tilted
-  // first — and wait for that camera move to finish, or the ease and the
-  // per-frame setBearing fight each other.
-  if (b3d.getAttribute('aria-pressed') !== 'true') {
-    b3d.click();
-    map.once('moveend', startOrbit);
-  } else if (map.getPitch() < 15) {
-    map.easeTo({ pitch: 60, duration: 600 });
-    map.once('moveend', startOrbit);
-  } else {
-    startOrbit();
-  }
-});
+
 
 /* A user drag should take over from the orbit. Only a real gesture carries
    originalEvent — without that check our own easeTo fires rotatestart and
@@ -3139,6 +3176,7 @@ sZoom.addEventListener('keydown', e => e.stopPropagation());
    EVERYTHING is the master. It does not replace the others; it scales them, so you can
    pull one setting back without losing where the rest were set. */
 let capNameMax = 55, capMonMax = 3, dataLevel = 1, everything = 1;
+let orbitSpeed = 0;
 
 function applyLevels() {
   const caps = Math.round(capNameMax * everything);
@@ -3185,6 +3223,12 @@ levelBar('s-data', 'l-data', v => v === 0 ? 'OFF' : v === 100 ? 'FULL' : v + '%'
   v => { dataLevel = v / 100; applyLevels(); });
 levelBar('s-newsn', 'l-newsn', v => v === 0 ? 'NONE' : v >= 30 ? 'ALL' : String(v),
   v => { newsMax = v; newsHud(); dirty = true; });
+levelBar('s-3d', 'l-3d', v => v === 0 ? 'FLAT' : v === 100 ? 'FULL HEIGHT' : v + '%',
+  v => { buildingLevel = v / 100; applyBuildings(); });
+levelBar('s-orbit', 'l-orbit', v => v === 0 ? 'STILL' : (v * 0.0024).toFixed(3) + '°/FRAME',
+  v => { orbitSpeed = v * 0.0024; if (v > 0) startOrbit(); else stopOrbit(); });
+levelBar('s-sunlit', 'l-sunlit', v => v === 0 ? 'FLAT' : v === 100 ? 'FULL' : v + '%',
+  v => { sunStrength = v / 100; applySun(); });
 
 /* One switch for the capitals' monuments: the cyan marks and their names. */
 
@@ -4620,7 +4664,7 @@ map.once('load', shapesIfClose);
 /* Three switches decide these layers: the monuments toggle, the data-colour
    toggle, and whether the map is in 3D - flat outline or cyan volume, never both. */
 function monumentVisibility() {
-  const threeD = b3d.getAttribute('aria-pressed') === 'true';
+  const threeD = buildingLevel > 0;
   const on = showCapMon && dataColour && !historicalEra;
   const set = (id, v) => {
     if (map.getLayer(id))
@@ -5422,25 +5466,22 @@ PALETTE.forEach(([name, hex], i) => {
 /* Sunlight. Direction drives fill-extrusion shading, so a lit face of a
    building becomes larger dots and a shaded face smaller ones — the relief
    comes through the lattice rather than being painted over it. */
-const bSun = document.getElementById('b-sun');
+/* Sunlight as a strength. At zero the light comes straight down and nothing casts a
+   side, which is the flat map; turn it up and the buildings get a lit face and a shadow. */
 const sSun = document.getElementById('s-sun');
+let sunStrength = 1;
 function applySun() {
-  const on = bSun.getAttribute('aria-pressed') === 'true';
   const az = +sSun.value;
   map.setLight({
     anchor: 'map',
-    position: [1.4, az, on ? 38 : 90],   // polar 90 = straight down = flat
+    position: [1.4, az, 90 - 52 * sunStrength],   // polar 90 = straight down = flat
     color: '#ffffff',
-    intensity: on ? 0.6 : 0.15
+    intensity: 0.15 + 0.45 * sunStrength,
   });
   dirty = true;
 }
 sSun.addEventListener('input', () => {
   document.getElementById('l-sun').textContent = sSun.value;
-  applySun();
-});
-bSun.addEventListener('click', () => {
-  bSun.setAttribute('aria-pressed', bSun.getAttribute('aria-pressed') !== 'true');
   applySun();
 });
 map.once('load', applySun);
