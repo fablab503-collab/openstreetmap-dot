@@ -129,8 +129,10 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | Control | Effect |
 | --- | --- |
 | The `DOTWORLD` wordmark | Flies back out to the whole globe, turning, with the day's news on it |
+| The panel list (left) | Thirteen rows, one per panel, each 17 px tall. Click a row and it opens; every other one folds, so only ever one is open and the whole list fits on a laptop screen. The red dot on the right of a panel folds it again. A folded row is half transparent — the map runs under it |
+| The `?` beside a red dot | Shows that panel's prose. It is hidden until you ask: 2,015 px of it across six panels, 409 of them in `SETTINGS` alone |
 | `WHERE AM I` (bottom centre) | Marks where you are, rounded to about a kilometre, and flies there |
-| `WHERE YOU ARE` (right column) | The same thing with its numbers showing — latitude, longitude, how close it is and the place name — plus `KEEP UP WITH ME` to follow you while you move, and `FORGET IT` to clear it. Nothing is asked for until you press a button, and the position is rounded to two decimal places before anything is done with it, the name lookup included |
+| `WHERE YOU ARE` (left column) | The same thing with its numbers showing — latitude, longitude, how close it is and the place name — plus `KEEP UP WITH ME` to follow you while you move, and `FORGET IT` to clear it. Nothing is asked for until you press a button, and the position is rounded to two decimal places before anything is done with it, the name lookup included |
 | The story line | The headline of whichever year the bar is on, with month and day. Click it for everything from the Big Bang to that year | Wikidata + linked articles |
 | `YEAR` bar (bottom centre) | Take the map back to 1500 or forward to 2050. Cities are scaled by their own country's trajectory, and below 1995 the borders are the ones of that era |
 | `COLOURS` | How many colours the map may use. **It starts at none** — one colour, the dot colour, and nothing else. Each step up hands a group its own hues: water, population, monuments, land, built land, transport, to 43 at the top. Fewer colours means fewer lit subpixels, so it costs less power — it does not cost less time, the frame is the same either way (measured 60.2 ms against 58.9 ms for the whole lattice) |

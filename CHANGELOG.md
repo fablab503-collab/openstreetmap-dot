@@ -5,6 +5,58 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — A test of every menu, and four things it found
+
+Daniel: "do a test now on all the menus to maximise the compactness, opacity, functions,
+and text info added extra but not in menu settings. Check also the WHERE I AM."
+
+Every panel, every button, every row measured off the live page.
+
+### Fixed
+
+- **Eleven buttons did nothing.** The topic strip called `scrollIntoView` and no more.
+  With every panel folded the column is 613 px inside a 688 px box, so there was nothing
+  to scroll — and if the panel was folded, scrolling to it showed a 26 px strip with its
+  name on it. Clicked all eleven: **nothing changed, nothing scrolled, on every one.**
+  `SETTINGS` and `WHERE YOU ARE` had no button at all.
+- **87 rows and headings across nine panels ran together into a paragraph.** Only VIEW,
+  LIVE and the COLOURS heading ever had `display:block`. `WHERE YOU ARE` read as *"WHERE
+  YOU ARE LATITUDE — LONGITUDE — TO ABOUT — PLACE —"* over three wrapped lines instead of
+  four rows with their values on the right. Every panel's rows are blocks now, values
+  right-aligned like VIEW's always were. Re-checked: **0 inline, 0 overflowing.**
+- **`1 KM, ROUNDED (DEVICE SAID 42 M)` wrapped onto a second line every time.** It is
+  `1 KM · DEVICE 42 M` now — one line, same two facts.
+
+### Changed
+
+- **The panel list is the navigation.** The strip of topic buttons is gone; it was 139 px
+  naming the same thirteen panels the folded rows below already named. Click a row and it
+  opens, and every other one folds — only one panel is ever open. **13 of 13 rows open
+  alone; the red dot folds each one back.**
+- **A folded panel is 17 px, was 26,** and the gap between them 4 px, was 7.
+- **A folded panel is half transparent** — `rgba(0,0,0,.5)` against the open panels' .86.
+  It is a label, not a panel; the map runs under it.
+- **The whole folded column is 335 px, was 613.** On a 712 px screen it did not fit
+  before — 150 px of header plus 613 of rows — and now there is room for a panel as well.
+- **The prose sits behind a `?`**, one per panel that has any, next to the red dot.
+  Hidden by default: `SETTINGS` **1150 px instead of 1559**, `NEWS` 1351 instead of 2076,
+  `GAME` 202 instead of 633, `LIVE` 296 instead of 418, `WEATHER` and `WHERE YOU ARE` 129
+  and 179 instead of 293 and 343. **2,015 px of explanation, kept, out of the way.**
+
+### Checked and working
+
+- **WHERE YOU ARE, end to end** with a stubbed position of 43.6119, 3.8772 ± 42 m:
+  `FIND ME` gave **43.61°, 3.88°, 1 KM · DEVICE 42 M, MONTPELLIER, FRANCE** and flew the
+  map to 43.61/3.88 at zoom 10.5. `KEEP UP WITH ME` presses and releases and clears its
+  watch once. `FORGET IT` puts all four fields back to —. The rounding holds: the name
+  lookup is sent the two-decimal position, not the device's.
+- **37 panel buttons clicked, 34 changed something.** The three that did not were already
+  in the state they set — `RESET NORTH` facing north, `EVERYTHING` with everything on.
+- The big minimise still takes the column **206 px → 47 × 59** and back. `HIDE PANELS`
+  still slides it away to opacity 0 and back. **No JavaScript errors in any of it.**
+
+---
+
 ## 2026-09-15 — A grey map to start with, and the stall that was not the colours
 
 Daniel: "take out all the colours and add the level bar to add them if I need to. If I
