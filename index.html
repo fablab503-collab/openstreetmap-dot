@@ -1277,7 +1277,8 @@ let CAPITALS = [];
 let CAPMON = [];
 let showCapMon = true;
 let picked = null;       // the country chosen in the picker, declared here for the same reason
-let nameFX = null, nameRAF = 0;   // the country-name reveal, same reason; see showCountryName
+let nameFX = null, cityFX = null, fxRAF = 0;   // the reveal, same reason; see showCountryName
+const labelBoxes = [];   // what drawCapitals put on the label canvas this frame
 let dirty = true;
 
 /* Dot pitch is a function of zoom, and it is the whole LOD story:
@@ -1483,8 +1484,10 @@ function halftone() {
   }
 
   lctx.clearRect(0, 0, labels.width, labels.height);
+  labelBoxes.length = 0;
   if (showCapitals || showCapMon || picked) drawCapitals();
   drawCountryName();
+  drawCityNames();
   recordFrame(performance.now() - t0);
 }
 
@@ -1779,7 +1782,7 @@ function drawCapitals() {
   const proj = map.getProjection && map.getProjection();
   const onGlobe = !!proj && proj.type === 'globe';
   const ctr = map.getCenter();
-  const placed = [];
+  const placed = labelBoxes;      // shared, so the city list can dodge these too
   let shown = 0;
 
   /* The chosen country goes first and is never dropped: it is the one label
@@ -2155,9 +2158,21 @@ function visualCentre(ring) {
            west: w, east: e };
 }
 
+/* The country's ten biggest cities, biggest first, one every half second once the
+   country's own name has gone. They take five seconds to all be there and stand
+   until ten, then leave together. Each is decoded the same way as the country name,
+   at a third of the size, so the two read as one thing at two levels. */
+const NAME_TOTAL  = NAME_SCRAMBLE + NAME_HOLD + NAME_FLASH;
+const CITY_COUNT  = 10;
+const CITY_STEP   = 500;               // 10 cities x 500 ms = the five seconds
+const CITY_DECODE = 350;
+const CITY_OUT    = 10000;             // all of them gone at ten seconds
+const CITY_FADE   = 400;
+
 function stopCountryName() {
-  cancelAnimationFrame(nameRAF); nameRAF = 0;
+  cancelAnimationFrame(fxRAF); fxRAF = 0;
   if (nameFX) { nameFX = window.__nameFX = null; dirty = true; }
+  if (cityFX) { cityFX = window.__cityFX = null; dirty = true; }
 }
 
 function showCountryName(name, rings) {
@@ -2185,16 +2200,110 @@ function showCountryName(name, rings) {
   // None of this is reachable from outside the module; a window on it is how the
   // last rendering bug was found in one run instead of three.
   window.__nameFX = nameFX;
-  if (!nameRAF) nameRAF = requestAnimationFrame(tickName);
+  if (!fxRAF) fxRAF = requestAnimationFrame(tickFX);
   dirty = true;
+}
+
+/* The ten biggest cities of the country, ready to start the moment the country's
+   name has flashed out. Order is by the population on file rather than by the one
+   the year bar shows: a year scales every city in a country by the same factor, so
+   it cannot change who is biggest - only what the figure says. */
+function showCityNames(cc) {
+  if (!cc) return;
+  const startAt = performance.now() + NAME_TOTAL;
+  ensureCityNames().then(j => {
+    // The names file is fetched the first time it is wanted and can land after the
+    // country's name has gone - so ask what is picked, not what is on screen.
+    if (!j || !CITY_RAW || !picked || picked.cc !== cc) return;
+    const idx = [];
+    for (let i = 0; i < j.cc.length; i++) if (j.cc[i] === cc) idx.push(i);
+    idx.sort((a, b) => CITY_RAW[b][2] - CITY_RAW[a][2]);
+    const list = idx.slice(0, CITY_COUNT).map((i, rank) => ({
+      text: (j.names[i] || '').toUpperCase(),
+      lon: CITY_RAW[i][0], lat: CITY_RAW[i][1], rank: rank + 1 }))
+      .filter(c => c.text);
+    if (!list.length) return;
+    cityFX = { cc, list, t0: startAt };
+    window.__cityFX = cityFX;
+    if (!fxRAF) fxRAF = requestAnimationFrame(tickFX);
+    dirty = true;
+  });
 }
 
 // The map is only redrawn when it says it has a new frame, and a country sitting
 // still never does - so the reveal has to ask for its own frames.
-function tickName() {
-  if (!nameFX) { nameRAF = 0; return; }
+function tickFX() {
+  if (!nameFX && !cityFX) { fxRAF = 0; return; }
   dirty = true;
-  nameRAF = requestAnimationFrame(tickName);
+  fxRAF = requestAnimationFrame(tickFX);
+}
+
+function drawCityNames() {
+  if (!cityFX) return;
+  const t = performance.now() - cityFX.t0;
+  if (t < 0) return;                                // still the country's turn
+  if (t >= CITY_OUT + CITY_FADE) { cityFX = window.__cityFX = null; return; }
+
+  const fs = Math.max(10, Math.round(11 * DPR));    // a third of the country's name
+  const lineH = fs * 1.9;
+  const out = Math.max(0, (t - CITY_OUT) / CITY_FADE);
+  const alpha = 1 - out * out;
+  const grow = 1 + out * 0.12;
+  lctx.save();
+  lctx.font = fs + 'px "Space Mono", ui-monospace, monospace';
+  lctx.textBaseline = 'middle';
+  lctx.textAlign = 'left';
+  const cw = lctx.measureText('M').width;
+
+  cityFX.shown = 0;
+  for (const c of cityFX.list) {
+    const at = (c.rank - 1) * CITY_STEP;
+    if (t < at) continue;                           // its turn has not come
+    cityFX.shown++;
+    const ct = t - at;
+    let p;
+    try { p = map.project([c.lon, c.lat]); } catch (e) { continue; }
+    const x = p.x * DPR, y = p.y * DPR;
+    if (!(x > 0 && y > 0 && x < labels.width && y < labels.height)) continue;
+
+    const head = c.rank + ' ';
+    const wHead = cw * head.length, wName = cw * c.text.length * grow;
+    const pad = 8 * DPR;
+    /* The capital is usually the biggest city in its own country, and its label is
+       already there. Drop a line rather than print over it - twice, then take the
+       spot anyway, because a name the user is waiting for beats a tidy frame. */
+    let ty = y;
+    for (let tries = 0; tries < 2; tries++) {
+      const b = [x + pad - 3, ty - fs, x + pad + wHead + wName + 3, ty + fs];
+      if (!labelBoxes.some(o => b[0] < o[2] && o[0] < b[2] && b[1] < o[3] && o[1] < b[3])) break;
+      ty += lineH;
+    }
+    const box = [x + pad - 3, ty - fs, x + pad + wHead + wName + 3, ty + fs];
+    labelBoxes.push(box);
+
+    lctx.globalAlpha = alpha;
+    lctx.fillStyle = 'rgba(0,0,0,.85)';             // keep type legible over dots
+    lctx.fillRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
+    lctx.beginPath();                               // a mark on the city itself
+    lctx.arc(x, y, 2.6 * DPR, 0, Math.PI * 2);
+    lctx.strokeStyle = '#ffeda0';
+    lctx.lineWidth = 1 * DPR;
+    lctx.stroke();
+    lctx.fillStyle = '#ffeda0';                     // the rank, in the trace's amber
+    lctx.fillText(head, x + pad, ty);
+
+    for (let i = 0; i < c.text.length; i++) {
+      const ch = c.text[i];
+      if (ch === ' ') continue;
+      const locked = ct >= CITY_DECODE * (i + 1) / c.text.length;
+      lctx.globalAlpha = alpha * (locked ? 1 : 0.5);
+      lctx.fillStyle = locked ? '#ffffff' : '#ffeda0';
+      lctx.fillText(locked ? ch
+        : NAME_GLYPHS[(Math.floor(ct / 55) + i * 7) % NAME_GLYPHS.length],
+        x + pad + wHead + cw * i * grow, ty);
+    }
+  }
+  lctx.restore();
 }
 
 function drawCountryName() {
@@ -2270,7 +2379,7 @@ function traceCountry(cc, name) {
     if (feat.geometry.type === 'Polygon') outer(feat.geometry.coordinates);
     else feat.geometry.coordinates.forEach(outer);
     rings.sort((a, b) => b.length - a.length);
-    if (name) showCountryName(name, rings);
+    if (name) { showCountryName(name, rings); showCityNames(cc); }
     src.setData({ type: 'FeatureCollection',
       features: rings.slice(0, TRACE_RINGS).map(r => ({
         type: 'Feature', properties: {},
@@ -2511,6 +2620,10 @@ async function countryPop(cap) {
 }
 
 function pickCountry(cap, frame) {
+  /* Whatever the last country was saying, it stops now. The new one's reveal only
+     starts when the camera arrives, and until then the old country's cities were
+     still decoding over a map on its way somewhere else. */
+  stopCountryName();
   picked = cap;
   highlight(cap && cap.cc);
   showPicked(cap);

@@ -5,6 +5,40 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — And then its ten biggest cities, one by one
+
+Daniel: "in the same way but a bit smaller make appear for 5 seconds after the country
+name also 10 biggest cities in order of inhabitants 1 by 1 and make them disappear
+after 10 seconds."
+
+### Added
+
+- **The country's ten biggest cities, biggest first.** The moment the country's own
+  name has flashed out, they arrive one every 500 ms - so all ten are there at five
+  seconds - each decoded the same way in 350 ms, at 11 px against the country's 34.
+  They stand until ten seconds and then leave together in a 400 ms fade. The rank
+  carries the order in the border light's amber, `#ffeda0`; the name is white; a small
+  amber ring marks the city itself. Measured on the clock: 1 city at 0.2 s, 3 at 1.2 s,
+  6 at 2.7 s, all 10 by 4.8 s, still 10 at 9.8 s, gone by 10.6 s.
+- **Ordered by the population on file, not the one the year bar shows.** A year scales
+  every city in a country by the same factor, so it can change what the figure says but
+  never who is biggest. Italy comes out Rome, Milan, Naples, Turin, Palermo, Genoa,
+  Bologna, Florence, Bari, Catania; Spain: Madrid, Barcelona, Valencia, Zaragoza,
+  Sevilla, Málaga, Murcia, Palma, Las Palmas de Gran Canaria, Alicante.
+- **The list dodges the labels already on the canvas.** The capital is usually its
+  country's biggest city and its label is already drawn there, so `drawCapitals` now
+  shares the boxes it placed; a city that would land on one drops a line, twice, then
+  takes the spot anyway - a name the reader is waiting for beats a tidy frame.
+
+### Fixed
+
+- **Picking a new country left the old one still talking.** The reveal only starts when
+  the camera arrives, so between the pick and the arrival the previous country's cities
+  went on decoding over a map already on its way somewhere else. Picking anything now
+  stops whatever was being said.
+
+---
+
 ## 2026-09-15 — The country says its own name
 
 Daniel: "once i tap the capital and it's zooming in the country add the name of the
