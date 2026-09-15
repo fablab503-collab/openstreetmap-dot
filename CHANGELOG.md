@@ -5,6 +5,35 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — A jump with a thumb on it, and roofs to land on
+
+Daniel: "add the real gravity and jump. it needs to jump really high in base of how long
+do you press the space bar. it's allowed to jump and go on buildings."
+
+### Changed
+
+- **The jump has a thumb on it now.** The push off the ground is the same every time;
+  holding the key keeps pushing, at 900 px/s², for up to four tenths of a second. Gravity
+  is 900 px/s² throughout. Measured: a tap peaks at **46 px**, a held key at **140 px** -
+  three times the height, from the same key.
+- **A wall only stops what is shorter than it.** Every building carries its own height in
+  the tiles (`render_height`, in metres), and metres become pixels through the map's own
+  scale, so a jump that clears a four-storey building at street zoom does not clear a
+  continent at country zoom. Over the roofline you walk on.
+- **Roofs are ground.** Land on one and you stand on it; walk across it and off the far
+  side and you fall to the street. Measured: blocked by a wall at 0 m, a held jump over
+  it crossing 41.6 m, and a shorter hop settling at **26.2 px** - a building of about
+  eight metres - then walking off it and coming down to 0.
+- **On a roof you are not hidden by the building you are on.** The occlusion test now
+  asks how high you are before deciding you are behind something.
+
+### Measured
+
+- 8.3 ms between frames with all of it running, the label canvas 0.5 ms. The height
+  questions are `queryRenderedFeatures` on the footprint layer, a handful a frame.
+
+---
+
 ## 2026-09-15 — The game, after watching it played
 
 Daniel played it and sent a list. All of it is in.

@@ -2637,19 +2637,44 @@ function dropMarker(lon, lat) {
    once you have rotated the map. Screen pixels a second, so it handles the same at
    street zoom and at country zoom - it is a puppet, not a vehicle with a speedometer. */
 const KEY_SPEED = 135;      // CSS px a second
-const JUMP_V    = 210;      // px a second, upwards
-const GRAVITY   = 560;      // px a second, a second
+/* A jump with a thumb on it. The push off the ground is the same every time; holding
+   the key keeps pushing for up to four tenths of a second, which is worth another
+   hundred pixels of height. A tap clears a kerb, a held key clears a roof. */
+const JUMP_V0   = 260;      // px a second, off the ground
+const JUMP_HOLD = 900;      // px a second a second, while the key is down
+const HOLD_MAX  = 0.40;     // for this long, at most
+const GRAVITY   = 900;      // px a second a second, always
 const EDGE_PAD  = 90;       // how close to the edge before the map follows it
 const keysDown = new Set();
-let jumpV = 0, markerLast = 0;
+let jumpV = 0, markerLast = 0, holding = false, holdT = 0;
 
-/* Buildings, asked of the map itself. Whichever of the flat layer and the extruded one
-   is switched on is the one that answers, because a hidden layer is not rendered and
-   `queryRenderedFeatures` only knows about what is. */
-function blockedAt(x, y) {
-  if (!map.getLayer('building')) return false;
-  try { return map.queryRenderedFeatures([x, y], { layers: ['building'] }).length > 0; }
-  catch (e) { return false; }
+/* How high the ground is here. A building's own roof is ground, once you are on top of
+   it - that is the whole of the climbing. `render_height` is the tiles' own figure in
+   metres; metres become pixels through the map's own scale, so a jump that clears a
+   four-storey building at street zoom does not clear a continent at country zoom. */
+function mPerPx() {
+  return 40075016.686 * Math.cos(map.getCenter().lat * RAD)
+       / (512 * Math.pow(2, map.getZoom()));
+}
+function buildingAt(x, y) {
+  if (!map.getLayer('building')) return null;
+  try {
+    const f = map.queryRenderedFeatures([x, y], { layers: ['building'] })[0];
+    if (!f) return null;
+    const h = f.properties.render_height != null ? +f.properties.render_height
+            : f.properties.height != null ? +f.properties.height : 5;
+    return { h: isFinite(h) ? h : 5 };
+  } catch (e) { return null; }
+}
+// The height of the roof under a point, in screen pixels. Flat ground is zero.
+function surfaceAt(x, y) {
+  const b = buildingAt(x, y);
+  return b ? b.h / mPerPx() : 0;
+}
+/* A wall only stops you if it is taller than you are. Over the roofline you walk on. */
+function blockedAt(x, y, h) {
+  const top = surfaceAt(x, y);
+  return top > (h == null ? 0 : h) + 1;
 }
 
 /* Out of sight behind a building. Nothing can ever stand inside one, so if its point on
@@ -2670,11 +2695,13 @@ function driveMarker(now) {
   markerLast = now;
   if (!dt) return;
 
-  if (jumpV || jumpY) {                       // up, then down, and no further
-    jumpY += jumpV * dt;
-    jumpV -= GRAVITY * dt;
-    if (jumpY <= 0) { jumpY = 0; jumpV = 0; }
-  }
+  let p0;
+  try { p0 = map.project([markerAt.lon, markerAt.lat]); } catch (e) { return; }
+  const floor = surfaceAt(p0.x, p0.y);        // the roof under it, or the street
+  if (holding && jumpV > 0 && holdT < HOLD_MAX) { jumpV += JUMP_HOLD * dt; holdT += dt; }
+  jumpV -= GRAVITY * dt;
+  jumpY += jumpV * dt;
+  if (jumpY <= floor) { jumpY = floor; jumpV = 0; holding = false; }   // landed, on what there is
 
   /* Walking itself: the same rule the four in the game use - go on until a wall says
      no, then take a turn that is open. Over a city that is indistinguishable from
@@ -2710,11 +2737,13 @@ function driveMarker(now) {
   /* A search lands on a building more often than not - a named place usually IS a
      building - so the first version put it inside one and it could never leave. A wall
      only stops something that is not already in it. */
+  /* Blocked only by what is taller than you. Standing on a roof you walk across it;
+     step off the edge and the floor under you drops to the street, and so do you. */
   window.__marker.blocked = false;
-  if (!jumpY && !blockedAt(p.x, p.y) && blockedAt(nx, ny)) {
+  if (!blockedAt(p.x, p.y, jumpY) && blockedAt(nx, ny, jumpY)) {
     window.__marker.blocked = true;
-    if (!blockedAt(nx, p.y)) ny = p.y;
-    else if (!blockedAt(p.x, ny)) nx = p.x;
+    if (!blockedAt(nx, p.y, jumpY)) ny = p.y;
+    else if (!blockedAt(p.x, ny, jumpY)) nx = p.x;
     else { nx = p.x; ny = p.y; }
   }
   if (nx === p.x && ny === p.y) return;
@@ -2757,7 +2786,11 @@ addEventListener('keydown', e => {
        go while it is still going up cuts the rise short, which is how a platform game
        has done variable height since 1985 and is far better to play than reading the
        length of the press and only then leaving the ground. */
-    if (!jumpY && !jumpV && !e.repeat) jumpV = JUMP_V;
+    if (e.repeat) return;
+    const p = map.project([markerAt.lon, markerAt.lat]);
+    if (Math.abs(jumpY - surfaceAt(p.x, p.y)) < 2 && !jumpV) {   // only from a surface
+      jumpV = JUMP_V0; holdT = 0; holding = true;
+    }
     return;
   }
 
@@ -2784,7 +2817,7 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => {
   const raw = e.key.toLowerCase();
-  if (raw === ' ' || e.code === 'Space') { if (jumpV > 0) jumpV *= 0.32; return; }
+  if (raw === ' ' || e.code === 'Space') { holding = false; return; }
   keysDown.delete(ARROWS[raw] || raw);
 });
 addEventListener('blur', () => keysDown.clear());
@@ -3160,7 +3193,10 @@ function drawFigure(at, kind, head, jump, t, lit, dk, gl) {
   const gx = p.x * DPR, gy = p.y * DPR;
   const S = MARK_PX * DPR, lift = MARK_LIFT * DPR;
   if (!(gx > -S * 2 && gy > -S * 3 && gx < labels.width + S * 2 && gy < labels.height + S * 2)) return;
-  if (hiddenBehind(p.x, p.y)) { hidden = { x: gx, y: gy, gl }; return; }   // a solid is a solid
+  // On a roof you are above the thing, not behind it, so you are not hidden by it.
+  if (jump < surfaceAt(p.x, p.y) - 1 && hiddenBehind(p.x, p.y)) {
+    hidden = { x: gx, y: gy, gl }; return;
+  }
 
   const S2 = S * (MARK_SCALE[kind] || 1);
   const bob = Math.sin(t * 2.2) * MARK_BOB * DPR;
