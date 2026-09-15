@@ -277,6 +277,7 @@
   #pal button[aria-pressed=true] { border-color:var(--lit); }
   #swatch-name { color:#6a6a6a; margin-top:5px; display:block; font-size:10px; }
   #ctl label { display:block; margin:9px 0 3px; color:#6a6a6a; }
+  #ctl .hint { color:#4a4a4a; }
   #ctl input[type=range] { width:100%; accent-color:#8a8a8a; height:14px; }
   /* Every button in a panel, not only the ones in the settings. `font:inherit` is the
      whole point of the rule - a button does not inherit the page's type on its own, and
@@ -450,6 +451,76 @@
   <button type="button" data-to="p-game">Game</button>
 </div>
 
+<div id="ctl" class="panel">
+  <label>DOT SCALE <span id="l-scale">0.65</span></label>
+  <input id="s-scale" type="range" min="0.01" max="2" step="0.01" value="0.65">
+  <label>GAIN <span id="l-gain">2.05</span></label>
+  <input id="s-gain" type="range" min="0.4" max="2.2" step="0.05" value="2.05">
+  <label>CUTOFF <span id="l-cut">0.03</span></label>
+  <input id="s-cut" type="range" min="0" max="0.4" step="0.01" value="0.03">
+  <label>TILT <span id="l-tilt">0</span>°</label>
+  <input id="s-tilt" type="range" min="0" max="85" step="1" value="0">
+  <label>BEARING <span id="l-bear">0</span>°</label>
+  <input id="s-bear" type="range" min="0" max="359" step="1" value="0">
+  <label>SUN <span id="l-sun">210</span>° <span class="hint">— 3D ONLY</span></label>
+  <input id="s-sun" type="range" min="0" max="359" step="1" value="210">
+  <label>DOT COLOUR <span id="swatch-name">WHITE</span></label>
+  <div id="pal"></div>
+  <label>COLOURS <span id="l-colours">—</span></label>
+  <input id="s-colours" type="range" min="0" max="6" step="1" value="6">
+  <label>MIN POPULATION <span id="l-minpop">15 K</span></label>
+  <input id="s-minpop" type="range" min="0" max="100" step="1" value="0">
+  <label>WHO FLOATS OVER A PLACE YOU FIND</label>
+  <span class="note" id="s-marker-note">W A S D to walk it · SPACE to jump · it will not walk through a building</span>
+  <select id="s-marker" aria-label="What floats over a place you search for">
+    <option value="ghost" selected>GHOST</option>
+    <option value="person">PERSON</option>
+    <option value="dog">DOG</option>
+    <option value="bicycle">BICYCLE</option>
+    <option value="moto">MOTORBIKE</option>
+    <option value="car">CAR</option>
+    <option value="van">VAN</option>
+    <option value="bus">BUS</option>
+    <option value="none">NOBODY</option>
+  </select>
+  <label>EVERYTHING <span id="l-all">FULL</span></label>
+  <input id="s-all" type="range" min="0" max="100" step="1" value="100">
+  <label>CAPITAL NAMES <span id="l-caps">55</span></label>
+  <input id="s-caps" type="range" min="0" max="195" step="1" value="55">
+  <label>CAPITAL MONUMENTS <span id="l-capmon">ALL THREE</span></label>
+  <input id="s-capmon" type="range" min="0" max="3" step="1" value="3">
+  <label>DATA COLOUR <span id="l-data">FULL</span></label>
+  <input id="s-data" type="range" min="0" max="100" step="1" value="100">
+  <label>NEWS ON THE GLOBE <span id="l-newsn">ALL</span></label>
+  <input id="s-newsn" type="range" min="0" max="30" step="1" value="30">
+  <button id="b-locate">ILLUMINATE MY COUNTRY</button>
+  <button id="b-globe" aria-pressed="true">WORLD: ROUND</button>
+  <button id="b-world" aria-pressed="false">WHOLE EARTH</button>
+  <button id="b-3d" aria-pressed="false">3D DOT VIEW</button>
+  <button id="b-orbit" aria-pressed="false">ORBIT</button>
+  <button id="b-north" aria-pressed="false">RESET NORTH</button>
+  <button id="b-sun" aria-pressed="true">SUNLIGHT</button>
+  <button id="b-space" aria-pressed="false">LEAVE EARTH</button>
+  <div class="space-only" id="sp-params">
+    <div class="prow"><span>look at</span>
+      <select id="sp-body" aria-label="Body to look at"></select></div>
+    <div class="prow"><span>time</span>
+      <input id="sp-rate" type="range" min="0" max="6" step="1" value="1"
+             aria-label="How fast time runs"><b id="l-rate">real time</b></div>
+    <div class="prow"><span>realism</span>
+      <input id="sp-realism" type="range" min="0" max="100" step="1" value="100"
+             aria-label="How much of each body's real colour to use"><b id="l-realism">100%</b></div>
+    <div class="prow"><span>depth of field</span>
+      <input id="sp-dof" type="range" min="0" max="6" step="0.1" value="1"><b id="l-dof">1.0</b></div>
+    <div class="prow"><span>scale</span>
+      <button id="sp-true" class="pval" type="button" aria-pressed="true">true</button></div>
+    <div class="prow"><span>gravity well</span>
+      <button id="sp-well" class="pval" type="button" aria-pressed="true">on</button></div>
+    <div class="prow"><span>orbits</span>
+      <button id="sp-orbits" class="pval" type="button" aria-pressed="true">on</button></div>
+    <button id="sp-back">BACK TO EARTH</button>
+  </div>
+</div>
 <div id="hud" class="panel">
   <span class="row">ZOOM <b id="h-zoom">—</b></span>
   <span class="row">DOT PITCH <b id="h-pitch">—</b></span>
@@ -744,70 +815,6 @@
     a kilometre — before anything at all is done with it, including the lookup of the
     town name, which is the one request that leaves this page. Nothing is stored and
     nothing is sent anywhere else.</span>
-</div>
-<div id="ctl" class="panel">
-  <label>DOT SCALE <span id="l-scale">0.65</span></label>
-  <input id="s-scale" type="range" min="0.01" max="2" step="0.01" value="0.65">
-  <label>GAIN <span id="l-gain">2.05</span></label>
-  <input id="s-gain" type="range" min="0.4" max="2.2" step="0.05" value="2.05">
-  <label>CUTOFF <span id="l-cut">0.03</span></label>
-  <input id="s-cut" type="range" min="0" max="0.4" step="0.01" value="0.03">
-  <label>TILT <span id="l-tilt">0</span>°</label>
-  <input id="s-tilt" type="range" min="0" max="85" step="1" value="0">
-  <label>BEARING <span id="l-bear">0</span>°</label>
-  <input id="s-bear" type="range" min="0" max="359" step="1" value="0">
-  <label>SUN <span id="l-sun">210</span>°</label>
-  <input id="s-sun" type="range" min="0" max="359" step="1" value="210">
-  <label>DOT COLOUR <span id="swatch-name">WHITE</span></label>
-  <div id="pal"></div>
-  <label>COLOURS <span id="l-colours">—</span></label>
-  <input id="s-colours" type="range" min="0" max="6" step="1" value="6">
-  <label>MIN POPULATION <span id="l-minpop">15 K</span></label>
-  <input id="s-minpop" type="range" min="0" max="100" step="1" value="0">
-  <label>WHO FLOATS OVER A PLACE YOU FIND</label>
-  <span class="note" id="s-marker-note">W A S D to walk it · SPACE to jump · it will not walk through a building</span>
-  <select id="s-marker" aria-label="What floats over a place you search for">
-    <option value="ghost" selected>GHOST</option>
-    <option value="person">PERSON</option>
-    <option value="dog">DOG</option>
-    <option value="bicycle">BICYCLE</option>
-    <option value="moto">MOTORBIKE</option>
-    <option value="car">CAR</option>
-    <option value="van">VAN</option>
-    <option value="bus">BUS</option>
-    <option value="none">NOBODY</option>
-  </select>
-  <button id="b-all" aria-pressed="true">ALL DATA</button>
-  <button id="b-caps" aria-pressed="true">CAPITAL NAMES</button>
-  <button id="b-capmon" aria-pressed="true">CAPITAL MONUMENTS</button>
-  <button id="b-data" aria-pressed="true">DATA COLOUR</button>
-  <button id="b-locate">ILLUMINATE MY COUNTRY</button>
-  <button id="b-globe" aria-pressed="true">WORLD: ROUND</button>
-  <button id="b-world" aria-pressed="false">WHOLE EARTH</button>
-  <button id="b-3d" aria-pressed="false">3D DOT VIEW</button>
-  <button id="b-orbit" aria-pressed="false">ORBIT</button>
-  <button id="b-north" aria-pressed="false">RESET NORTH</button>
-  <button id="b-sun" aria-pressed="true">SUNLIGHT</button>
-  <button id="b-space" aria-pressed="false">LEAVE EARTH</button>
-  <div class="space-only" id="sp-params">
-    <div class="prow"><span>look at</span>
-      <select id="sp-body" aria-label="Body to look at"></select></div>
-    <div class="prow"><span>time</span>
-      <input id="sp-rate" type="range" min="0" max="6" step="1" value="1"
-             aria-label="How fast time runs"><b id="l-rate">real time</b></div>
-    <div class="prow"><span>realism</span>
-      <input id="sp-realism" type="range" min="0" max="100" step="1" value="100"
-             aria-label="How much of each body's real colour to use"><b id="l-realism">100%</b></div>
-    <div class="prow"><span>depth of field</span>
-      <input id="sp-dof" type="range" min="0" max="6" step="0.1" value="1"><b id="l-dof">1.0</b></div>
-    <div class="prow"><span>scale</span>
-      <button id="sp-true" class="pval" type="button" aria-pressed="true">true</button></div>
-    <div class="prow"><span>gravity well</span>
-      <button id="sp-well" class="pval" type="button" aria-pressed="true">on</button></div>
-    <div class="prow"><span>orbits</span>
-      <button id="sp-orbits" class="pval" type="button" aria-pressed="true">on</button></div>
-    <button id="sp-back">BACK TO EARTH</button>
-  </div>
 </div>
 </div>
 
@@ -1506,6 +1513,9 @@ let dataColour = true;   // keep data hues; false neutralises everything to one 
    that code runs, and a `let` read from inside halftone() would hit the
    temporal dead zone and kill the first frame. */
 let showCapitals = true;
+let capShown = 55;      // how many capital names the map is allowed to draw
+let capMonRank = 3;     // how many monuments per capital
+let newsMax = 30;       // how many stories go on the globe and in the list
 let CAPITALS = [];
 let CAPMON = [];
 let showCapMon = true;
@@ -2051,7 +2061,8 @@ function drawCapitals() {
     : CAPITALS;
   for (const cap of list) {
     const isPicked = cap === picked;
-    if (shown >= 55 && !isPicked) break;     // past this it is noise, not data
+    // The level says how many, and the chosen country is never one of the ones dropped.
+    if (shown >= capShown && !isPicked) break;
     // On a sphere, project() still returns a point for the far side; cull it.
     if (onGlobe && angularDist(ctr.lat, ctr.lng, cap.lat, cap.lon) > 82) continue;
     let p;
@@ -2108,6 +2119,7 @@ function drawCapitals() {
   lctx.font = mfs + 'px "Space Mono", ui-monospace, monospace';
   for (const mon of CAPMON) {
     if (shown >= 70) break;
+    if (mon.rank > capMonRank) continue;          // past the level asked for
     if (mon.rank > 1 && z < 8) continue;          // the other two need more room
     if (onGlobe && angularDist(ctr.lat, ctr.lng, mon.lat, mon.lon) > 82) continue;
     let p;
@@ -2133,12 +2145,7 @@ function drawCapitals() {
   }
 }
 
-const bCaps = document.getElementById('b-caps');
-bCaps.addEventListener('click', () => {
-  showCapitals = bCaps.getAttribute('aria-pressed') !== 'true';
-  bCaps.setAttribute('aria-pressed', showCapitals);
-  dirty = true;
-});
+
 
 /* Where am I. Same rule as ILLUMINATE MY COUNTRY, which lights a whole country
    without ever holding your position: the fix is rounded to 2 decimals - about a
@@ -2569,7 +2576,7 @@ function newsHud(state) {
   const list = document.getElementById('n-list');
   if (!list) return;
   list.innerHTML = '';
-  for (const i of shown.slice(0, 14)) {
+  for (const i of shown.slice(0, Math.min(14, newsMax))) {
     const a = document.createElement('a');
     a.className = 'sub';
     a.href = i.url || '#';
@@ -2582,7 +2589,9 @@ function newsHud(state) {
 }
 
 // Far out, and only far out.
-function newsInView() { return map.getZoom() <= NEWS_ZOOM && NEWS.items.some(passes); }
+function newsInView() {
+  return newsMax > 0 && map.getZoom() <= NEWS_ZOOM && NEWS.items.some(passes);
+}
 
 /* A rail of stories down the left of the map, each on a line back to its own place on
    the globe. Radiating the words around the globe put them over it and over each other;
@@ -2635,7 +2644,7 @@ function drawNews() {
   // Who is on this side of the world, and which half of it they are on.
   const left = [], right = [];
   for (const it of NEWS.items) {
-    if (left.length + right.length >= 20) break;
+    if (left.length + right.length >= Math.min(20, newsMax)) break;
     if (!passes(it)) continue;
     if (angularDist(ctr.lat, ctr.lng, it.lat, it.lon) > 82) continue;
     let p;
@@ -3121,23 +3130,64 @@ sZoom.addEventListener('keydown', e => e.stopPropagation());
 /* One switch for everything the map can show, so you do not have to find four.
    It drives the buttons rather than the layers, so each keeps its own behaviour and
    stays in step with what it is showing. */
-const bAll = document.getElementById('b-all');
-bAll.addEventListener('click', () => {
-  const on = bAll.getAttribute('aria-pressed') !== 'true';
-  bAll.setAttribute('aria-pressed', on);
-  for (const b of [bData, bCaps, bCapMon]) {
-    if ((b.getAttribute('aria-pressed') === 'true') !== on) b.click();
-  }
-});
+/* ── how much, not whether ──────────────────────────────────────────────────────
+   These were four on/off buttons. A switch can only say all or nothing, and a map full of
+   every capital name is as unreadable as a map with none. They are levels: at zero the
+   thing is off, and every step up puts more of it on screen. All the way down on all of
+   them leaves the bare shape of the world and nothing else, which is a view worth having.
 
-/* One switch for the capitals' monuments: the cyan marks and their names. */
-const bCapMon = document.getElementById('b-capmon');
-bCapMon.addEventListener('click', () => {
-  showCapMon = bCapMon.getAttribute('aria-pressed') !== 'true';
-  bCapMon.setAttribute('aria-pressed', showCapMon);
+   EVERYTHING is the master. It does not replace the others; it scales them, so you can
+   pull one setting back without losing where the rest were set. */
+let capNameMax = 55, capMonMax = 3, dataLevel = 1, everything = 1;
+
+function applyLevels() {
+  const caps = Math.round(capNameMax * everything);
+  const mons = Math.round(capMonMax * everything);
+  const data = dataLevel * everything;
+
+  showCapitals = caps > 0;
+  capShown = caps;
+  showCapMon = mons > 0;
+  capMonRank = mons;
+
+  dataColour = data > 0;
+  ['population', 'monuments'].forEach(id => {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', data > 0 ? 'visible' : 'none');
+  });
+  /* Between off and full it is the layers' own opacity that moves, so "a little data" is
+     a quieter map rather than a map missing half its layers. */
+  if (map.getLayer('population')) map.setPaintProperty('population', 'circle-opacity', 0.95 * data);
+  if (map.getLayer('monuments')) map.setPaintProperty('monuments', 'circle-opacity', 0.95 * data);
   monumentVisibility();
   if (showCapMon && map.getZoom() >= 12) ensureShapes();
-});
+  const legend = document.getElementById('legend');
+  if (legend) legend.hidden = data <= 0;
+  newsHud();
+  dirty = true;
+}
+
+const levelBar = (id, label, read, apply) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const show = () => { document.getElementById(label).textContent = read(+el.value); };
+  el.addEventListener('input', () => { apply(+el.value); show(); });
+  show();
+};
+
+levelBar('s-all', 'l-all', v => v === 0 ? 'NOTHING' : v === 100 ? 'FULL' : v + '%',
+  v => { everything = v / 100; applyLevels(); });
+levelBar('s-caps', 'l-caps', v => v === 0 ? 'NONE' : v >= 195 ? 'ALL 195' : String(v),
+  v => { capNameMax = v; applyLevels(); });
+levelBar('s-capmon', 'l-capmon',
+  v => ['NONE', 'THE BEST KNOWN', 'TWO EACH', 'ALL THREE'][v],
+  v => { capMonMax = v; applyLevels(); });
+levelBar('s-data', 'l-data', v => v === 0 ? 'OFF' : v === 100 ? 'FULL' : v + '%',
+  v => { dataLevel = v / 100; applyLevels(); });
+levelBar('s-newsn', 'l-newsn', v => v === 0 ? 'NONE' : v >= 30 ? 'ALL' : String(v),
+  v => { newsMax = v; newsHud(); dirty = true; });
+
+/* One switch for the capitals' monuments: the cyan marks and their names. */
+
 
 /* Find one of the 195 countries and show it on the map.
    The list is built from the capitals file, so it is exactly the 195 the panel
@@ -5321,18 +5371,7 @@ bLocate.addEventListener('click', () => {
 
 /* One switch for the whole data layer: hides the coloured circles AND stops
    the halftone keeping hues, so the map falls back to a single-colour field. */
-const bData = document.getElementById('b-data');
-const legend = document.getElementById('legend');
-bData.addEventListener('click', () => {
-  const on = bData.getAttribute('aria-pressed') !== 'true';
-  bData.setAttribute('aria-pressed', on);
-  dataColour = on;
-  ['population', 'monuments'].forEach(id =>
-    map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none'));
-  monumentVisibility();
-  legend.hidden = !on;
-  dirty = true;
-});
+
 
 const bGlobe = document.getElementById('b-globe');
 bGlobe.addEventListener('click', () => {
