@@ -3765,6 +3765,21 @@ let   MARK_ELEV = 32 * RAD;            // the game looks almost straight down in
    36 degrees showed one eye and gazed off past your shoulder. */
 const MARK_YAW  = 36 * RAD;
 const MARK_TURN = { ghost: 8 * RAD, person: 15 * RAD, dog: 26 * RAD };
+/* Which way a model's front is. Everything on wheels was built nose-to--z, which is up
+   the screen and the way the yaw maths assumes. The ghost and the dog were not: their
+   faces were deliberately turned to +z so they look back at the reader while they stand
+   still - and the price of that was walking backwards the moment they moved. Half a turn
+   each, applied only when there is a direction of travel. */
+const MARK_FLIP = { ghost: Math.PI, dog: Math.PI };
+/* Checked one by one rather than assumed:
+     ghost   eyes at +z          -> flipped
+     dog     head +z, tail -z    -> flipped
+     person  ball head, box body, no face at all  -> nothing to get wrong
+     bicycle handlebar -z, seat +z   -> already right
+     moto    handlebar -z, seat +z   -> already right
+     car     windscreen -z, cabin +z -> already right
+     van     cab box at -z           -> already right
+     bus     a box with windows all round, no front -> nothing to get wrong */
 // The ones that are long and low need more of the box than a standing figure does.
 const MARK_SCALE = { car: 1.45, van: 1.4, bus: 1.3, moto: 1.3, bicycle: 1.3, dog: 1.3 };
 
@@ -4570,7 +4585,8 @@ function drawFigure(at, kind, head, jump, t, lit, dk, gl) {
      once you let go rather than snapping back. */
   const B = map.getBearing();
   const turn = MARK_TURN[kind] == null ? MARK_YAW : MARK_TURN[kind];
-  const yaw = head == null ? turn - B * RAD : (B - head) * RAD;
+  const yaw = head == null ? turn - B * RAD
+                           : (B - head) * RAD + (MARK_FLIP[kind] || 0);
   const ca = Math.cos(yaw), sa = Math.sin(yaw);
   const ce = Math.cos(MARK_ELEV), se = Math.sin(MARK_ELEV);
 
