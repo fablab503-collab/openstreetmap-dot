@@ -5,6 +5,43 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-15 — The globe never stopped turning
+
+Daniel: "again."
+
+### Fixed
+
+- **The opening spin ran for as long as the tab was open.** It was written as an arrival
+  and nothing ever ended it: only a hand on the map stopped it. On a page nobody touched,
+  the globe turned at 120 frames a second for ever — and every frame called `setCenter`,
+  which made MapLibre repaint, which set the halftone dirty, which redrew the lattice and
+  repainted the labels. Counted on an idle page: **360 requestAnimationFrame callbacks a
+  second, three loops at 120 each** — ours, MapLibre's, and the spin's.
+- **It stops after 20 seconds now.** A sixth of a turn, long enough to read as a turning
+  world. The wordmark starts it again whenever you want it, and a hand on the map still
+  stops it early. Counted again on an idle page: **120 a second, one loop** — ours, and
+  all it does is check whether anything changed. MapLibre's own loop has gone quiet with
+  it, which means the map is not being drawn at all while nothing is happening.
+
+### Changed
+
+- **The colour legend shows the colours that are on, and nothing else.** It was 1,406 px
+  describing every colour the map knows, whether or not one of them was in use — and
+  since colours now start at none, all of it described an empty set. At `NONE` it is
+  **75 px** and one line saying so. Each step of the bar brings its own block: water at
+  1 (**401 px**), the population bands and what the marks mean at 2 (**769**), monuments
+  at 3 (**912**), land and built land at 4 (**1,454**).
+- All thirteen panels open together came to **9,912 px** before any of this week's work,
+  7,885 after the first simplification, and **6,539 now**.
+
+### Checked
+
+13 of 13 rows still open alone. 37 buttons tested, 34 responded — the same three that
+were already in the state they set. Map still drawing at 0.98 Mpx a frame. No JavaScript
+errors.
+
+---
+
 ## 2026-09-15 — Black and white, dark or light, and a map drawn at a ninth the size
 
 Daniel: "make everything faster, smoother, simplify it with less front-end information.

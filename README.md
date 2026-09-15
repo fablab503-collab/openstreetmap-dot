@@ -128,7 +128,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 
 | Control | Effect |
 | --- | --- |
-| The `DOTWORLD` wordmark | Flies back out to the whole globe, turning, with the day's news on it |
+| The `DOTWORLD` wordmark | Flies back out to the whole globe, turning, with the day's news on it. The turn lasts 20 seconds and then stops — it is a way of arriving, not something to sit through, and a globe turning for ever keeps three animation loops awake on a page nobody is looking at. Any hand on the map stops it sooner |
 | The panel list (left) | Thirteen rows, one per panel, each 17 px tall. Click a row and it opens; every other one folds, so only ever one is open and the whole list fits on a laptop screen. The red dot on the right of a panel folds it again. A folded row is half transparent — the map runs under it |
 | The `?` beside a red dot | Everything that panel keeps back — its prose, and the readouts that answer a second question rather than the first. `VIEW` shows zoom, dots lit and frame time, and holds five more behind the mark: 61 px instead of 285. `LIVE` shows the source, the count and the time, and holds eight: 180 px instead of 418 |
 | `THEME` (top of `SETTINGS`) | `DARK`, `LIGHT` or `AUTO`. Auto follows the system and keeps following it — change the system's mind with the page open and the menu changes with it. The menu is black and white either way: there is no third colour in it any more. The map keeps its own `DOT COLOUR` |
@@ -136,6 +136,7 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | `WHERE YOU ARE` (left column) | The same thing with its numbers showing — latitude, longitude, how close it is and the place name — plus `KEEP UP WITH ME` to follow you while you move, and `FORGET IT` to clear it. Nothing is asked for until you press a button, and the position is rounded to two decimal places before anything is done with it, the name lookup included |
 | The story line | The headline of whichever year the bar is on, with month and day. Click it for everything from the Big Bang to that year | Wikidata + linked articles |
 | `YEAR` bar (bottom centre) | Take the map back to 1500 or forward to 2050. Cities are scaled by their own country's trajectory, and below 1995 the borders are the ones of that era |
+| `COLOURS` panel | The key to whatever colours are on, and only those. At none it is one line, 75 px; at the top it is 1,454 |
 | `COLOURS` | How many colours the map may use. **It starts at none** — one colour, the dot colour, and nothing else. Each step up hands a group its own hues: water, population, monuments, land, built land, transport, to 43 at the top. Fewer colours means fewer lit subpixels, so it costs less power — it does not cost less time, the frame is the same either way (measured 60.2 ms against 58.9 ms for the whole lattice) |
 | `ZOOM` bar (bottom centre) | Drag to go from a street to the whole globe in one gesture; it follows the map too, and slides away with the panels |
 | `SEARCH A PLACE` | Search by name; countries and regions frame to their bounds, and a small 3D figure hangs over the place with its shadow on the ground |

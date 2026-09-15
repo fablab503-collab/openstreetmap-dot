@@ -749,34 +749,49 @@
     each one. That ranking is Wikipedia's editors' work, not mine.</span>
 </div>
 
+<!-- The legend only ever described colours the map was allowed to use, and it
+     described all of them whether or not any were on. Each block now belongs to the
+     group of the COLOURS bar that turns it on, so at NONE the panel is one line. -->
 <div id="legend" class="panel">
-  <span class="ttl">POPULATION — BANDS</span>
-  <div id="bands"></div>
-  <span class="src" id="l-minband">Every city over 15,000 people — 34,091 of them,
-    from GeoNames. Colour names are the CSS ones, so each is a name you can look up.</span>
-  <span class="ttl" style="margin:10px 0 5px">LAND</span>
-  <div id="land-key" class="cats"></div>
-  <span class="src">Dim on purpose: these are the widest areas on the map, and area
-    is what costs on an OLED. Roads stay white and grey — they are what makes a city
-    legible, and a hue there would buy nothing.</span>
-  <span class="ttl" style="margin:10px 0 5px">WATER</span>
-  <div id="water-key" class="cats"></div>
-  <span class="src">Named CSS blues, dimmed by how much screen each one covers: the
-    sea is most of a world view, a swimming pool is four pixels. Anything that dries
-    up for part of the year is drawn faint.</span>
-  <span class="ttl" style="margin:10px 0 5px">WHAT THE MARK MEANS</span>
-  <div class="cats">
-    <span class="cat"><i style="background:#ff8c00"></i>DOT — A CITY</span>
-    <span class="cat"><i style="background:#ff8c00;box-shadow:0 0 0 1.5px #fff"></i>RING — A CAPITAL</span>
-    <span class="cat"><i style="background:#40e0d0"></i>TURQUOISE — A MONUMENT</span>
+  <span class="row">COLOURS <b id="l-legend-state">NONE</b></span>
+  <span class="src" id="l-legend-none">The map is one colour. Raise COLOURS in SETTINGS
+    and each step explains itself here.</span>
+  <div class="lsec" data-needs="2">
+    <span class="ttl">POPULATION — BANDS</span>
+    <div id="bands"></div>
+    <span class="src" id="l-minband">Every city over 15,000 people — 34,091 of them,
+      from GeoNames. Colour names are the CSS ones, so each is a name you can look up.</span>
+    <div class="cats" style="margin-top:7px">
+      <span class="cat"><i style="background:#ff8c00"></i>DOT — A CITY</span>
+      <span class="cat"><i style="background:#ff8c00;box-shadow:0 0 0 1.5px #fff"></i>RING — A CAPITAL</span>
+    </div>
+    <span class="src">Colour is always population; the mark says what kind of place it
+      is. Hue alone cannot do both: green capitals against amber cities measure 0.6
+      apart for red-green colour blindness, which is no difference at all.</span>
   </div>
-  <span class="src">Colour is always population; the mark says what kind of place it
-    is. Hue alone cannot do both: green capitals against amber cities measure 0.6
-    apart for red-green colour blindness, which is no difference at all. Click
-    anything for its exact figure.</span>
-  <span class="src">Top 3 per capital by Wikipedia coverage. Close in, the
-    building's own edges are drawn from OpenStreetMap — its foot, and its roofline
-    in 3D. The ranking is Wikipedia's editors' work, not mine.</span>
+  <div class="lsec" data-needs="1">
+    <span class="ttl" style="margin:10px 0 5px">WATER</span>
+    <div id="water-key" class="cats"></div>
+    <span class="src">Named CSS blues, dimmed by how much screen each one covers: the
+      sea is most of a world view, a swimming pool is four pixels. Anything that dries
+      up for part of the year is drawn faint.</span>
+  </div>
+  <div class="lsec" data-needs="3">
+    <span class="ttl" style="margin:10px 0 5px">MONUMENTS</span>
+    <div class="cats">
+      <span class="cat"><i style="background:#40e0d0"></i>TURQUOISE — A MONUMENT</span>
+    </div>
+    <span class="src">Top 3 per capital by Wikipedia coverage. Close in, the
+      building's own edges are drawn from OpenStreetMap — its foot, and its roofline
+      in 3D. The ranking is Wikipedia's editors' work, not mine.</span>
+  </div>
+  <div class="lsec" data-needs="4">
+    <span class="ttl" style="margin:10px 0 5px">LAND</span>
+    <div id="land-key" class="cats"></div>
+    <span class="src">Dim on purpose: these are the widest areas on the map, and area
+      is what costs on an OLED. Roads stay white and grey — they are what makes a city
+      legible, and a hue there would buy nothing.</span>
+  </div>
 </div>
 
 <div id="p-game" class="panel">
@@ -3015,12 +3030,22 @@ brand.addEventListener('click', () => {
    about 720 times over, and the panel says so. Any touch of the map stops it: it is a
    way of arriving, not something to sit through. */
 const SPIN_TURN_MS = 120000;
+/* And it stops on its own after this. It was only ever meant to be an arrival, but
+   nothing ended it: on a page nobody touched, the globe turned at 120 frames a second
+   for as long as the tab was open. Every frame of it called setCenter, which made
+   MapLibre repaint, which made the halftone redraw and the labels repaint — three
+   requestAnimationFrame loops at 120 a second, for ever, on a still map. Twenty seconds
+   is a sixth of a turn: long enough to read as a turning world. The wordmark starts it
+   again whenever you want it. */
+const SPIN_MAX_MS = 20000;
 let spinLast = 0;
 
 function startSpin() {
   stopSpin();
   spinLast = 0;
+  const began = performance.now();
   const step = now => {
+    if (now - began > SPIN_MAX_MS) { stopSpin(); return; }
     const dt = spinLast ? (now - spinLast) : 0;
     spinLast = now;
     const c = map.getCenter();
@@ -5262,6 +5287,13 @@ function applyColourLevel() {
   document.getElementById('l-colours').textContent =
     level === 0 ? 'NONE — ONE COLOUR'
                 : count + ' — TO ' + COLOUR_GROUPS[level - 1].name;
+  /* The legend shows the groups that are actually on and nothing else. It used to be
+     1,406 px of every colour the map knows whether or not one of them was in use. */
+  document.getElementById('l-legend-state').textContent = level === 0 ? 'NONE' : String(count);
+  document.getElementById('l-legend-none').hidden = level > 0;
+  for (const sec of document.querySelectorAll('#legend .lsec')) {
+    sec.hidden = level < +sec.dataset.needs;
+  }
   dirty = true;
 }
 sColours.addEventListener('input', applyColourLevel);
