@@ -173,3 +173,12 @@ The original code in this repository — the halftone lattice, the UI, the data
 plumbing — is released under the **MIT Licence** (see `LICENSE`). That covers
 only the code written here. It does **not** and cannot relicense any of the data
 or libraries above, which stay under their own terms.
+
+## Routing — FOSSGIS e.V. / OSRM
+
+Turn-by-turn routes for GO SOMEWHERE come from the Open Source Routing Machine (OSRM,
+BSD-2-Clause) as run by **FOSSGIS e.V.** at https://routing.openstreetmap.de — the
+`routed-foot`, `routed-bike` and `routed-car` profiles, over OpenStreetMap data (© OpenStreetMap
+contributors, ODbL). It answers a browser directly and needs no key; it is a community service
+with a fair-use policy, and this page asks it once per GO and never polls. The public demo at
+router.project-osrm.org was tried first and ignores the profile, so it is not used.

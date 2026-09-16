@@ -177,12 +177,26 @@
   #ui-left::-webkit-scrollbar { width:6px; }
   #ui-left::-webkit-scrollbar-thumb { background:var(--c3); }
   /* Three buttons on one row, because three words fit and a dropdown does not. */
-  #theme-pick { display:flex; gap:3px; margin-top:4px; }
-  #theme-pick button { flex:1 1 0; padding:4px 2px; cursor:pointer; background:var(--c0);
+  #theme-pick, #nv-mode { display:flex; gap:3px; margin-top:4px; }
+  #theme-pick button, #nv-mode button { flex:1 1 0; padding:4px 2px; cursor:pointer; background:var(--c0);
     color:var(--c7); border:1px solid var(--c2); font:inherit; font-size:9px;
     letter-spacing:.08em; text-transform:uppercase; }
-  #theme-pick button:hover { border-color:var(--c5); color:var(--ink-hi); }
-  #theme-pick button[aria-pressed=true] { border-color:var(--hi); color:var(--hi); }
+  #theme-pick button:hover, #nv-mode button:hover { border-color:var(--c5); color:var(--ink-hi); }
+  #theme-pick button[aria-pressed=true], #nv-mode button[aria-pressed=true] { border-color:var(--hi); color:var(--hi); }
+
+  /* Going somewhere: the destination field, its matches, and the turns. */
+  #nv-q { width:100%; margin-top:4px; padding:5px 6px; background:var(--c0); color:var(--ink-hi);
+    border:1px solid var(--c2); font:inherit; font-size:10px; letter-spacing:.06em; }
+  #nv-q:focus { outline:none; border-color:var(--c5); }
+  #nv-results div { padding:4px 0; border-bottom:1px solid var(--c2); cursor:pointer; font-size:9px;
+    color:var(--ink); text-transform:none; line-height:1.35; }
+  #nv-results div:hover { color:var(--ink-hi); }
+  #nv-steps { margin-top:6px; max-height:260px; overflow-y:auto; scrollbar-width:thin; }
+  #nv-steps .step { padding:3px 0; border-bottom:1px solid var(--c2); font-size:9px;
+    color:var(--ink); letter-spacing:.04em; line-height:1.35; }
+  #nv-steps .step.now { color:var(--ink-hi); border-left:2px solid var(--hi); padding-left:5px; }
+  #nv-state { color:var(--c7); font-size:9px; letter-spacing:.1em; margin-top:4px; }
+  .panel button:disabled { opacity:.4; cursor:default; }
 
   /* A folded row is a menu item, so it says so under the pointer. */
   .panel.min { cursor:pointer; }
@@ -647,6 +661,36 @@
     people in real time.</span>
 </div>
 
+<!-- Going somewhere. A place to go, three ways to get there, the line on the map and
+     the turns in a list - and WALK IT, because this map has someone standing on it.
+     Routing by OSRM at routing.openstreetmap.de (FOSSGIS e.V.), on OpenStreetMap roads. -->
+<div id="p-nav" class="panel">
+  <span class="ttl">GO SOMEWHERE</span>
+  <span class="row">FROM <b id="nv-from">—</b></span>
+  <input id="nv-q" type="search" placeholder="TO — TYPE A PLACE" autocomplete="off"
+         aria-label="Where to go">
+  <div id="nv-results"></div>
+  <span class="row">TO <b id="nv-to">—</b></span>
+  <label>HOW</label>
+  <div id="nv-mode">
+    <button type="button" data-mode="foot" aria-pressed="true">On foot</button>
+    <button type="button" data-mode="bike" aria-pressed="false">By bike</button>
+    <button type="button" data-mode="car" aria-pressed="false">By car</button>
+  </div>
+  <button id="b-nv-go" type="button" disabled>GO</button>
+  <span class="row">DISTANCE <b id="nv-dist">—</b></span>
+  <span class="row">TIME <b id="nv-time">—</b></span>
+  <span class="row" id="nv-state">PICK A PLACE</span>
+  <div id="nv-steps"></div>
+  <button id="b-nv-walk" type="button" disabled>WALK IT</button>
+  <button id="b-nv-clear" type="button">CLEAR THE ROUTE</button>
+  <span class="note">FROM is the figure if there is one, where you are if you have pressed
+    FIND ME, and otherwise the middle of the map. The roads are OpenStreetMap's and the
+    route comes from OSRM run by FOSSGIS e.V. at routing.openstreetmap.de — no key, three
+    real profiles. WALK IT sends the figure along the road at WALKING SPEED with the camera
+    behind it; any hand on W A S D takes over, and G still walks it itself.</span>
+</div>
+
 <div id="p-news" class="panel">
   <span class="ttl">THE WORLD, TODAY</span>
   <span class="big" id="n-mood">—</span>
@@ -796,38 +840,6 @@
   </div>
 </div>
 
-<div id="p-game" class="panel">
-  <span class="ttl">PAC-MAN, ON THE REAL STREETS</span>
-  <span class="big" id="g-state">NOT PLAYING</span>
-  <span class="row">SCORE <b id="g-score">0</b></span>
-  <span class="row">DOTS LEFT <b id="g-left">—</b></span>
-  <span class="row">LIVES <b id="g-lives">—</b></span>
-  <span class="row">GO TO <b id="g-go">—</b></span>
-  <span class="row">SPEED <b id="g-speed">—</b></span>
-  <button id="b-play" type="button">PLAY GAME</button>
-  <span class="note">Montpellier, from above, and only from close enough to see the
-    streets — zoom out past the city and the game stops rather than floating over a
-    continent. Take the dots, keep away from the four,
-    and get to wherever GO TO is pointing — round the corner, or twelve thousand
-    kilometres away. The orange ones are worth more and make you faster, 5% then 10%
-    then 100%. Nothing walks through a building, but a jump clears one, and a long
-    press jumps further than a tap. Caught, you come apart into your own pixels and
-    start again where you started.</span>
-  <div class="sep"></div>
-  <span class="ttl">KEYS</span>
-  <span class="row">MOVE <b>W A S D · ARROWS</b></span>
-  <span class="row">JUMP <b>SPACE, HOLD FOR MORE</b></span>
-  <span class="row">PAUSE <b>P</b></span>
-  <span class="row">START OVER <b>R</b></span>
-  <span class="row">CHANGE SHAPE <b>T</b></span>
-  <span class="row">WALK ITSELF <b>G</b></span>
-  <span class="row">TEN TIMES FASTER <b>HOLD SHIFT</b></span>
-  <span class="note">Shift is the boost - ten times the speed on the ground and half
-    again as high in the air - so walking itself is G rather than a chord shift already
-    owns. The keys work outside the game too — that is where they came from.
-    Nothing here is loaded from anywhere: the streets are the gaps between the buildings
-    the map has already drawn, which is all a maze ever was.</span>
-</div>
 
 <div id="p-space" class="panel">
   <span class="ttl">WHERE YOU ARE</span>
@@ -1301,10 +1313,18 @@ const style = {
         'line-opacity':0.6,
         'line-width':['interpolate',['linear'],['zoom'],12,0.6,16,2.5] } },
 
+    /* Paths and tracks are drawn as what they are - thin and broken - rather than the
+       same grey line as a residential street. At street zoom, on foot, that is the
+       difference between a way through and a wall. ('footway' was in the old filter
+       and matched nothing: in these tiles it is a subclass of `path`, not a class.) */
+    { id:'road-path', type:'line', source:'ofm', 'source-layer':'transportation',
+      minzoom:13, filter:['in','class','path','track'],
+      paint:{ 'line-color':'#6a6a6a', 'line-dasharray':[2,2],
+        'line-width':['interpolate',['linear'],['zoom'],13,0.4,18,1.8] } },
     { id:'road-minor', type:'line', source:'ofm', 'source-layer':'transportation',
-      minzoom:12, filter:['in','class','minor','service','track','path','footway'],
+      minzoom:12, filter:['in','class','minor','service'],
       paint:{ 'line-color':'#5a5a5a',
-        'line-width':['interpolate',['linear'],['zoom'],12,0.5,18,3] } },
+        'line-width':['interpolate',['linear'],['zoom'],12,0.5,16,2.2,18,4] } },
     { id:'road-sec', type:'line', source:'ofm', 'source-layer':'transportation',
       filter:['in','class','secondary','tertiary'],
       paint:{ 'line-color':'#9a9a9a',
@@ -1625,10 +1645,11 @@ const labelBoxes = [];   // what drawCapitals put on the label canvas this frame
 let markerAt = null, markerKind = 'ghost', markerRAF = 0, markerT0 = 0, markerBuilt = null;
 let markerHead = null, jumpY = 0;   // read while drawing, so declared up here with the rest
 let autoWalk = false, autoEnt = null;
-const GM = { on: false, ready: false, paused: false, over: '', score: 0, lives: 3, mult: 1,
-             dots: [], coinsTaken: 0, foes: [], keysBusy: false, last: 0, from: null,
-             target: null };
-let dying = null;   // the pixels of someone who has just been caught, falling
+/* Going somewhere: the route as a list of [lon, lat], how far along it the figure is,
+   and what the panel should say. Up here with the marker's own state because
+   driveMarker reads it every frame. */
+const NAV = { from: null, to: null, toName: '', mode: 'foot', route: null, steps: [],
+              km: 0, sec: 0, follow: false, seg: 0, along: 0, done: 0, state: '', hudAt: 0 };
 let dirty = true;
 
 /* Dot pitch is a function of zoom, and it is the whole LOD story:
@@ -1921,7 +1942,7 @@ function paintLabels() {
   drawCountryName();
   drawCityNames();
   drawNews();
-  drawGame();
+  drawNav();
   drawMarker();
 }
 
@@ -3177,8 +3198,10 @@ document.getElementById('b-weather').addEventListener('click', () => {
    the rounded pair. */
 const meSet = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
 let meWatch = 0;
+let meAt = null;        // the rounded pair, for anything that wants to start from you
 
 function showMe(lat, lon, accM) {
+  meAt = { lon, lat };
   const src = map.getSource('me');
   if (src) src.setData({ type: 'FeatureCollection', features: [
     { type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] },
@@ -3271,6 +3294,7 @@ document.getElementById('b-me-clear').addEventListener('click', () => {
   bKeep.textContent = 'KEEP UP WITH ME';
   const src = map.getSource('me');
   if (src) src.setData({ type: 'FeatureCollection', features: [] });
+  meAt = null;
   ['me-lat', 'me-lon', 'me-acc', 'me-place'].forEach(id => meSet(id, '—'));
   bHere.setAttribute('aria-pressed', 'false');
   bHere.textContent = 'WHERE AM I';
@@ -3954,7 +3978,7 @@ const MARK_BOB  = 3.4;                 // and how far it drifts while it hangs
 /* Seen from above and off one corner. Straight on and nearly level, a car is a
    rectangle and nothing else: it took a three-quarter view to make one read as a car
    at thirty pixels. */
-let   MARK_ELEV = 32 * RAD;            // the game looks almost straight down instead
+let   MARK_ELEV = 32 * RAD;
 /* A vehicle wants the corner view; a face wants to be looked at. The ghost turned
    36 degrees showed one eye and gazed off past your shoulder. */
 const MARK_YAW  = 36 * RAD;
@@ -4104,18 +4128,9 @@ window.__marker = {
       return { roof: +st.toFixed(1), air: +Math.max(0, jumpY - st).toFixed(1) };
     } catch (e) { return null; }
   },
-  get dying() { return dying ? dying.bits.length : 0; },
-  get game() { return { on: GM.on, score: GM.score, lives: GM.lives, mult: +GM.mult.toFixed(2),
-                        coins: GM.coinsTaken, left: GM.dots.filter(d => !d.eaten).length,
-                        coinsOnMap: GM.dots.filter(d => d.coin && !d.eaten).length,
-                        target: GM.target,
-                        foes: GM.foes.map(f => {
-                          try {
-                            const a = map.project([f.lon, f.lat]);
-                            const b = map.project([markerAt.lon, markerAt.lat]);
-                            return Math.round(Math.hypot(a.x - b.x, a.y - b.y));
-                          } catch (e) { return null; }
-                        }) }; },
+  get nav() { return { to: NAV.to, name: NAV.toName, mode: NAV.mode, km: +NAV.km.toFixed(2),
+                       min: Math.round(NAV.sec / 60), steps: NAV.steps.length, follow: NAV.follow,
+                       done: Math.round(NAV.done), seg: NAV.seg, state: NAV.state }; },
 };
 
 function markerModel(kind) {
@@ -4225,7 +4240,12 @@ function driveMarker(now) {
   /* Walking itself: the same rule the four in the game use - go on until a wall says
      no, then take a turn that is open. Over a city that is indistinguishable from
      following the streets, because the streets are the only places it can go. */
-  if (autoWalk && !keysDown.size) {
+  /* On a route, or walking itself, and nobody steering: the road drives. Steering is
+     W A S D - not shift, which is only ever a speed. Counting shift as a hand on the keys
+     froze the walk the moment you held it to go faster: 90 m done, then nothing. */
+  const steering = keysDown.has('w') || keysDown.has('a') || keysDown.has('s') || keysDown.has('d');
+  if (NAV.follow && !steering) { navStep(dt); return; }
+  if (autoWalk && !steering) {
     if (!autoEnt) autoEnt = { lon: markerAt.lon, lat: markerAt.lat, dir: DIRS[1] };
     autoEnt.lon = markerAt.lon; autoEnt.lat = markerAt.lat;
     walkOn(autoEnt, KEY_SPEED * 0.75, dt, null);
@@ -4251,7 +4271,7 @@ function driveMarker(now) {
      Shift is ten times that - 120 m/s, a fast train - for getting across a city rather
      than along a street. */
   const boost = keysDown.has('shift') ? 10 : 1;
-  const step = KEY_SPEED * GM.mult * boost * dt / mPerPx();
+  const step = KEY_SPEED * boost * dt / mPerPx();
   let nx = p.x + dx * step, ny = p.y + dy * step;
 
   /* Walls, unless it is over them. Blocked head-on, it tries each axis on its own
@@ -4318,7 +4338,7 @@ function followCam() {
     ctl: 'SETTINGS', hud: 'VIEW', stats: 'LIVE', 'p-news': 'NEWS',
     'p-weather': 'WEATHER', 'p-world': 'WORLD', 'p-cities': 'CITIES',
     'p-capitals': 'CAPITALS', 'p-monuments': 'MONUMENTS', legend: 'COLOURS',
-    'p-game': 'GAME', 'p-space': 'SPACE', 'p-me': 'WHERE YOU ARE'
+    'p-nav': 'GO SOMEWHERE', 'p-space': 'SPACE', 'p-me': 'WHERE YOU ARE'
   };
   for (const panel of document.querySelectorAll('.panel:not(#err)')) {
     const label = names[panel.id] || panel.id.replace(/^p-/, '').toUpperCase();
@@ -4382,19 +4402,15 @@ addEventListener('keydown', e => {
     return;
   }
 
-  if ('prtg'.includes(raw) && !GM.keysBusy) {
-    if (raw === 'p') { e.preventDefault(); pauseGame(); return; }
-    if (raw === 'r') { e.preventDefault(); if (GM.on) startGame(); return; }
-    if (raw === 't') {
-      e.preventDefault();
-      const i = MARK_CYCLE.indexOf(markerKind);
-      setMarkerKind(MARK_CYCLE[(i + 1) % MARK_CYCLE.length]);
-      return;
-    }
-    /* Walking itself used to be SHIFT + A. Shift is the boost now, so it moved to G -
-       'go' - and A is only ever left. Two things cannot share one chord. */
-    if (raw === 'g') { e.preventDefault(); autoWalk = !autoWalk; return; }
+  if (raw === 't') {
+    e.preventDefault();
+    const i = MARK_CYCLE.indexOf(markerKind);
+    setMarkerKind(MARK_CYCLE[(i + 1) % MARK_CYCLE.length]);
+    return;
   }
+  /* Walking itself used to be SHIFT + A. Shift is the boost now, so it moved to G -
+     'go' - and A is only ever left. Two things cannot share one chord. */
+  if (raw === 'g') { e.preventDefault(); autoWalk = !autoWalk; NAV.follow = false; return; }
 
   if (raw === 'shift') { keysDown.add('shift'); return; }
   if (!'wasd'.includes(k)) return;
@@ -4402,7 +4418,7 @@ addEventListener('keydown', e => {
   // Nothing dropped yet: start it in the middle of what you are looking at, or the
   // keys would do nothing at all and look broken.
   if (!markerAt) { const c = map.getCenter(); dropMarker(c.lng, c.lat); }
-  autoWalk = false;                           // a hand on the keys beats the autopilot
+  autoWalk = false; NAV.follow = false;       // a hand on the keys beats any autopilot
   keysDown.add(k);
 });
 addEventListener('keyup', e => {
@@ -4419,152 +4435,11 @@ function setMarkerKind(kind) {
   paintLabels();
 }
 
-/* ── Pac-Man, on the real streets ────────────────────────────────────────────────
-   No maze is drawn and none is loaded. The buildings the map has already put on screen
-   ARE the maze - the streets are the gaps between them - which is why this needs no
-   data of its own at all and would work over any city you point it at. It starts on
-   Montpellier because that is where this whole thing started.
-
-   The dots go on a grid over the view, and any that land inside a building are thrown
-   away; what survives is a dot in every street. The four chase by the same rule the
-   player walks by: go until a wall says no, then take a turn that is open, preferring
-   the one that closes the gap. That is the whole of it. */
-const GAME_AT   = [3.8797, 43.6086];   // Place de la Comedie
-const GAME_ZOOM = 17;
-const DOT_GAP   = 150;                 // screen px between dots: rare, not a carpet
-/* Below this the game is not on screen, it is on top of a continent: the dots stop
-   being streets apart and become countries apart, and four figures the size of a thumb
-   hang over the Atlantic. Zoomed out past it, nothing of the game is drawn and nothing
-   of it happens - you cannot be caught by something you cannot see. */
-const GAME_MIN_ZOOM = 14;
-const COIN_EVERY = 11;                 // one dot in this many is worth more than a dot
-const SPEED_STEP = [5, 10, 15, 25, 50, 100];   // per cent faster, a coin at a time
-const FOE_SPEED = 9;                   // metres a second; the player has 12
-const FOE_HUES  = [['#ff5c5c', '#5a1b1b'], ['#ffb0d8', '#5a2c42'],
-                   ['#67e8ff', '#173f4a'], ['#ffc46b', '#4f3512']];
-
 const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];     // up, right, down, left
-const gset = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
-
-/* Somewhere to head for. Mostly the next few streets, sometimes the next county, and
-   now and then a point picked off the whole globe - which is usually the sea, so it is
-   drawn from the land the map already knows about when it can be. A target is a
-   direction and a distance, not a route: how you get there is your problem. */
-function newTarget() {
-  const here = markerAt || { lon: GAME_AT[0], lat: GAME_AT[1] };
-  const roll = Math.random();
-  let km;
-  if (roll < 0.62) km = 0.15 + Math.random() * 0.6;        // round the corner
-  else if (roll < 0.9) km = 2 + Math.random() * 30;         // across the city, or out of it
-  else if (roll < 0.98) km = 60 + Math.random() * 900;      // another region, another country
-  else km = 1500 + Math.random() * 12000;                   // the other side of the world
-  const bear = Math.random() * 360;
-  const d = km / 6371, b = bear * RAD, la = here.lat * RAD, lo = here.lon * RAD;
-  const lat2 = Math.asin(Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(b));
-  const lon2 = lo + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(la),
-                               Math.cos(d) - Math.sin(la) * Math.sin(lat2));
-  GM.target = { lon: ((lon2 / RAD + 540) % 360) - 180,
-                lat: Math.max(-85, Math.min(85, lat2 / RAD)), km };
-}
-
-function targetLine() {
-  if (!GM.target || !markerAt) return '—';
-  const t = GM.target;
-  const x = (t.lon - markerAt.lon) * Math.cos(markerAt.lat * RAD), y = t.lat - markerAt.lat;
-  const km = Math.hypot(x, y) * 111.32;
-  const bear = (Math.atan2(x, y) / RAD + 360) % 360;
-  const rose = ['N','NE','E','SE','S','SW','W','NW'][Math.round(bear / 45) % 8];
-  return (km < 1 ? Math.round(km * 1000) + ' M' : km.toFixed(km < 100 ? 1 : 0) + ' KM') + ' ' + rose;
-}
-
-function gameHud() {
-  gset('g-state', !GM.on ? 'NOT PLAYING' : !GM.ready ? 'SETTING OUT…' : GM.over ? GM.over
-    : GM.paused ? 'PAUSED'
-    : map.getZoom() < GAME_MIN_ZOOM ? 'TOO FAR OUT — ZOOM IN' : 'PLAYING');
-  gset('g-score', GM.score);
-  gset('g-left', GM.on && GM.ready ? GM.dots.filter(d => !d.eaten).length : '—');
-  gset('g-lives', GM.on ? '●'.repeat(Math.max(0, GM.lives)) || 'NONE' : '—');
-  gset('g-go', GM.on ? targetLine() : '—');
-  gset('g-speed', GM.on ? '×' + GM.mult.toFixed(2) : '—');
-  const b = document.getElementById('b-play');
-  if (b) b.textContent = GM.on ? 'START OVER' : 'PLAY GAME';
-}
-
-// A dot every DOT_GAP across the view, minus the ones that landed indoors.
-function layDots() {
-  const W = labels.width / DPR, H = labels.height / DPR, out = [];
-  for (let x = DOT_GAP; x < W - DOT_GAP; x += DOT_GAP)
-    for (let y = DOT_GAP; y < H - DOT_GAP; y += DOT_GAP) {
-      if (blockedAt(x, y)) continue;
-      const ll = map.unproject([x, y]);
-      out.push({ lon: ll.lng, lat: ll.lat, eaten: false,
-                 coin: Math.random() < 1 / COIN_EVERY });
-    }
-  return out;
-}
-
-// Somewhere in the open, and not on top of the player.
-function freeSpot(awayFrom) {
-  const W = labels.width / DPR, H = labels.height / DPR;
-  for (let i = 0; i < 300; i++) {
-    const x = 60 + Math.random() * (W - 120), y = 60 + Math.random() * (H - 120);
-    if (blockedAt(x, y)) continue;
-    if (awayFrom) {
-      /* Near enough to be a threat, far enough to be fair. Unbounded, they started a
-         whole screen away on a wide window and took a minute to be a game. */
-      const d = Math.hypot(x - awayFrom.x, y - awayFrom.y);
-      if (d < 220 || d > 700) continue;
-    }
-    const ll = map.unproject([x, y]);
-    return { lon: ll.lng, lat: ll.lat };
-  }
-  return null;
-}
-
-async function startGame() {
-  GM.keysBusy = true;
-  GM.on = true; GM.ready = false; GM.paused = false; GM.over = '';
-  GM.score = 0; GM.lives = 3; GM.mult = 1; GM.coinsTaken = 0; GM.target = null;
-  dying = null;
-  gameHud();
-  showTopic('p-game');
-  stopOrbit();
-  // From above, north up: a maze read at an angle is not a maze.
-  MARK_ELEV = 74 * RAD;
-  map.jumpTo({ center: GAME_AT, zoom: GAME_ZOOM, pitch: 0, bearing: 0 });
-  await new Promise(r => map.once('idle', r));
-  const c = map.getCenter();
-  GM.from = { lon: c.lng, lat: c.lat };
-  dropMarker(c.lng, c.lat);
-  autoWalk = false;
-  GM.dots = layDots();
-  newTarget();
-  const me = map.project([c.lng, c.lat]);
-  GM.foes = FOE_HUES.map(([lit, dk], i) => {
-    const at = freeSpot(me) || { lon: c.lng, lat: c.lat };
-    return { ...at, lit, dk, dir: DIRS[i % 4], t0: i * 0.4 };
-  });
-  GM.keysBusy = false;
-  GM.ready = true;
-  gameHud();
-}
-
-function pauseGame() {
-  if (!GM.on || GM.over) return;
-  GM.paused = !GM.paused;
-  GM.last = 0;
-  gameHud();
-}
-
-function endGame(how) {
-  GM.over = how;
-  MARK_ELEV = 32 * RAD;
-  gameHud();
-}
 
 /* One step for anything that walks itself: keep going, and when the way ahead is shut
-   take one that is open. `chase` pulls the choice towards the player, which is the only
-   difference between a thing hunting you and a thing wandering. */
+   take one that is open. Over a city that is indistinguishable from following the
+   streets, because the streets are the only places it can go. */
 function walkOn(e, speed, dt, chase) {
   let p;
   try { p = map.project([e.lon, e.lat]); } catch (err) { return; }
@@ -4595,166 +4470,6 @@ function walkOn(e, speed, dt, chase) {
   e.lon = ll.lng; e.lat = ll.lat;
 }
 
-/* Caught. It comes apart into its own pixels, which fall to the ground and go out -
-   and only then does it start again from where it started. Everything here is screen
-   space and lasts 900 ms, so it costs nothing and never has to be cleaned up. */
-const MELT_MS = 900;
-function melt(x, y, lit) {
-  const bits = [];
-  for (let i = 0; i < 46; i++) {
-    bits.push({ x: x + (Math.random() - 0.5) * 16 * DPR,
-                y: y - Math.random() * 26 * DPR,
-                vx: (Math.random() - 0.5) * 38 * DPR,
-                vy: (Math.random() - 1.2) * 46 * DPR,
-                s: (0.8 + Math.random() * 1.6) * DPR });
-  }
-  dying = { bits, t0: performance.now(), ground: y, lit };
-}
-function drawMelt() {
-  if (!dying) return;
-  const t = (performance.now() - dying.t0) / MELT_MS;
-  if (t >= 1) { dying = null; return; }
-  lctx.save();
-  lctx.globalAlpha = 1 - t * t;
-  lctx.fillStyle = dying.lit;
-  for (const b of dying.bits) {
-    const s = t * MELT_MS / 1000;
-    const x = b.x + b.vx * s;
-    let y = b.y + b.vy * s + 260 * DPR * s * s;     // pixels, because it is a picture
-    if (y > dying.ground) y = dying.ground;         // and it settles on the ground
-    lctx.fillRect(x, y, b.s, b.s);
-  }
-  lctx.restore();
-}
-
-function stepGame(now) {
-  if (!gameInView() || GM.paused || GM.over || !markerAt) {
-    GM.last = now;
-    if (GM.on) gameHud();      // or the panel goes on saying PLAYING to an empty screen
-    return;
-  }
-  const dt = GM.last ? Math.min(0.06, (now - GM.last) / 1000) : 0;
-  GM.last = now;
-  if (!dt) return;
-
-  let me;
-  try { me = map.project([markerAt.lon, markerAt.lat]); } catch (e) { return; }
-
-  for (const d of GM.dots) {
-    if (d.eaten) continue;
-    const q = map.project([d.lon, d.lat]);
-    /* Wide enough to be taken by walking past it rather than aimed at. On a 150 px
-       grid a 15 px reach meant threading a needle. */
-    if (Math.hypot(q.x - me.x, q.y - me.y) < 24) {
-      d.eaten = true;
-      if (d.coin) {
-        /* A coin is speed, and the steps get steeper: five per cent, then ten, then a
-           hundred, so the sixth one is the one you remember. */
-        const step = SPEED_STEP[Math.min(SPEED_STEP.length - 1, GM.coinsTaken++)] || 100;
-        GM.mult *= 1 + step / 100;
-        GM.score += 100;
-      } else GM.score += 10;
-    }
-  }
-  if (!GM.dots.some(d => !d.eaten)) { endGame('ALL OF IT EATEN'); return; }
-
-  // Somewhere to be. Arrive and there is somewhere else to be.
-  if (GM.target) {
-    const t = GM.target;
-    const km = Math.hypot((t.lon - markerAt.lon) * Math.cos(markerAt.lat * RAD),
-                          t.lat - markerAt.lat) * 111.32;
-    if (km < 0.03) { GM.score += 500; newTarget(); }
-  }
-
-  for (const f of GM.foes) {
-    walkOn(f, FOE_SPEED, dt, me);
-    const q = map.project([f.lon, f.lat]);
-    // Stuck in a courtyard with no way out is not chasing anybody: put it back in play.
-    if (f.was && Math.hypot(q.x - f.was.x, q.y - f.was.y) < 6) {
-      if ((f.stuck = (f.stuck || 0) + dt) > 3) { Object.assign(f, freeSpot(me) || f); f.stuck = 0; }
-    } else f.stuck = 0;
-    f.was = { x: q.x, y: q.y };
-    if (jumpY < 2 && Math.hypot(q.x - me.x, q.y - me.y) < 19) {
-      melt(me.x * DPR, me.y * DPR, '#ffe74d');
-      GM.lives--;
-      if (GM.lives <= 0) { endGame('CAUGHT'); return; }
-      markerAt.lon = GM.from.lon; markerAt.lat = GM.from.lat;    // back to where it began
-      jumpY = 0; jumpV = 0;
-      const back = map.project([GM.from.lon, GM.from.lat]);
-      for (const g of GM.foes) Object.assign(g, freeSpot(back) || g);
-      break;
-    }
-  }
-  gameHud();
-}
-
-// A function declaration, not a const arrow: paintLabels can run before this line is
-// reached and a const in its dead zone throws rather than reading as undefined.
-/* `ready` matters: laying the dots waits for the map to settle, and between switching
-   the game on and having any dots there is an await. Without this the first frame of
-   that gap found an empty board and declared the game won. */
-function gameInView() { return GM.on && GM.ready && map.getZoom() >= GAME_MIN_ZOOM; }
-
-function drawGame() {
-  if (!gameInView()) return;
-  lctx.save();
-  for (const d of GM.dots) {
-    if (d.eaten) continue;
-    let q;
-    try { q = map.project([d.lon, d.lat]); } catch (e) { continue; }
-    const x = q.x * DPR, y = q.y * DPR;
-    if (!(x > 0 && y > 0 && x < labels.width && y < labels.height)) continue;
-    if (hiddenBehind(q.x, q.y)) continue;            // a solid is a solid, for dots too
-    lctx.beginPath();
-    lctx.arc(x, y, (d.coin ? 4.4 : 2.2) * DPR, 0, Math.PI * 2);
-    lctx.fillStyle = d.coin ? '#ff8c00' : '#ffd400';
-    lctx.fill();
-    if (d.coin) { lctx.strokeStyle = '#ffe74d'; lctx.lineWidth = 1 * DPR; lctx.stroke(); }
-  }
-  lctx.restore();
-  const t = performance.now() / 1000;
-  for (const f of GM.foes) drawFigure(f, 'ghost', null, 0, t + f.t0, f.lit, f.dk, f.lit);
-  drawTarget();
-  drawMelt();
-}
-
-/* Where to go, when it is not on screen: an arrow at the edge, pointing at it. A
-   destination twelve thousand kilometres away is still a direction. */
-function drawTarget() {
-  if (!GM.target || !markerAt) return;
-  let me, to;
-  try {
-    me = map.project([markerAt.lon, markerAt.lat]);
-    to = map.project([GM.target.lon, GM.target.lat]);
-  } catch (e) { return; }
-  const W = labels.width / DPR, H = labels.height / DPR;
-  const inView = to.x > 0 && to.y > 0 && to.x < W && to.y < H;
-  lctx.save();
-  lctx.strokeStyle = '#7ec8a9'; lctx.fillStyle = '#7ec8a9';
-  if (inView) {
-    lctx.globalAlpha = 0.9;
-    lctx.lineWidth = 1.4 * DPR;
-    lctx.beginPath();
-    lctx.arc(to.x * DPR, to.y * DPR, 9 * DPR, 0, Math.PI * 2);
-    lctx.stroke();
-    lctx.beginPath();
-    lctx.arc(to.x * DPR, to.y * DPR, 2.4 * DPR, 0, Math.PI * 2);
-    lctx.fill();
-  } else {
-    const a = Math.atan2(to.y - me.y, to.x - me.x);
-    const r = Math.min(W, H) * 0.34 * DPR;
-    const cx = me.x * DPR + Math.cos(a) * r, cy = me.y * DPR + Math.sin(a) * r;
-    lctx.globalAlpha = 0.75;
-    lctx.translate(cx, cy); lctx.rotate(a);
-    lctx.beginPath();
-    lctx.moveTo(7 * DPR, 0); lctx.lineTo(-5 * DPR, 4.5 * DPR); lctx.lineTo(-5 * DPR, -4.5 * DPR);
-    lctx.closePath(); lctx.fill();
-  }
-  lctx.restore();
-}
-
-const bPlay = document.getElementById('b-play');
-if (bPlay) bPlay.addEventListener('click', () => startGame());
 
 /* Its own frames, and only this canvas: the lattice underneath has not changed,
    so putting the whole of halftone() through the GPU to move a ghost 3 px would be
@@ -4763,7 +4478,6 @@ function tickMarker() {
   if (!markerAt || markerKind === 'none') { markerRAF = 0; markerLast = 0; return; }
   const now = performance.now();
   driveMarker(now);
-  stepGame(now);
   /* Ask for a redraw rather than painting here. Walking moves the map, which makes
      MapLibre render, which repaints the labels in that same frame — painting here as
      well drew them twice a frame, and the second one was always the stale one. */
@@ -4772,16 +4486,9 @@ function tickMarker() {
 }
 
 function drawMarker() {
-  if (!markerAt || markerKind === 'none' || dying) return;
-  // In the game it is a player and belongs to the streets; out of it, it is a marker
-  // and belongs wherever you dropped it, at any zoom.
-  if (GM.on && map.getZoom() < GAME_MIN_ZOOM) return;
-  // In the game you are the warm one and the four chasing you are not.
-  const me = GM.on;
+  if (!markerAt || markerKind === 'none') return;
   drawFigure(markerAt, markerKind, markerHead, jumpY,
-             (performance.now() - markerT0) / 1000,
-             me ? '#ffe74d' : MARK_LIT, me ? '#6b5200' : MARK_DARK,
-             me ? '#ffd400' : MARK_GLOW);
+             (performance.now() - markerT0) / 1000, MARK_LIT, MARK_DARK, MARK_GLOW);
   /* Behind a building you cannot see it, which is the point - but losing yourself
      entirely is not a rule, it is a bug. A thin ring says where you are without
      drawing you through the wall. */
@@ -6196,6 +5903,264 @@ q.addEventListener('keydown', e => {
 });
 // Typing in the field must not reach the map's keyboard shortcuts.
 q.addEventListener('keydown', e => e.stopPropagation());
+
+/* ── go somewhere ─────────────────────────────────────────────────────────────────
+   A route from where you are to a place, on open data: the roads are OpenStreetMap's
+   and the routing is OSRM run by FOSSGIS e.V. at routing.openstreetmap.de, which
+   answers a browser page directly, needs no key, and keeps three real profiles - on
+   foot, by bike and by car gave 1.1 km, 2.1 km and 6.5 km for the same pair of points
+   when this was built, which is how you know they are different roads. The public demo
+   at router.project-osrm.org was tried first and ignores the profile.
+
+   The route is a line on the map, a list of turns in the panel, and - because this map
+   already has someone standing on it - a thing the figure can walk. */
+const NAV_HOST = 'https://routing.openstreetmap.de';
+const NAV_PROFILE = { foot: 'routed-foot', bike: 'routed-bike', car: 'routed-car' };
+const TURN = { left: '↰', right: '↱', straight: '↑', 'slight left': '↖', 'slight right': '↗',
+               'sharp left': '↙', 'sharp right': '↘', uturn: '↶' };
+const nvSet = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+const metresBetween = (a, b) => {          // [lon, lat] pairs; good to a few metres over a street
+  const dx = (b[0] - a[0]) * 111320 * Math.cos((a[1] + b[1]) / 2 * RAD);
+  return Math.hypot(dx, (b[1] - a[1]) * 111320);
+};
+const bearingOf = (a, b) => (Math.atan2((b[0] - a[0]) * Math.cos((a[1] + b[1]) / 2 * RAD),
+                                       b[1] - a[1]) / RAD + 360) % 360;
+const fmtM = m => m < 950 ? Math.round(m / 10) * 10 + ' M' : (m / 1000).toFixed(m < 9500 ? 1 : 0) + ' KM';
+const fmtMin = sec => sec < 3570 ? Math.max(1, Math.round(sec / 60)) + ' MIN'
+                                 : Math.floor(sec / 3600) + ' H ' + Math.round(sec % 3600 / 60) + ' MIN';
+
+/* Where "from" is, in order of how much it is you: the figure, if there is one; where
+   you are, if you have pressed FIND ME; the middle of what you are looking at. */
+function navFrom() {
+  if (markerAt) return { lon: markerAt.lon, lat: markerAt.lat, name: 'THE FIGURE' };
+  if (meAt) return { lon: meAt.lon, lat: meAt.lat, name: 'WHERE YOU ARE' };
+  const c = map.getCenter();
+  return { lon: c.lng, lat: c.lat, name: 'THE MIDDLE OF THE MAP' };
+}
+
+function navHud() {
+  nvSet('nv-from', navFrom().name);
+  nvSet('nv-to', NAV.toName ? NAV.toName.split(',')[0].toUpperCase().slice(0, 26) : '—');
+  nvSet('nv-dist', NAV.route ? fmtM(NAV.km * 1000) : '—');
+  nvSet('nv-time', NAV.route ? fmtMin(NAV.sec) : '—');
+  nvSet('nv-state', NAV.state || (NAV.route ? 'ROUTE READY' : NAV.to ? 'PRESS GO' : 'PICK A PLACE'));
+  const go = document.getElementById('b-nv-go');
+  if (go) go.disabled = !NAV.to;
+  const walk = document.getElementById('b-nv-walk');
+  if (walk) { walk.disabled = !NAV.route; walk.textContent = NAV.follow ? 'STOP WALKING' : 'WALK IT'; }
+  const list = document.getElementById('nv-steps');
+  if (!list) return;
+  if (list.dataset.n !== String(NAV.steps.length)) {
+    list.innerHTML = '';
+    for (const st of NAV.steps) {
+      const d = document.createElement('div');
+      d.className = 'step';
+      d.textContent = st.glyph + ' ' + (st.m ? fmtM(st.m) + ' — ' : '') + st.text;
+      list.appendChild(d);
+    }
+    list.dataset.n = String(NAV.steps.length);
+  }
+  // the turn the figure is on: the first whose end is still ahead of it
+  let acc = 0, cur = -1;
+  for (let i = 0; i < NAV.steps.length; i++) { acc += NAV.steps[i].m; if (NAV.done < acc) { cur = i; break; } }
+  [...list.children].forEach((d, i) => d.classList.toggle('now', NAV.follow && i === cur));
+}
+
+/* One line per turn, from OSRM's own manoeuvres: the road's name where it has one and
+   what the turn is where it does not. */
+function navSteps(leg) {
+  return (leg.steps || []).map(st => {
+    const m = st.maneuver || {};
+    const glyph = m.type === 'arrive' ? '●' : m.type === 'depart' ? '○'
+                : /roundabout|rotary/.test(m.type) ? '↻' : TURN[m.modifier] || '↑';
+    let text = (st.name || '').toUpperCase();
+    if (m.type === 'arrive') text = 'ARRIVE' + (text ? ' · ' + text : '');
+    else if (m.type === 'depart') text = 'SET OFF' + (text ? ' ALONG ' + text : '');
+    else if (!text) text = (m.type + ' ' + (m.modifier || '')).toUpperCase().trim();
+    return { glyph, text, m: Math.round(st.distance) };
+  });
+}
+
+async function navGo() {
+  if (!NAV.to) return;
+  const from = navFrom();
+  NAV.from = { lon: from.lon, lat: from.lat };
+  NAV.state = 'ASKING FOR A ROUTE…'; NAV.follow = false; navHud();
+  const path = NAV_PROFILE[NAV.mode] || NAV_PROFILE.foot;
+  const u = NAV_HOST + '/' + path + '/route/v1/driving/' + NAV.from.lon + ',' + NAV.from.lat
+          + ';' + NAV.to.lon + ',' + NAV.to.lat + '?overview=full&geometries=geojson&steps=true';
+  try {
+    const r = await fetch(u);
+    const j = await r.json();
+    const route = j.routes && j.routes[0];
+    if (!r.ok || !route) throw new Error(j.message || j.code || 'no route');
+    NAV.route = route.geometry.coordinates;
+    NAV.km = route.distance / 1000; NAV.sec = route.duration;
+    NAV.steps = navSteps(route.legs[0] || {});
+    NAV.seg = 0; NAV.along = 0; NAV.done = 0; NAV.state = '';
+    navDraw();
+    // the whole of it on screen, and the figure at the start of it
+    const lons = NAV.route.map(c => c[0]), lats = NAV.route.map(c => c[1]);
+    stopOrbit();
+    map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]],
+                  { padding: { top: 60, bottom: 60, left: 240, right: 60 }, duration: 1400, maxZoom: 16 });
+    if (!markerAt) dropMarker(NAV.from.lon, NAV.from.lat);
+  } catch (e) {
+    NAV.route = null; NAV.steps = [];
+    NAV.state = 'NO ROUTE — ' + String(e && e.message || e).toUpperCase().slice(0, 40);
+    navDraw();
+  }
+  navHud();
+}
+
+/* The line itself: a dark edge under a white core, so it stands off the roads it runs
+   along - and under the 3D buildings, so a block that stands between you and the road
+   hides that bit of it, the way it hides the road. */
+function navDraw() {
+  const data = { type: 'FeatureCollection', features: NAV.route
+    ? [{ type: 'Feature', geometry: { type: 'LineString', coordinates: NAV.route }, properties: {} }] : [] };
+  const src = map.getSource('route');
+  if (src) { src.setData(data); dirty = true; return; }
+  map.addSource('route', { type: 'geojson', data });
+  const before = map.getLayer('building-3d') ? 'building-3d' : undefined;
+  map.addLayer({ id: 'route-casing', type: 'line', source: 'route',
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': '#000000', 'line-opacity': 0.9,
+             'line-width': ['interpolate', ['linear'], ['zoom'], 10, 4, 16, 9, 20, 16] } }, before);
+  map.addLayer({ id: 'route-line', type: 'line', source: 'route',
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': '#ffffff', 'line-opacity': 0.95,
+             'line-width': ['interpolate', ['linear'], ['zoom'], 10, 2, 16, 4.5, 20, 8] } }, before);
+  dirty = true;
+}
+
+function navClear() {
+  NAV.route = null; NAV.steps = []; NAV.to = null; NAV.toName = ''; NAV.follow = false;
+  NAV.seg = 0; NAV.along = 0; NAV.done = 0; NAV.state = '';
+  const box = document.getElementById('nv-q'); if (box) box.value = '';
+  const out = document.getElementById('nv-results'); if (out) out.innerHTML = '';
+  navDraw(); navHud();
+}
+
+/* The figure along the road. Metres this frame from WALKING SPEED, spent segment by
+   segment down the line; the heading is the segment's own bearing, so it faces the way
+   the road goes rather than the way a key was pressed. */
+function navStep(dt) {
+  const R = NAV.route;
+  if (!R || R.length < 2 || !markerAt) { NAV.follow = false; navHud(); return; }
+  let left = KEY_SPEED * (keysDown.has('shift') ? 10 : 1) * dt;
+  while (left > 0 && NAV.seg < R.length - 1) {
+    const len = metresBetween(R[NAV.seg], R[NAV.seg + 1]);
+    const remain = len - NAV.along;
+    if (left < remain) { NAV.along += left; NAV.done += left; left = 0; }
+    else { left -= remain; NAV.done += remain; NAV.seg++; NAV.along = 0; }
+  }
+  if (NAV.seg >= R.length - 1) {                       // the end of the line
+    const end = R[R.length - 1];
+    markerAt.lon = end[0]; markerAt.lat = end[1];
+    NAV.follow = false; NAV.state = 'ARRIVED'; followCam(); navHud(); return;
+  }
+  const a = R[NAV.seg], b = R[NAV.seg + 1];
+  const len = metresBetween(a, b) || 1, f = NAV.along / len;
+  markerAt.lon = a[0] + (b[0] - a[0]) * f;
+  markerAt.lat = a[1] + (b[1] - a[1]) * f;
+  markerHead = bearingOf(a, b);
+  jumpY = 0; jumpV = 0;                                // roads are on the ground
+  followCam();
+  const now = performance.now();
+  if (now - NAV.hudAt > 250) {                         // four times a second is plenty for text
+    NAV.hudAt = now;
+    NAV.state = 'WALKING · ' + fmtM(Math.max(0, NAV.km * 1000 - NAV.done)) + ' TO GO';
+    navHud();
+  }
+}
+
+function navWalk() {
+  if (!NAV.route) return;
+  if (NAV.follow) { NAV.follow = false; NAV.state = ''; navHud(); return; }
+  if (!markerAt) dropMarker(NAV.from.lon, NAV.from.lat);
+  else { markerAt.lon = NAV.from.lon; markerAt.lat = NAV.from.lat; }   // back to the start of it
+  if (markerKind === 'none') setMarkerKind('person');
+  NAV.seg = 0; NAV.along = 0; NAV.done = 0; autoWalk = false;
+  NAV.state = 'WALKING';
+  stopOrbit();
+  if (!markerRAF) markerRAF = requestAnimationFrame(tickMarker);
+  /* Down to street level first, then walk. The follow camera pans with duration 0 every
+     frame, and a pan with no duration stops whatever camera animation is running - so
+     starting to walk during the ease-in left the map at whatever zoom it had. */
+  const go = () => { NAV.follow = true; navHud(); };
+  if (map.getZoom() < 17) {                    // GO fits the whole route at 16 at most; walking wants the street
+    map.once('moveend', go);
+    map.easeTo({ center: [NAV.from.lon, NAV.from.lat], zoom: 17, duration: 900 });
+  } else go();
+  navHud();
+}
+
+/* The destination, on the label canvas: a ring, a dot and the name, so you can see where
+   the line is going even before the map has been asked for it. */
+function drawNav() {
+  if (!NAV.to) return;
+  let p; try { p = map.project([NAV.to.lon, NAV.to.lat]); } catch (e) { return; }
+  const x = p.x * DPR, y = p.y * DPR;
+  if (!(x > -40 && y > -40 && x < labels.width + 40 && y < labels.height + 40)) return;
+  lctx.save();
+  lctx.strokeStyle = '#ffffff'; lctx.fillStyle = '#ffffff'; lctx.lineWidth = 1.5 * DPR;
+  lctx.beginPath(); lctx.arc(x, y, 8 * DPR, 0, Math.PI * 2); lctx.stroke();
+  lctx.beginPath(); lctx.arc(x, y, 2.5 * DPR, 0, Math.PI * 2); lctx.fill();
+  lctx.font = (10 * DPR) + 'px "Space Mono", monospace';
+  lctx.textBaseline = 'middle';
+  lctx.fillText(NAV.toName.split(',')[0].toUpperCase().slice(0, 28), x + 13 * DPR, y);
+  lctx.restore();
+}
+
+// The destination field: the same lookup the top search uses, kept to this panel.
+(function navSearchBox() {
+  const box = document.getElementById('nv-q'), out = document.getElementById('nv-results');
+  if (!box || !out) return;
+  let timer = null;
+  const show = items => {
+    out.innerHTML = '';
+    if (!items.length) { const d = document.createElement('div'); d.textContent = 'NO MATCH'; out.appendChild(d); return; }
+    for (const it of items) {
+      const d = document.createElement('div');
+      d.textContent = it.display_name;
+      d.addEventListener('click', () => {
+        NAV.to = { lon: +it.lon, lat: +it.lat }; NAV.toName = String(it.display_name);
+        NAV.route = null; NAV.steps = []; NAV.follow = false; NAV.state = '';
+        box.value = it.display_name.split(',')[0]; out.innerHTML = '';
+        navDraw(); navHud();
+      });
+      out.appendChild(d);
+    }
+  };
+  const look = async text => {
+    try {
+      const r = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q='
+                            + encodeURIComponent(text), { headers: { 'Accept': 'application/json' } });
+      show(r.ok ? await r.json() : []);
+    } catch (e) { show([]); }
+  };
+  box.addEventListener('input', () => {
+    clearTimeout(timer);
+    const t = box.value.trim();
+    if (t.length < 3) { out.innerHTML = ''; return; }
+    timer = setTimeout(() => look(t), 450);
+  });
+  // Typing here must not reach the map's own keys: a W in a place name is not a step.
+  box.addEventListener('keydown', e => { if (e.key === 'Enter') { clearTimeout(timer); look(box.value.trim()); } e.stopPropagation(); });
+  box.addEventListener('keyup', e => e.stopPropagation());
+})();
+document.getElementById('nv-mode').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || !b.dataset.mode) return;
+  NAV.mode = b.dataset.mode;
+  for (const o of document.querySelectorAll('#nv-mode button')) o.setAttribute('aria-pressed', String(o === b));
+  if (NAV.to) navGo();                                   // a new way there, straight away
+});
+document.getElementById('b-nv-go').addEventListener('click', navGo);
+document.getElementById('b-nv-walk').addEventListener('click', navWalk);
+document.getElementById('b-nv-clear').addEventListener('click', navClear);
+map.on('moveend', () => { if (!NAV.follow) navHud(); });   // FROM can change with the view
+navHud();
 
 /* ────────────────────────────────────────────────────────────────────────────
    SPACE — leave the Earth and see what holds it up.

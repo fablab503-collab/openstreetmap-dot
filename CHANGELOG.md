@@ -5,6 +5,79 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-16 — The game is out, and you can go somewhere
+
+Daniel: "do a test of all the code, functions until you find bugs and you fix them, take
+out also the Pac-Man game but improve the graphics and add some navigation system like
+Google Maps and Organic Maps, free open source data, so I can see and navigate through it
+really simple."
+
+### Tested
+
+- **23 sliders** to their minimum, middle and maximum: every label changes, none reads
+  NaN or undefined. **5 selects** cycled. **The zoom bar** drives the map (6.04 → 4.00).
+  **The year bar** changes the story line (Artemis II → Battle of Marengo, 1800) and `NOW`
+  brings it back. **Story** and **About** open and close. **WORLD: ROUND** toggles the
+  projection both ways; **WHOLE EARTH** flies out to zoom 1.4; **RESET NORTH** puts the
+  bearing at 0. **ILLUMINATE MY COUNTRY** says `PERMISSION DENIED` when refused and
+  `FRANCE` when given a Montpellier position; **WHERE AM I** goes to `YOU: MONTPELLIER`
+  at zoom 10.5; **WEATHER WHERE I AM** fills five rows from Open-Meteo. A capital clicked
+  on the map picks its country, names it across the map and lists its cities. The news
+  chips filter the list (SCIENCE alone: 0 of 18; everything: 14 shown), `LOOK AGAIN NOW`
+  refetches. `SPACE` leaves and comes back. Search with nonsense says `No match`. The
+  marker set to `NOBODY` stops its loop. Every WASD, T and G key still does its job.
+  **Zero JavaScript errors across all of it.** No new bugs in this pass — the ones this
+  week found were fixed as they were found.
+
+### Removed
+
+- **The Pac-Man game.** Its panel, its four chasers, the dots, the coins, the target
+  arrow, the melt, and the `P` and `R` keys — about 340 lines. `T` (change shape) and `G`
+  (walk itself) stay, and so does `walkOn`, because the figure walking itself uses the
+  same rule the chasers did. The idea of playing it with real people stays parked, as it
+  was, in the notes and nowhere else.
+
+### Added
+
+- **`GO SOMEWHERE`** — a fourth row in the list. Type a place, pick it from the matches,
+  choose `ON FOOT`, `BY BIKE` or `BY CAR`, press `GO`. The route is a white line with a
+  dark edge on the map, under the 3D buildings so a block in front of it hides that bit
+  of it like it hides the road. The panel gives distance, time and every turn with its
+  length — `○ 30 M — SET OFF ALONG RUE FOURNARIÉ`, `↱ 120 M — RUE DE GIRONE`, `↰ 60 M —
+  RUE GLAIZE` — and highlights the one the figure is on.
+- **`WALK IT`** sends the figure down the line at `WALKING SPEED`, facing the way the road
+  goes, the camera behind it, `770 M TO GO` counting down. Any hand on W A S D takes over.
+  Measured: 75 m in 2.5 s at the 30 m/s default. A destination ring with its name sits on
+  the map from the moment you pick it.
+- **The engine is OSRM run by FOSSGIS e.V. at routing.openstreetmap.de.** Reachable from a
+  browser page, no key, ~30–100 ms. Tested from the page before a line was written: for
+  one pair in Montpellier, **on foot 840 m / 11 min / 14 turns, by car 6.82 km / 17 min /
+  26 turns** — three real profiles. The public demo at router.project-osrm.org answered
+  the same 6.5 km car route for all three and was dropped.
+- FROM is the figure if there is one, where you are if you have pressed `FIND ME`, and
+  otherwise the middle of the map; the panel says which.
+
+### Graphics
+
+- **Paths and tracks are drawn as what they are** — thin, broken lines in `#6a6a6a` —
+  instead of the same grey line as a residential street. On foot at street zoom that is
+  the difference between a way through and a wall. (The old filter listed `footway`, which
+  matched nothing: in these tiles it is a subclass of `path`, not a class.) Minor roads
+  widen a little faster past zoom 16.
+- The route line and the destination mark, above.
+
+### Fixed
+
+- `WALK IT` used to ease in to street zoom and start walking at once — and the follow
+  camera pans with duration 0 every frame, which stops any camera animation, so the map
+  stayed at whatever zoom it had (15.5 in the test). It waits for the ease to land now.
+- **Holding SHIFT to sprint along the route froze the walker.** `driveMarker` counted any
+  key in the set as a hand on the keys, and shift is in the set — so with shift held the
+  route branch never ran: 90 m done, then nothing for as long as it was held. The G
+  auto-walk had the same fault. Steering is W A S D now; shift is only ever a speed.
+
+---
+
 ## 2026-09-15 — A bar for how fast it walks, and a faster starting point
 
 Daniel, after the frame-sync and the camera slack: "still the same problem."
