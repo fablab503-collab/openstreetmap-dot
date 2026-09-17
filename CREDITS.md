@@ -182,3 +182,10 @@ BSD-2-Clause) as run by **FOSSGIS e.V.** at https://routing.openstreetmap.de —
 contributors, ODbL). It answers a browser directly and needs no key; it is a community service
 with a fair-use policy, and this page asks it once per GO and never polls. The public demo at
 router.project-osrm.org was tried first and ignores the profile, so it is not used.
+
+## The song
+
+*just turn it on for ten hours* — Daniel's own file, supplied by him for this page. The
+ten-hour original stays out of the repo (763 MB; GitHub refuses files over 100 MB); what is
+served is four loops of it, re-encoded to AAC at 128 kbps with a 10 ms fade at each end.
+No licence is claimed here beyond his say-so.

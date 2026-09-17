@@ -5,3 +5,6 @@
 memory/
 .claude/
 __pycache__/
+
+# The original ten-hour file, 763 MB: kept here, never pushed (GitHub stops at 100 MB)
+music/source/

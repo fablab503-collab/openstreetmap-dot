@@ -469,6 +469,23 @@
   /* Up beside the search, where you are already looking for a place. In the bottom-left
      corner it sat on top of whichever panel had grown that far, belonged to no section,
      and was the last thing anyone found. */
+  /* The song, under WHERE AM I. A strip the width of that button. */
+  #player { position:absolute; top:52px; right:12px; z-index:15; width:150px;
+    padding:7px 9px 8px; background:var(--pane); border:1px solid var(--c2);
+    letter-spacing:.06em; text-transform:uppercase; font-size:9px; color:var(--ink);
+    backdrop-filter:blur(2px); }
+  #player .ttl { display:block; color:var(--c7); font-size:9px; letter-spacing:.14em; }
+  #player button { width:100%; margin-top:6px; padding:6px; cursor:pointer; background:var(--c0);
+    color:var(--ink); border:1px solid var(--c3); font:inherit; letter-spacing:.1em;
+    text-transform:uppercase; }
+  #player button:hover, #player button[aria-pressed=true] { border-color:var(--hi); color:var(--hi); }
+  #pl-bar { height:3px; background:var(--c1); margin-top:6px; }
+  #pl-bar i { display:block; height:100%; width:0; background:var(--hi); }
+  #pl-note { display:block; margin-top:5px; color:var(--c7); font-size:8px; letter-spacing:.1em; }
+  body.ui-hidden #player { transform:translateX(200px); opacity:0; pointer-events:none;
+    transition:transform .38s cubic-bezier(.4,0,.2,1), opacity .38s ease; }
+  #player { transition:transform .38s cubic-bezier(.4,0,.2,1), opacity .38s ease; }
+
   #b-here { position:absolute; top:12px; right:12px;
     z-index:15; padding:8px 16px; cursor:pointer; background:var(--pane);
     color:var(--ink); border:1px solid var(--c2); font:inherit; letter-spacing:.1em;
@@ -490,6 +507,18 @@
 <canvas id="dots"></canvas>
 <canvas id="labels"></canvas>
 <canvas id="space"></canvas>
+
+<!-- A song, on the right under WHERE AM I - Daniel's own file. It starts on its own
+     where the browser allows sound without a hand on the page; Chrome and Safari mostly
+     do not, so the first click or key anywhere starts it, and the panel says so until
+     then. Ten seconds from nothing up to half volume, which is as loud as it ever gets. -->
+<div id="player">
+  <span class="ttl">JUST TURN IT ON</span>
+  <button id="b-music" type="button" aria-pressed="false">PLAY</button>
+  <div id="pl-bar"><i></i></div>
+  <span id="pl-note">—</span>
+</div>
+<audio id="music" src="music/just-turn-it-on.m4a" loop preload="metadata"></audio>
 
 <div id="search">
   <input id="q" type="search" placeholder="SEARCH A PLACE" autocomplete="off"
@@ -5903,6 +5932,82 @@ q.addEventListener('keydown', e => {
 });
 // Typing in the field must not reach the map's keyboard shortcuts.
 q.addEventListener('keydown', e => e.stopPropagation());
+
+/* ── the song ─────────────────────────────────────────────────────────────────────
+   One file, looped, at half volume and never louder: MUSIC_MAX is the ceiling, and the
+   first ten seconds climb to it from nothing. It starts on its own where the browser
+   allows sound without a hand on the page; where it does not - Chrome and Safari, most
+   of the time - the first click or key anywhere starts it, and the panel says so until
+   then. Stop it and it stays stopped, across reloads, until you press play again. */
+const MUSIC_MAX = 0.5;                 // half of what the file is: as loud as it ever gets
+const MUSIC_FADE_MS = 10000;
+const MUSIC_KEY = 'dotworld.music.v1';
+const music = document.getElementById('music');
+const bMusic = document.getElementById('b-music');
+let musicFade = 0, musicWanted = true;
+try { musicWanted = localStorage.getItem(MUSIC_KEY) !== 'off'; } catch (e) { /* private mode */ }
+const musicSay = t => { const e = document.getElementById('pl-note'); if (e) e.textContent = t; };
+function musicHud() {
+  const on = !music.paused;
+  bMusic.textContent = on ? 'STOP' : 'PLAY';
+  bMusic.setAttribute('aria-pressed', String(on));
+}
+function musicFadeIn() {
+  cancelAnimationFrame(musicFade);
+  const t0 = performance.now();
+  music.volume = 0;
+  const step = () => {
+    const f = Math.min(1, (performance.now() - t0) / MUSIC_FADE_MS);
+    music.volume = MUSIC_MAX * f;
+    if (f < 1 && !music.paused) musicFade = requestAnimationFrame(step);
+    else if (f >= 1) musicSay('PLAYING · HALF VOLUME');
+  };
+  musicFade = requestAnimationFrame(step);
+}
+async function musicStart() {
+  try {
+    await music.play();
+    musicFadeIn();
+    musicSay('FADING IN · TEN SECONDS');
+    musicHud();
+    return true;
+  } catch (e) {                          // the browser wants a hand on the page first
+    musicSay('TAP ANYWHERE TO START');
+    musicHud();
+    return false;
+  }
+}
+function musicStop() {
+  cancelAnimationFrame(musicFade);
+  music.pause();
+  musicSay('STOPPED · PLAY OR M');
+  musicHud();
+}
+bMusic.addEventListener('click', () => {
+  const on = music.paused;
+  musicWanted = on;
+  try { localStorage.setItem(MUSIC_KEY, on ? 'on' : 'off'); } catch (e) { /* ignore */ }
+  if (on) musicStart(); else musicStop();
+});
+// M is free: the map's own keys are W A S D, space, shift, T and G.
+addEventListener('keydown', e => { if (e.key.toLowerCase() === 'm' && !e.repeat) bMusic.click(); });
+music.addEventListener('timeupdate', () => {          // a thin line for where it is in the song
+  const i = document.querySelector('#pl-bar i');
+  if (i && music.duration) i.style.width = (100 * music.currentTime / music.duration).toFixed(2) + '%';
+});
+if (musicWanted) {
+  musicStart().then(ok => {
+    if (ok) return;
+    const once = () => {
+      removeEventListener('pointerdown', once); removeEventListener('keydown', once);
+      if (musicWanted && music.paused) musicStart();
+    };
+    addEventListener('pointerdown', once); addEventListener('keydown', once);
+  });
+} else { musicSay('STOPPED · PLAY OR M'); musicHud(); }
+window.__music = { get on() { return !music.paused; }, get volume() { return +music.volume.toFixed(3); },
+                   get at() { return +music.currentTime.toFixed(1); }, get length() { return +music.duration.toFixed(1); },
+                   get max() { return MUSIC_MAX; }, get note() { return document.getElementById('pl-note').textContent; } };
 
 /* ── go somewhere ─────────────────────────────────────────────────────────────────
    A route from where you are to a place, on open data: the roads are OpenStreetMap's

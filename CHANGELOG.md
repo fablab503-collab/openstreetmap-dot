@@ -5,6 +5,42 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-17 — A song on the right
+
+Daniel: "move this song on the project folder and add it to the right side as a music
+player that you can play or stop. Automatically make it play with an increase of the
+music the first 10 seconds and let it play if not paused. The maximum volume should be
+50 percent less of the actual volume."
+
+### Added
+
+- **A player under `WHERE AM I`**: the song's name, `PLAY` / `STOP` (or `M`), a thin line
+  for where it is. It climbs from silence to **half volume over ten seconds**, and half
+  volume is the ceiling — `MUSIC_MAX = 0.5`, never higher. Stop it and it stays stopped
+  across reloads, until you press play.
+- **It starts on its own where the browser lets it.** Most do not let a page make sound
+  before a hand has touched it — Chrome and Safari both refuse — so where `play()` is
+  refused the panel says `TAP ANYWHERE TO START` and the first click or key anywhere
+  starts it. That is the browser's rule, not a choice here.
+
+### What is in the repo, and why it is not the file he gave me
+
+- The file is **763 MB and ten hours long** (35,999.9 s, AAC 170 kbps, 48 kHz stereo).
+  GitHub refuses any file over 100 MB, and a Pages site is capped at 1 GB, so it cannot
+  be pushed as it is. It has been moved into `music/source/` and git-ignored.
+- The name says what it is: one song looped for ten hours. **Measured by autocorrelating
+  the first 25 minutes: the song repeats every 90.00 s** — the top three candidates at
+  89.75, 90.00 and 90.25 s, the next at 180.00, the harmonic. Refined at 100 Hz: 90.00
+  (correlation 0.76 on the envelope). At sample level the waveform does not line up
+  exactly at that lag (0.35), so a bare cut would click at the seam.
+- **What is served is four loops — 360.02 s, re-encoded to AAC at 128 kbps with a 10 ms
+  fade at each end** — on `<audio loop>`. The fades kill the click. Browsers still leave
+  a few tens of milliseconds of silence at each loop of an AAC file — that is the
+  encoder's priming, and there is no fixing it from a page — so it happens once every
+  six minutes rather than every ninety seconds.
+
+---
+
 ## 2026-09-16 — The game is out, and you can go somewhere
 
 Daniel: "do a test of all the code, functions until you find bugs and you fix them, take
