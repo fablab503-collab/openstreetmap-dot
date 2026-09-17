@@ -5,6 +5,43 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-17 — Three hundred stories, a hundred countries
+
+Daniel: "I would like to have at least 100 news globally, or 195 so it could be one for
+each country."
+
+### Changed
+
+- **Fourteen days of Wikipedia's Current events, not two.** Measured before changing
+  anything: two days is 11–35 lines, seven is 113, fourteen is 275, and all fourteen come
+  back in parallel in 400 ms. A day older than yesterday is final on Wikipedia, so each is
+  read once and remembered; today and yesterday are read every look. **A later look costs
+  four requests** — the two live days, the quakes, the desk — where the first costs
+  sixteen.
+- **A week of quakes, not a day.** USGS's `4.5_week` feed: 90 earthquakes across some
+  forty countries and seas, where the day feed gave a dozen.
+- **One story per country first.** The list and the rails used to be the newest twenty
+  stories, which is Washington, Moscow, Washington again. Now the newest story from each
+  country comes first, and only then does anywhere get a second: **the first 20 of the
+  list are 20 countries, the first 50 are 50, the first 100 are 100.**
+- **`NEWS ON THE GLOBE` goes to 195 and starts there**; a saved 30 — which was "all" —
+  becomes 195 once. The list shows all of them and scrolls; the panel says how many
+  countries it has.
+
+### Measured, on a fresh load
+
+**330 stories · 103 countries.** 90 quakes, 227 placed by name, 13 from the desk. The
+archive in the browser is 104 KB.
+
+### Not on offer
+
+- **195 countries with a story each.** Two weeks of the sources never mention about
+  ninety of them at all — nothing happened there that Wikipedia's editors wrote a line
+  about, and no quake reached 4.5. A hundred and three is what the world's open news
+  actually covers in a fortnight; inventing a line for Tuvalu would be making it up.
+
+---
+
 ## 2026-09-17 — A song on the right
 
 Daniel: "move this song on the project folder and add it to the right side as a music

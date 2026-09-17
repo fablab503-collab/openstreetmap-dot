@@ -235,6 +235,7 @@
   .chart .cbar { grid-column:1 / -1; height:6px; background:var(--c1); }
   .chart .cbar i { display:block; height:100%; }
   .chart b { color:var(--ink-hi); font-weight:400; letter-spacing:0; }
+  #n-list { max-height:330px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--c3) transparent; }
   #n-list a.sub { color:var(--ink); text-decoration:none; border-bottom:1px solid var(--c2);
     padding-bottom:5px; }
   #n-list a.sub:hover { color:var(--ink-hi); }
@@ -598,7 +599,7 @@
   <label>DATA COLOUR <span id="l-data">FULL</span></label>
   <input id="s-data" type="range" min="0" max="100" step="1" value="100">
   <label>NEWS ON THE GLOBE <span id="l-newsn">ALL</span></label>
-  <input id="s-newsn" type="range" min="0" max="30" step="1" value="30">
+  <input id="s-newsn" type="range" min="0" max="195" step="1" value="195">
   <label>DETAIL — TEXTURE <span id="l-detail">OFF</span></label>
   <input id="s-detail" type="range" min="0" max="100" step="1" value="0">
   <span class="note" id="detail-note">Off, on purpose. This is the groundwork for real
@@ -1664,7 +1665,7 @@ let dataColour = true;   // keep data hues; false neutralises everything to one 
 let showCapitals = true;
 let capShown = 55;      // how many capital names the map is allowed to draw
 let capMonRank = 3;     // how many monuments per capital
-let newsMax = 30;       // how many stories go on the globe and in the list
+let newsMax = 195;      // how many stories go on the globe and in the list: one a country, at most
 let CAPITALS = [];
 let CAPMON = [];
 let showCapMon = true;
@@ -2421,7 +2422,36 @@ bHere.addEventListener('click', () => {
    and are exact. */
 const NEWS_ZOOM  = 2.0;          // past this, none of it is drawn
 const NEWS_EVERY = 10 * 60000;   // a look every ten minutes, as asked
-const NEWS_KEEP  = 24 * 3600e3;  // and a day of it kept
+/* Two weeks of day pages, not two days. A day of world news places about a dozen
+   stories in half a dozen countries; Daniel asked for a hundred at least, and one per
+   country if it could be had. Fourteen days of the portal is about 275 lines, and a
+   week of quakes another ninety across some forty countries. A day older than
+   yesterday is final on Wikipedia, so each is read once and remembered; today and
+   yesterday are read every look. */
+const NEWS_DAYS  = 14;
+const NEWS_KEEP  = NEWS_DAYS * 86400e3;
+const NEWS_DAYS_DONE = 'dotworld.news.days.v1';
+const dayKey = d => d.toISOString().slice(0, 10);
+function daysToFetch() {
+  let done = {};
+  try { done = JSON.parse(localStorage.getItem(NEWS_DAYS_DONE) || '{}'); } catch (e) { /* fresh */ }
+  const out = [];
+  for (let i = 0; i < NEWS_DAYS; i++) {
+    const d = new Date(Date.now() - i * 86400e3);
+    if (i < 2 || !done[dayKey(d)]) out.push(d);      // today and yesterday still change
+  }
+  return out;
+}
+function markDaysDone(days) {
+  try {
+    let done = {};
+    try { done = JSON.parse(localStorage.getItem(NEWS_DAYS_DONE) || '{}'); } catch (e) { /* fresh */ }
+    for (const d of days) done[dayKey(d)] = Date.now();
+    const cut = Date.now() - NEWS_KEEP;
+    for (const k in done) if (new Date(k).getTime() < cut) delete done[k];
+    localStorage.setItem(NEWS_DAYS_DONE, JSON.stringify(done));
+  } catch (e) { /* private mode: it will just read them again */ }
+}
 const NEWS_STORE = 'dotworld.news.v1';
 const NEWS = { items: [], at: 0, timer: 0, busy: false, hot: null };
 
@@ -2648,7 +2678,7 @@ function loadArchive() {
 function saveArchive(items) {
   try {
     const cut = Date.now() - NEWS_KEEP;
-    const keep = items.filter(i => i.t >= cut).slice(0, 400);
+    const keep = items.filter(i => i.t >= cut).slice(0, 600);
     localStorage.setItem(NEWS_STORE, JSON.stringify(
       keep.map(i => [i.t, +i.lon.toFixed(3), +i.lat.toFixed(3), i.text, i.url, i.where,
                      i.kind, i.mood, i.cats])));
@@ -2685,7 +2715,7 @@ async function fetchWikiDay(d) {
 
 async function fetchQuakes() {
   const j = await (await fetch(
-    'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson')).json();
+    'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson')).json();
   return (j.features || []).map(f => {
     const place = String(f.properties.place || '');
     const bits = place.split(',');
@@ -2765,18 +2795,19 @@ async function loadNews(why) {
   if (NEWS.busy) return;
   NEWS.busy = true;
   newsHud('LOOKING…');
-  const now = new Date();
-  const yesterday = new Date(now.getTime() - 86400e3);
+  const days = daysToFetch();
   const got = await Promise.allSettled([
-    fetchWikiDay(now), fetchWikiDay(yesterday), fetchQuakes(), fetchDesk(),
+    ...days.map(fetchWikiDay), fetchQuakes(), fetchDesk(),
   ]);
+  // a day that is final and came back is not read again
+  markDaysDone(days.filter((d, i) => got[i].status === 'fulfilled'
+                                     && Date.now() - d.getTime() >= 2 * 86400e3));
   const fresh = got.filter(r => r.status === 'fulfilled').flatMap(r => r.value);
   const seen = new Set();
   const all = [...fresh, ...loadArchive()]
     .filter(i => { const k = newsKey(i); if (seen.has(k)) return false; seen.add(k); return true; })
-    .filter(i => Date.now() - i.t < NEWS_KEEP)
-    .sort((a, b) => b.t - a.t);
-  NEWS.items = all;
+    .filter(i => Date.now() - i.t < NEWS_KEEP);
+  NEWS.items = spread(all);
   NEWS.at = Date.now();
   saveArchive(all);
   NEWS.busy = false;
@@ -2784,12 +2815,29 @@ async function loadNews(why) {
   dirty = true;
 }
 
+/* One story per country first - the newest each has - and then the rest by time. A day
+   of world news is mostly six countries, and the rails and the list were the first
+   twenty of it: Washington, Moscow, Washington again. Spread out, the first hundred are
+   a hundred places, and only then does anywhere get a second story. */
+function spread(items) {
+  const byT = [...items].sort((a, b) => b.t - a.t);
+  const seen = new Set(), first = [], rest = [];
+  for (const i of byT) {
+    const c = (i.where || '').split(' · ')[0];
+    if (c && c !== 'AT SEA' && !seen.has(c)) { seen.add(c); first.push(i); } else rest.push(i);
+  }
+  return first.concat(rest);
+}
+const countriesIn = items => new Set(items.map(i => (i.where || '').split(' · ')[0])
+                                          .filter(c => c && c !== 'AT SEA')).size;
+
 function newsHud(state) {
   const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
   const shown = NEWS.items.filter(passes);
+  const nc = countriesIn(shown);
   set('n-count', state || (!NEWS.items.length ? 'NOTHING YET'
-    : shown.length === NEWS.items.length ? shown.length + ' STORIES'
-    : shown.length + ' OF ' + NEWS.items.length + ' STORIES'));
+    : (shown.length === NEWS.items.length ? shown.length + ' STORIES'
+       : shown.length + ' OF ' + NEWS.items.length + ' STORIES') + ' · ' + nc + ' COUNTRIES'));
   /* The day's balance, at the top where it is the first thing read. It is a guess made
      of a word list and the panel says GUESSED, because a day is not a number. */
   const n = shown.length;
@@ -2813,7 +2861,7 @@ function newsHud(state) {
   const list = document.getElementById('n-list');
   if (!list) return;
   list.innerHTML = '';
-  for (const i of shown.slice(0, Math.min(14, newsMax))) {
+  for (const i of shown.slice(0, newsMax)) {
     const a = document.createElement('a');
     a.className = 'sub';
     a.href = i.url || '#';
@@ -3439,7 +3487,7 @@ levelBar('s-capmon', 'l-capmon',
   v => { capMonMax = v; applyLevels(); });
 levelBar('s-data', 'l-data', v => v === 0 ? 'OFF' : v === 100 ? 'FULL' : v + '%',
   v => { dataLevel = v / 100; applyLevels(); });
-levelBar('s-newsn', 'l-newsn', v => v === 0 ? 'NONE' : v >= 30 ? 'ALL' : String(v),
+levelBar('s-newsn', 'l-newsn', v => v === 0 ? 'NONE' : v >= 195 ? 'ALL' : String(v),
   v => { newsMax = v; newsHud(); dirty = true; });
 
 /* ── detail: texture instead of colour ──────────────────────────────────────────
@@ -3569,6 +3617,12 @@ function loadSettings() {
     if (!localStorage.getItem(COLOURS_START_OFF)) {
       localStorage.setItem(COLOURS_START_OFF, '1');
       o['s-colours'] = '0';
+    }
+    /* The news bar went from 30 at most to 195. A saved 30 meant all of it and still
+       should - once; set it to 30 on purpose after that and it stays. */
+    if (o['s-newsn'] === '30' && !localStorage.getItem('dotworld.news195.v1')) {
+      localStorage.setItem('dotworld.news195.v1', '1');
+      o['s-newsn'] = '195';
     }
   } catch (e) { /* private mode: the default is already none */ }
   for (const id of KEPT) {
