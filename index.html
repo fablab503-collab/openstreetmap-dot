@@ -2845,7 +2845,10 @@ function spread(items) {
   }
   return first.concat(rest);
 }
-const countriesIn = items => new Set(items.map(i => (i.where || '').split(' · ')[0])
+/* Countries, not places: a quake's "where" is a sea or a territory as often as a
+   country, and counting those said 200 COUNTRIES when the daily pick had 190. */
+const countriesIn = items => new Set(items.filter(i => i.kind !== 'quake')
+                                          .map(i => (i.where || '').split(' · ')[0])
                                           .filter(c => c && c !== 'AT SEA')).size;
 
 function newsHud(state) {
