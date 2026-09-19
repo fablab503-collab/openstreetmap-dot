@@ -2791,13 +2791,30 @@ async function fetchDesk() {
   }).filter(Boolean);
 }
 
+/* ── one story a country, every day ─────────────────────────────────────────────
+   Built on a timer by .github/workflows/news-by-country.yml from that country's own
+   press where it has an open feed and Google News's edition for it where it does not,
+   and written to data/news-by-country.json - which is all this page reads. The name
+   of the outlet travels with each story so the reader sees who said it. If the file is
+   missing or stale the page carries on with what it has. */
+async function fetchDaily() {
+  const r = await fetch('data/news-by-country.json', { cache: 'no-store' });
+  if (!r.ok) return [];
+  const j = await r.json();
+  return (j.stories || []).map(st => ({
+    t: st.t, lon: st.lon, lat: st.lat,
+    where: (st.country + ' · ' + st.capital).toUpperCase(),
+    text: st.title + (st.source ? ' — ' + st.source : ''),
+    url: st.url, kind: 'daily', mood: moodOf(st.title).kind, cats: catsOf(st.title) }));
+}
+
 async function loadNews(why) {
   if (NEWS.busy) return;
   NEWS.busy = true;
   newsHud('LOOKING…');
   const days = daysToFetch();
   const got = await Promise.allSettled([
-    ...days.map(fetchWikiDay), fetchQuakes(), fetchDesk(),
+    ...days.map(fetchWikiDay), fetchQuakes(), fetchDesk(), fetchDaily(),
   ]);
   // a day that is final and came back is not read again
   markDaysDone(days.filter((d, i) => got[i].status === 'fulfilled'
@@ -2853,7 +2870,9 @@ function newsHud(state) {
   };
   bar('n-bar-bad', bad); bar('n-bar-flat', flat); bar('n-bar-good', good);
   const fromDesk = shown.filter(i => i.kind === 'desk').length;
-  set('n-placed', shown.filter(i => i.kind === 'quake').length + ' QUAKES · '
+  const daily = shown.filter(i => i.kind === 'daily').length;
+  set('n-placed', (daily ? daily + ' TODAY, ONE A COUNTRY · ' : '')
+                + shown.filter(i => i.kind === 'quake').length + ' QUAKES · '
                 + shown.filter(i => i.kind === 'news').length + ' PLACED BY NAME'
                 + (fromDesk ? ' · ' + fromDesk + ' FROM THE DESK' : ''));
   set('n-when', NEWS.at ? new Date(NEWS.at).toTimeString().slice(0, 5) : '—');

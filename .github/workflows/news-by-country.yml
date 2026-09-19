@@ -1,0 +1,34 @@
+# One story a country, every day. Runs scripts/news-by-country.mjs and commits what it
+# wrote; GitHub Pages rebuilds from the commit and the page reads the new file.
+name: news by country
+on:
+  schedule:
+    - cron: '20 5 * * *'        # 05:20 UTC, every day
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: news-by-country
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Ask the feeds
+        run: node scripts/news-by-country.mjs
+      - name: Commit the day's stories
+        run: |
+          git config user.name "dotworld news"
+          git config user.email "fablab503@gmail.com"
+          if git diff --quiet -- data/news-by-country.json; then echo "nothing new"; exit 0; fi
+          git stash push -- data/news-by-country.json
+          git pull --rebase origin main
+          git stash pop
+          git add data/news-by-country.json
+          git commit -m "News by country: $(date -u +%Y-%m-%d) — $(node -e "const j=require('./data/news-by-country.json');console.log(j.countries+' countries, '+j.press+' own press, '+j.googleNews+' google news')")"
+          git push

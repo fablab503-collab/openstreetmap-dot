@@ -1,0 +1,976 @@
+{
+"GB": [
+[
+"BBC News",
+"https://feeds.bbci.co.uk/news/uk/rss.xml"
+]
+],
+"IE": [
+[
+"RTÉ",
+"https://www.rte.ie/feeds/rss/?index=/news/"
+],
+[
+"The Irish Times",
+"https://www.irishtimes.com/arc/outboundfeeds/feed-irish-news/"
+]
+],
+"FR": [
+[
+"Le Monde",
+"https://www.lemonde.fr/rss/une.xml"
+],
+[
+"France 24",
+"https://www.france24.com/fr/france/rss"
+]
+],
+"DE": [
+[
+"Tagesschau",
+"https://www.tagesschau.de/index~rss2.xml"
+],
+[
+"Der Spiegel",
+"https://www.spiegel.de/schlagzeilen/index.rss"
+]
+],
+"IT": [
+[
+"ANSA",
+"https://www.ansa.it/sito/notizie/topnews/topnews_rss.xml"
+],
+[
+"Rai News",
+"https://www.rainews.it/rss/tutti"
+]
+],
+"ES": [
+[
+"El País",
+"https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada"
+],
+[
+"RTVE",
+"https://www.rtve.es/rss/temas_noticias.xml"
+]
+],
+"PT": [
+[
+"RTP",
+"https://www.rtp.pt/noticias/rss"
+]
+],
+"NL": [
+[
+"NOS",
+"https://feeds.nos.nl/nosnieuwsalgemeen"
+]
+],
+"BE": [
+[
+"VRT NWS",
+"https://www.vrt.be/vrtnws/nl.rss.articles.xml"
+]
+],
+"CH": [
+[
+"SRF",
+"https://www.srf.ch/news/bnf/rss/1646"
+]
+],
+"AT": [
+[
+"ORF",
+"https://rss.orf.at/news.xml"
+]
+],
+"DK": [
+[
+"DR",
+"https://www.dr.dk/nyheder/service/feeds/allenyheder"
+]
+],
+"SE": [
+[
+"SVT",
+"https://www.svt.se/nyheter/rss.xml"
+]
+],
+"NO": [
+[
+"NRK",
+"https://www.nrk.no/toppsaker.rss"
+]
+],
+"FI": [
+[
+"Yle",
+"https://feeds.yle.fi/uutiset/v1/majorHeadlines/YLE_UUTISET.rss"
+]
+],
+"IS": [
+[
+"RÚV",
+"https://www.ruv.is/rss/frettir"
+],
+[
+"Iceland Review",
+"https://www.icelandreview.com/feed/"
+]
+],
+"PL": [
+[
+"TVN24",
+"https://tvn24.pl/najnowsze.xml"
+]
+],
+"CZ": [
+[
+"ČT24",
+"https://ct24.ceskatelevize.cz/rss/hlavni-zpravy"
+]
+],
+"SK": [
+[
+"TASR / Teraz",
+"https://www.teraz.sk/rss/slovensko.rss"
+]
+],
+"HU": [
+[
+"Telex",
+"https://telex.hu/rss"
+],
+[
+"Index",
+"https://index.hu/24ora/rss/"
+]
+],
+"RO": [
+[
+"Digi24",
+"https://www.digi24.ro/rss"
+]
+],
+"GR": [
+[
+"ERT",
+"https://www.ertnews.gr/feed/"
+]
+],
+"CY": [
+[
+"Cyprus Mail",
+"https://cyprus-mail.com/feed/"
+]
+],
+"HR": [
+[
+"Index.hr",
+"https://www.index.hr/rss/vijesti"
+]
+],
+"SI": [
+[
+"RTV SLO",
+"https://img.rtvslo.si/feeds/00.xml"
+]
+],
+"RS": [
+[
+"N1",
+"https://n1info.rs/feed/"
+],
+[
+"RTS",
+"https://www.rts.rs/page/stories/sr/rss.html"
+]
+],
+"ME": [
+[
+"Vijesti",
+"https://www.vijesti.me/rss"
+]
+],
+"MK": [
+[
+"MIA",
+"https://mia.mk/feed/"
+]
+],
+"UA": [
+[
+"Ukrinform",
+"https://www.ukrinform.net/rss/block-lastnews"
+]
+],
+"RU": [
+[
+"TASS",
+"https://tass.com/rss/v2.xml"
+]
+],
+"LV": [
+[
+"LSM",
+"https://eng.lsm.lv/rss/"
+]
+],
+"EE": [
+[
+"ERR",
+"https://news.err.ee/rss"
+]
+],
+"GE": [
+[
+"Civil.ge",
+"https://civil.ge/feed"
+]
+],
+"TR": [
+[
+"Anadolu",
+"https://www.aa.com.tr/en/rss/default?cat=guncel"
+]
+],
+"MC": [
+[
+"Monaco Tribune",
+"https://www.monaco-tribune.com/en/feed/"
+]
+],
+"VA": [
+[
+"Vatican News",
+"https://www.vaticannews.va/en.rss.xml"
+]
+],
+"US": [
+[
+"NPR",
+"https://feeds.npr.org/1001/rss.xml"
+],
+[
+"The New York Times",
+"https://rss.nytimes.com/services/xml/rss/nyt/US.xml"
+]
+],
+"GT": [
+[
+"Prensa Libre",
+"https://www.prensalibre.com/feed/"
+]
+],
+"BZ": [
+[
+"Amandala",
+"https://amandala.com.bz/news/feed/"
+]
+],
+"CR": [
+[
+"Tico Times",
+"https://ticotimes.net/feed"
+],
+[
+"La Nación",
+"https://www.nacion.com/rss/"
+]
+],
+"CU": [
+[
+"14ymedio",
+"https://www.14ymedio.com/rss/"
+],
+[
+"Granma",
+"https://www.granma.cu/feed"
+]
+],
+"DO": [
+[
+"Diario Libre",
+"https://www.diariolibre.com/rss/portada.xml"
+]
+],
+"HT": [
+[
+"Le Nouvelliste",
+"https://lenouvelliste.com/rss"
+]
+],
+"JM": [
+[
+"Jamaica Observer",
+"https://www.jamaicaobserver.com/feed/"
+]
+],
+"TT": [
+[
+"Newsday",
+"https://newsday.co.tt/feed/"
+]
+],
+"BB": [
+[
+"Barbados Today",
+"https://barbadostoday.bb/feed/"
+]
+],
+"AG": [
+[
+"Antigua Observer",
+"https://antiguaobserver.com/feed/"
+]
+],
+"LC": [
+[
+"St Lucia Times",
+"https://stluciatimes.com/feed/"
+]
+],
+"DM": [
+[
+"Dominica News Online",
+"https://dominicanewsonline.com/news/feed/"
+]
+],
+"GD": [
+[
+"NOW Grenada",
+"https://nowgrenada.com/feed/"
+]
+],
+"KN": [
+[
+"WINN FM",
+"https://www.winnmediaskn.com/feed/"
+]
+],
+"VC": [
+[
+"Searchlight",
+"https://www.searchlight.vc/feed/"
+]
+],
+"CO": [
+[
+"El Tiempo",
+"https://www.eltiempo.com/rss/colombia.xml"
+]
+],
+"VE": [
+[
+"Efecto Cocuyo",
+"https://efectococuyo.com/feed/"
+],
+[
+"El Nacional",
+"https://www.elnacional.com/feed/"
+]
+],
+"PE": [
+[
+"RPP",
+"https://rpp.pe/feed"
+]
+],
+"AR": [
+[
+"Buenos Aires Times",
+"https://www.batimes.com.ar/feed"
+],
+[
+"La Nación",
+"https://www.lanacion.com.ar/arc/outboundfeeds/rss/"
+]
+],
+"BR": [
+[
+"G1",
+"https://g1.globo.com/rss/g1/"
+],
+[
+"Folha de S.Paulo",
+"https://feeds.folha.uol.com.br/emcimadahora/rss091.xml"
+]
+],
+"SR": [
+[
+"Starnieuws",
+"https://www.starnieuws.com/rss/starnieuws.rss"
+]
+],
+"KE": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/kenya/headlines.rdf"
+]
+],
+"NG": [
+[
+"Punch",
+"https://punchng.com/feed/"
+],
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/nigeria/headlines.rdf"
+]
+],
+"EG": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/egypt/headlines.rdf"
+]
+],
+"GH": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/ghana/headlines.rdf"
+]
+],
+"ET": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/ethiopia/headlines.rdf"
+]
+],
+"TZ": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/tanzania/headlines.rdf"
+]
+],
+"UG": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/uganda/headlines.rdf"
+]
+],
+"RW": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/rwanda/headlines.rdf"
+]
+],
+"ZW": [
+[
+"The Herald",
+"https://www.herald.co.zw/feed/"
+],
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/zimbabwe/headlines.rdf"
+]
+],
+"ZM": [
+[
+"Lusaka Times",
+"https://www.lusakatimes.com/feed/"
+],
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/zambia/headlines.rdf"
+]
+],
+"NA": [
+[
+"The Namibian",
+"https://www.namibian.com.na/feed/"
+],
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/namibia/headlines.rdf"
+]
+],
+"BW": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/botswana/headlines.rdf"
+]
+],
+"MU": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/mauritius/headlines.rdf"
+]
+],
+"SO": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/somalia/headlines.rdf"
+]
+],
+"SD": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/sudan/headlines.rdf"
+]
+],
+"SS": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/southsudan/headlines.rdf"
+]
+],
+"LY": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/libya/headlines.rdf"
+]
+],
+"TN": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/tunisia/headlines.rdf"
+]
+],
+"DZ": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/algeria/headlines.rdf"
+]
+],
+"SN": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/senegal/headlines.rdf"
+]
+],
+"CI": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/cotedivoire/headlines.rdf"
+]
+],
+"CM": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/cameroon/headlines.rdf"
+]
+],
+"CD": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/congo_kinshasa/headlines.rdf"
+]
+],
+"CG": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/congo_brazzaville/headlines.rdf"
+]
+],
+"AO": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/angola/headlines.rdf"
+]
+],
+"MZ": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/mozambique/headlines.rdf"
+]
+],
+"MG": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/madagascar/headlines.rdf"
+]
+],
+"MW": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/malawi/headlines.rdf"
+]
+],
+"ML": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/mali/headlines.rdf"
+]
+],
+"NE": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/niger/headlines.rdf"
+]
+],
+"BF": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/burkinafaso/headlines.rdf"
+]
+],
+"TD": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/chad/headlines.rdf"
+]
+],
+"MR": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/mauritania/headlines.rdf"
+]
+],
+"GN": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/guinea/headlines.rdf"
+]
+],
+"SL": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/sierraleone/headlines.rdf"
+]
+],
+"LR": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/liberia/headlines.rdf"
+]
+],
+"TG": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/togo/headlines.rdf"
+]
+],
+"BJ": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/benin/headlines.rdf"
+]
+],
+"GM": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/gambia/headlines.rdf"
+]
+],
+"GW": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/guineabissau/headlines.rdf"
+]
+],
+"CV": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/capeverde/headlines.rdf"
+]
+],
+"GQ": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/equatorialguinea/headlines.rdf"
+]
+],
+"GA": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/gabon/headlines.rdf"
+]
+],
+"CF": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/centralafricanrepublic/headlines.rdf"
+]
+],
+"BI": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/burundi/headlines.rdf"
+]
+],
+"ER": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/eritrea/headlines.rdf"
+]
+],
+"DJ": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/djibouti/headlines.rdf"
+]
+],
+"KM": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/comoros/headlines.rdf"
+]
+],
+"LS": [
+[
+"AllAfrica",
+"https://allafrica.com/tools/headlines/rdf/lesotho/headlines.rdf"
+]
+],
+"SY": [
+[
+"Enab Baladi",
+"https://english.enabbaladi.net/feed/"
+],
+[
+"SANA",
+"https://sana.sy/en/?feed=rss2"
+]
+],
+"IQ": [
+[
+"Iraqi News",
+"https://www.iraqinews.com/feed/"
+]
+],
+"IR": [
+[
+"Tehran Times",
+"https://www.tehrantimes.com/rss"
+],
+[
+"IRNA",
+"https://en.irna.ir/rss"
+]
+],
+"SA": [
+[
+"Arab News",
+"https://www.arabnews.com/rss.xml"
+]
+],
+"QA": [
+[
+"Al Jazeera",
+"https://www.aljazeera.com/xml/rss/all.xml"
+]
+],
+"IN": [
+[
+"The Hindu",
+"https://www.thehindu.com/news/national/feeder/default.rss"
+],
+[
+"NDTV",
+"https://feeds.feedburner.com/ndtvnews-top-stories"
+]
+],
+"PK": [
+[
+"Dawn",
+"https://www.dawn.com/feeds/home"
+],
+[
+"Geo News",
+"https://www.geo.tv/rss/1/1"
+]
+],
+"BD": [
+[
+"The Daily Star",
+"https://www.thedailystar.net/frontpage/rss.xml"
+]
+],
+"LK": [
+[
+"Ada Derana",
+"https://www.adaderana.lk/rss.php"
+]
+],
+"NP": [
+[
+"The Kathmandu Post",
+"https://kathmandupost.com/rss"
+]
+],
+"AF": [
+[
+"TOLOnews",
+"https://tolonews.com/rss.xml"
+]
+],
+"CN": [
+[
+"SCMP",
+"https://www.scmp.com/rss/91/feed"
+],
+[
+"Xinhua",
+"http://www.news.cn/english/rss/chinarss.xml"
+]
+],
+"TW": [
+[
+"Taipei Times",
+"https://www.taipeitimes.com/xml/index.rss"
+]
+],
+"JP": [
+[
+"The Japan Times",
+"https://www.japantimes.co.jp/feed/"
+]
+],
+"KR": [
+[
+"Yonhap",
+"https://en.yna.co.kr/RSS/news.xml"
+],
+[
+"KBS World",
+"http://world.kbs.co.kr/rss/rss_news.htm?lang=e"
+]
+],
+"KP": [
+[
+"NK News",
+"https://www.nknews.org/feed/"
+]
+],
+"KZ": [
+[
+"The Astana Times",
+"https://astanatimes.com/feed/"
+]
+],
+"KG": [
+[
+"AKIpress",
+"https://akipress.com/rss/news.rss"
+],
+[
+"24.kg",
+"https://24.kg/rss/"
+]
+],
+"TJ": [
+[
+"Asia-Plus",
+"https://asiaplustj.info/en/rss"
+]
+],
+"UZ": [
+[
+"Gazeta.uz",
+"https://www.gazeta.uz/en/rss/"
+]
+],
+"MM": [
+[
+"The Irrawaddy",
+"https://www.irrawaddy.com/feed"
+],
+[
+"Myanmar Now",
+"https://myanmar-now.org/en/feed"
+]
+],
+"TH": [
+[
+"Bangkok Post",
+"https://www.bangkokpost.com/rss/data/topstories.xml"
+]
+],
+"LA": [
+[
+"The Laotian Times",
+"https://laotiantimes.com/feed/"
+]
+],
+"KH": [
+[
+"Khmer Times",
+"https://www.khmertimeskh.com/feed/"
+]
+],
+"VN": [
+[
+"VnExpress International",
+"https://e.vnexpress.net/rss/news.rss"
+]
+],
+"MY": [
+[
+"Malay Mail",
+"https://www.malaymail.com/feed/rss/malaysia"
+]
+],
+"SG": [
+[
+"CNA",
+"https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml"
+],
+[
+"The Straits Times",
+"https://www.straitstimes.com/news/singapore/rss.xml"
+]
+],
+"ID": [
+[
+"Antara",
+"https://en.antaranews.com/rss/news.xml"
+]
+],
+"PH": [
+[
+"Rappler",
+"https://www.rappler.com/feed/"
+],
+[
+"Inquirer",
+"https://www.inquirer.net/fullfeed"
+]
+],
+"BN": [
+[
+"The Scoop",
+"https://thescoop.co/feed/"
+]
+],
+"TL": [
+[
+"Tatoli",
+"https://en.tatoli.tl/feed/"
+]
+],
+"PG": [
+[
+"Post-Courier",
+"https://www.postcourier.com.pg/feed/"
+]
+],
+"FJ": [
+[
+"FBC News",
+"https://www.fbcnews.com.fj/feed/"
+]
+],
+"TO": [
+[
+"Matangi Tonga",
+"https://matangitonga.to/rss.xml"
+]
+],
+"AU": [
+[
+"ABC News",
+"https://www.abc.net.au/news/feed/2942460/rss.xml"
+]
+],
+"NZ": [
+[
+"RNZ",
+"https://www.rnz.co.nz/rss/national.xml"
+],
+[
+"Stuff",
+"https://www.stuff.co.nz/rss"
+]
+]
+}

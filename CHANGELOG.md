@@ -5,6 +5,60 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-19 — One story a country, every day, from the country's own press
+
+Daniel: "could you get an algorithm that every day replaces with the new news of the
+country automatically from some kind of free API or internet site trusted about news?
+Look for at least 100 websites and see who's gonna offer free news."
+
+### Looked for
+
+- **293 feeds, probed live from here** — national broadcasters and papers for every
+  country I could name one for, AllAfrica's per-country headlines for all of Africa,
+  and 25 regional and global desks (BBC's five regions, UN News's five, DW, France 24,
+  RFI, Al Jazeera, Euronews, the Guardian, the Post, CNN, Politico Europe, Jeune Afrique,
+  MercoPress, Balkan Insight, Eurasianet, Arab News). **197 live with items, 96 dead**:
+  47 gone (404), 22 closed to robots (403), 19 answering with a web page instead of a
+  feed, 2 withdrawn (410), the rest errors. **172 live national feeds across 143
+  countries**, 149 of them with a story from the last three days; all 25 regional ones
+  live. The live ones are the table in `scripts/news-feeds.json`, by name and URL.
+- Two engines tried and set aside: **GDELT** rate-limits on first contact (429), and
+  Google News's per-country *front page* — which for a small country is the world's
+  news, not its own: Nauru's led with Riyadh.
+
+### Added
+
+- **A job on GitHub's timer**, `.github/workflows/news-by-country.yml`, 05:20 UTC every
+  day, running `scripts/news-by-country.mjs` — plain Node, no dependencies — and
+  committing what it wrote. For each of the 195 countries in `world-capitals.geojson`:
+  the country's own feeds first, then Google News searched for the country by name, and
+  the newest story of the last three days wins (a week for the search). The outlet's
+  name travels with every story. It writes `data/news-by-country.json`; the page reads
+  that file and asks nobody else.
+- **The page merges it in** as the first thing in the list: `192 TODAY, ONE A COUNTRY ·
+  90 QUAKES · …` on the panel, each headline followed by ` — ` and the outlet.
+
+### Measured, first full run
+
+- **192 of 195 countries: 124 from their own press, 68 from the search.** 94 seconds.
+- **Missing: Chad, Jordan, the Marshall Islands.** The first two share a name with
+  people: searching "Chad" got an obituary for a man called Chad, "Jordan" got Air
+  Jordans and a shortstop, and each looser rule let something through — "Chad Tracy"
+  when a title merely started with the name, "run(s) to Jordan Groshans" when a
+  preposition counted. For a colliding name the title now has to carry the demonym, the
+  capital, "Chad:" at the front, or "Chad's government"; on a quiet day that is nothing,
+  and nothing is the right answer. The Marshall Islands' newest story was nine days old.
+- Also on the list: "Palau" was Barcelona's arena until the same rule; "koror" turned out
+  to be a Somali word, so the rule is case-sensitive.
+
+### Not on offer
+
+- **195 every day.** The world's open news does not write about every country every
+  day. What this does is ask every country's own press every day and say plainly which
+  ones had nothing.
+
+---
+
 ## 2026-09-17 — Three hundred stories, a hundred countries
 
 Daniel: "I would like to have at least 100 news globally, or 195 so it could be one for

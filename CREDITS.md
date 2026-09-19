@@ -189,3 +189,24 @@ router.project-osrm.org was tried first and ignores the profile, so it is not us
 ten-hour original stays out of the repo (763 MB; GitHub refuses files over 100 MB); what is
 served is four loops of it, re-encoded to AAC at 128 kbps with a 10 ms fade at each end.
 No licence is claimed here beyond his say-so.
+
+## One story a country — the press, AllAfrica, Google News
+
+`data/news-by-country.json` is rebuilt every day by `scripts/news-by-country.mjs` from
+three kinds of source, in this order:
+
+- **The country's own press**, through its public RSS or Atom feed — national broadcasters
+  and newspapers, 172 feeds in 143 countries, listed by name and URL in
+  `scripts/news-feeds.json`. Each feed was probed live before it went in. What is taken is
+  one headline, its link and its date; the story stays on the outlet's site and the
+  outlet's name is shown beside the headline. Every one of them holds its own copyright.
+- **AllAfrica** (https://allafrica.com) — per-country headline feeds for the African
+  countries whose papers have no open feed of their own. The headlines are AllAfrica's
+  aggregation of African press; the stories are their authors'.
+- **Google News RSS** (https://news.google.com/rss) — searched for the country by name,
+  for the countries with no open press feed. Google supplies the ranking; the story and
+  the name shown are the originating outlet's, taken from the feed's own `<source>`.
+
+None of these needs a key or an account, and this page asks each once a day. The
+probe that chose them looked at 293 feeds; 96 were dead or closed to robots and are
+not used.
