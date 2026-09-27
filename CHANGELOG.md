@@ -5,6 +5,53 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-27 — DotWorld becomes Adamandeva's World tab
+
+Daniel: fuse DotWorld into the Adamandeva desk like one app - "if you click the DotWorld menu
+the whole globe appears" - with Adamandeva small and DotWorld the heavy one; make DotWorld
+more dynamic and connected to the desk's news; reorganise the sidebar with the music at half
+the level it was, more iOS buttons, location and real-time data.
+
+### Added
+
+- **The desk bridge.** When DotWorld runs inside the desk it says `ready`, takes the desk's
+  stories as a `feed` message instead of fetching them, flies to a story on `focus`, runs
+  or stops the tour on `tour`, and plays or stops the song on `music`. A desk story clicked
+  on the globe is sent back as `open` and reads in the desk's sheet, not a new tab. Origins
+  are checked both ways: only adamandeva.world (and localhost, for testing) is listened to.
+- **A `Live` card at the top of the column**, always open: UTC, your time, desk stories on
+  the globe, earthquakes in 24 hours, the desk's latest headline, **Locate me** (the
+  existing one-time, rounded ask, plus the distance to the nearest desk story) and **Desk
+  tour** (every desk story in turn, nine seconds each, stopped by any hand on the map).
+- **An iOS layer over the column**: rounded dark-glass panels, pill buttons, segmented
+  `THEME` and `HOW` pickers, iOS slider tracks, folded panels as list rows with a chevron.
+
+### Changed
+
+- **The song's ceiling is halved**: `MUSIC_MAX` 0.5 -> 0.25. The player moved from the top
+  right into the `Live` card.
+- **The column is in reading order**: where you are, the news, live figures, weather, going
+  somewhere, the world's layers, and how the map is drawn last.
+- **The desk's feed comes from the desk**: `https://adamandeva.world/news.json`, then the
+  same file from the desk's GitHub repo, then a local `news.json`. It used to be a local file
+  that was never in this repo, so it never loaded on the live site. Desk stories now link to
+  `adamandeva.world/#post=<id>` rather than the private desk, and lose their `@` signs.
+- Inside the desk, everything on the bottom edge sits above the desk's tab bar, attribution
+  included.
+
+### Checked
+
+- On localhost, desk on :8733 framing DotWorld on :8732: `ready` arrives, the feed puts the
+  desk's stories on the globe, *Show on globe* flies there with the card open, the tour
+  steps `Tour 1 of 58`, and a desk link opened inside the frame comes back as
+  `{type:'open'}` with `window.open` returning `null` - no new tab.
+- Standalone: the `Live` card fills (58 desk stories, 27 quakes, latest headline) and the
+  song reports `PLAYING · 25% VOLUME`.
+- Not checked: how it looks. The Browser pane was hidden, so no screenshot of the new column
+  was possible this session.
+
+---
+
 ## 2026-09-19 — One story a country, every day, from the country's own press
 
 Daniel: "could you get an algorithm that every day replaces with the new news of the

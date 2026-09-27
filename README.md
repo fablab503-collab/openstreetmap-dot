@@ -14,7 +14,8 @@ credited in **[CREDITS.md](CREDITS.md)**. If you like what you see, the credit i
 theirs — and [please support them](CREDITS.md#please-support-the-upstream-projects).
 
 Live: <https://fablab503-collab.github.io/openstreetmap-dot/> ·
-Changes: [CHANGELOG.md](CHANGELOG.md)
+Changes: [CHANGELOG.md](CHANGELOG.md) ·
+Also the **World tab of [Adamandeva](http://adamandeva.world)**, the technology desk it carries on the globe
 
 ---
 
@@ -132,10 +133,11 @@ LIT AREA and PIXELS DARK in the HUD show the power cost for the current view.
 | Control | Effect |
 | --- | --- |
 | The `DOTWORLD` wordmark | Flies back out to the whole globe, turning, with the day's news on it. The turn lasts 20 seconds and then stops — it is a way of arriving, not something to sit through, and a globe turning for ever keeps three animation loops awake on a page nobody is looking at. Any hand on the map stops it sooner |
+| `Live` (top of the left column) | What is happening now, always open: UTC and your own time, how many Adamandeva desk stories are on the globe, earthquakes in the last 24 hours, and the desk's latest headline - tap it to fly there. **Locate me** asks once for where you are (rounded to about a kilometre, as everywhere else here), flies there and tells you how far the nearest desk story is. **Desk tour** flies from one desk story to the next, nine seconds each, until a hand moves the map. The song's player sits in this card too |
 | The panel list (left) | Thirteen rows, one per panel, each 17 px tall. Click a row and it opens; every other one folds, so only ever one is open and the whole list fits on a laptop screen. The red dot on the right of a panel folds it again. A folded row is half transparent — the map runs under it |
 | The `?` beside a red dot | Everything that panel keeps back — its prose, and the readouts that answer a second question rather than the first. `VIEW` shows zoom, dots lit and frame time, and holds five more behind the mark: 61 px instead of 285. `LIVE` shows the source, the count and the time, and holds eight: 180 px instead of 418 |
 | `THEME` (top of `SETTINGS`) | `DARK`, `LIGHT` or `AUTO`. Auto follows the system and keeps following it — change the system's mind with the page open and the menu changes with it. The menu is black and white either way: there is no third colour in it any more. The map keeps its own `DOT COLOUR` |
-| The player (top right, under `WHERE AM I`) | Daniel's song, *just turn it on for ten hours*, on a loop. `PLAY` / `STOP`, or `M`. It starts on its own where the browser allows sound before you have touched the page; Chrome and Safari mostly do not, so the first click or key anywhere starts it and the panel says `TAP ANYWHERE TO START` until then. It climbs from silence to **half volume over ten seconds**, and half volume is as loud as it ever gets. Stop it and it stays stopped across reloads until you press play again. The file in the repo is four loops of the song — six minutes, about 6 MB — because the ten-hour original is 763 MB and GitHub stops at 100 MB; the song itself repeats every 90.00 s (measured by autocorrelation), so four loops on `loop` is the same ten hours |
+| The player (in the `Live` card) | Daniel's song, *just turn it on for ten hours*, on a loop. `PLAY` / `STOP`, or `M`. It starts on its own where the browser allows sound before you have touched the page; Chrome and Safari mostly do not, so the first click or key anywhere starts it and the panel says `TAP ANYWHERE TO START` until then. It climbs from silence to **a quarter of the file's volume over ten seconds** - half of the old ceiling, since 2026-09-27 - and that is as loud as it ever gets. Stop it and it stays stopped across reloads until you press play again. The file in the repo is four loops of the song — six minutes, about 6 MB — because the ten-hour original is 763 MB and GitHub stops at 100 MB; the song itself repeats every 90.00 s (measured by autocorrelation), so four loops on `loop` is the same ten hours |
 | `WHERE AM I` (bottom centre) | Marks where you are, rounded to about a kilometre, and flies there |
 | `WHERE YOU ARE` (left column) | The same thing with its numbers showing — latitude, longitude, how close it is and the place name — plus `KEEP UP WITH ME` to follow you while you move, and `FORGET IT` to clear it. Nothing is asked for until you press a button, and the position is rounded to two decimal places before anything is done with it, the name lookup included |
 | `GO SOMEWHERE` | Type a place, pick it, choose `ON FOOT` / `BY BIKE` / `BY CAR`, press `GO`. The route is drawn on the map as a white line with a dark edge, the panel lists every turn with its distance (`↱ 120 M — RUE DE GIRONE`), and `WALK IT` sends the figure along it at `WALKING SPEED` with the camera behind it; any hand on W A S D takes over. FROM is the figure if there is one, where you are if you have pressed `FIND ME`, otherwise the middle of the map. Measured for one pair in Montpellier: 840 m / 11 min on foot, 6.82 km / 17 min by car — three real profiles | OSRM at routing.openstreetmap.de (FOSSGIS e.V.), OpenStreetMap roads |
@@ -237,6 +239,31 @@ positions, use [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/).
   dots means reading the frame back off the GPU, which measured anywhere from
   ~1 ms to ~55 ms — doing it while moving caused visible hitches.
 - `window.__bench(20)` in the browser console times each stage of a redraw.
+
+## Inside Adamandeva
+
+DotWorld is also the **World tab** of [Adamandeva](http://adamandeva.world), a read-only
+technology news desk laid out like an iPad app. The desk loads DotWorld in a frame only the
+first time its World tab is opened and then keeps it, so the desk stays small and swapping
+tabs never reloads the globe. The two talk by `postMessage` and nothing else, and each
+checks the other's origin:
+
+| From | Message | What happens |
+| --- | --- | --- |
+| DotWorld | `ready` | the desk hides its loading globe and sends its feed |
+| desk | `feed` | the desk's live stories, which DotWorld puts on the globe in pink instead of fetching them |
+| desk | `focus` | *Show on globe* on a story: DotWorld flies there and opens the story's card |
+| desk / DotWorld | `tour` | the desk tour on or off, from either side |
+| desk | `music` | the song on or off |
+| DotWorld | `open` | a desk story clicked on the globe opens in the desk's story sheet, not a new tab |
+
+On its own, DotWorld reads the same stories from `https://adamandeva.world/news.json`, or
+from the desk's GitHub repo while the desk has no certificate. Inside the desk it moves
+everything on the bottom edge up out of the way of the desk's tab bar - the OpenStreetMap
+credit included, which stays visible.
+
+The column is dressed for it: rounded dark-glass panels, pill buttons, segmented pickers and
+iOS sliders. The glass stays dark on purpose - it is still an OLED budget.
 
 ## Sharing a view
 

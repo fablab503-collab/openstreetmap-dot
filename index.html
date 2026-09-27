@@ -502,6 +502,124 @@
   #attr a { color:var(--c8); }
   #hint { position:absolute; bottom:8px; right:12px; z-index:10; font-size:10px;
     color:var(--c4); letter-spacing:.08em; text-transform:uppercase; }
+
+  /* ── The iOS 27 layer (2026-09-27) ────────────────────────────────────────────────
+     DotWorld is also Adamandeva's World tab now, and the desk is laid out like an iPad
+     app, so the column is too: every panel a rounded sheet of dark glass, every button a
+     pill, the three-way pickers segmented controls, the sliders iOS tracks with a round
+     thumb, and a folded panel reads as a list row with a chevron. The glass is dark on
+     purpose - it is still an OLED budget, and a lit pane costs what a lit dot costs. */
+  :root { --panel:252px; --glass:rgba(18,18,20,.64); --glass-min:rgba(18,18,20,.5);
+    --glass-edge:rgba(255,255,255,.12); --glass-hi:rgba(255,255,255,.07);
+    --ios-r:18px; --ios-blue:#0a84ff; --ios-on:#3d7bd9; --ios-red:#ff453a;
+    --ios-font:-apple-system, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif; }
+  body.light { --glass:rgba(255,255,255,.7); --glass-min:rgba(255,255,255,.58);
+    --glass-edge:rgba(0,0,0,.08); --glass-hi:rgba(255,255,255,.8); --ios-blue:#007aff; }
+  #ui-left { gap:8px; top:14px; left:14px; }
+  #ui-left .panel, .ios-card, #player, #b-here, #zoombar, #search input, #n-card, #ui-toggle {
+    background:var(--glass); border:1px solid var(--glass-edge);
+    -webkit-backdrop-filter:blur(22px) saturate(1.5); backdrop-filter:blur(22px) saturate(1.5);
+    box-shadow:inset 0 1px 0 var(--glass-hi), 0 10px 28px rgba(0,0,0,.28); }
+  #ui-left .panel { border-radius:var(--ios-r); padding:11px 13px 12px; }
+  #ui-left .panel.min { border-radius:14px; padding:9px 13px; background:var(--glass-min); }
+  #ui-left .panel.min > .cap { font-family:var(--ios-font); font-size:13px; font-weight:600;
+    letter-spacing:0; text-transform:none; color:var(--ink-2); }
+  #ui-left .panel.min > .cap::first-letter { text-transform:uppercase; }
+  #ui-left .panel.min > .cap::after { content:'›'; float:right; margin-right:22px;
+    color:var(--c7); font-weight:400; font-size:15px; line-height:.8; }
+  #ui-left .panel.min .min-dot, #ui-left .panel.min .why-dot { top:12px; }
+  #ui-left .panel > .cap { font-family:var(--ios-font); font-size:11px; font-weight:600;
+    letter-spacing:.02em; margin-bottom:6px; }
+  .panel .min-dot { top:9px; right:9px; }
+  .panel .why-dot { top:9px; right:23px; }
+  #brandrow { padding:4px 4px 2px; }
+  #b-col { border-radius:50%; width:22px; height:22px; background:var(--glass); border:1px solid var(--glass-edge); }
+
+  /* pills */
+  .panel button:not(.min-dot):not(.why-dot), #player button, #b-here, #ui-toggle, .ios-pill {
+    border-radius:999px; font-family:var(--ios-font); font-weight:600; font-size:12px;
+    letter-spacing:.01em; text-transform:none; }
+  .panel button:not(.min-dot):not(.why-dot) { padding:8px 12px; background:rgba(255,255,255,.07);
+    border:1px solid transparent; color:var(--ink-2); }
+  body.light .panel button:not(.min-dot):not(.why-dot) { background:rgba(0,0,0,.05); }
+  .panel button[aria-pressed=true]:not(.min-dot):not(.why-dot) { background:var(--ios-blue);
+    color:#fff; border-color:transparent; }
+  #n-cats button, #pal button { border-radius:999px; }
+  .panel select { border-radius:10px; }
+  #search input { border-radius:14px; font-family:var(--ios-font); letter-spacing:.02em; }
+
+  /* segmented controls */
+  #theme-pick, #nv-mode { background:rgba(118,118,128,.24); border-radius:9px; padding:2px; gap:2px; }
+  #theme-pick button, #nv-mode button { border:0 !important; border-radius:7px !important;
+    background:transparent !important; margin:0 !important; padding:5px 2px !important;
+    font-family:var(--ios-font); font-size:11px; font-weight:600; text-transform:none;
+    color:var(--ink-2) !important; }
+  #theme-pick button[aria-pressed=true], #nv-mode button[aria-pressed=true] {
+    background:rgba(255,255,255,.22) !important; box-shadow:0 2px 6px rgba(0,0,0,.25); }
+  body.light #theme-pick button[aria-pressed=true], body.light #nv-mode button[aria-pressed=true] {
+    background:#fff !important; }
+
+  /* iOS sliders */
+  #ui-left input[type=range] { -webkit-appearance:none; appearance:none; height:22px;
+    background:transparent; accent-color:var(--ios-blue); }
+  #ui-left input[type=range]::-webkit-slider-runnable-track { height:4px; border-radius:4px;
+    background:rgba(120,120,128,.36); }
+  #ui-left input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:20px; height:20px;
+    margin-top:-8px; border-radius:50%; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,.35); }
+  #ui-left input[type=range]::-moz-range-track { height:4px; border-radius:4px; background:rgba(120,120,128,.36); }
+  #ui-left input[type=range]::-moz-range-thumb { width:20px; height:20px; border:0; border-radius:50%;
+    background:#fff; box-shadow:0 2px 6px rgba(0,0,0,.35); }
+
+  #b-here { border-radius:999px; padding:9px 16px; }
+  #zoombar { border-radius:20px; }
+  #n-card { border-radius:18px; padding:13px 15px; }
+  #ui-toggle { border-radius:999px; padding:9px 16px; }
+
+  /* The live card: what is happening now, and the three things you reach for most -
+     where you are, the desk's stories one after another, and the song. */
+  .ios-card { border-radius:var(--ios-r); padding:12px 13px; color:var(--ink-2);
+    font-family:var(--ios-font); position:relative; flex:0 0 auto; }
+  .lv-head { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:700; }
+  .lv-head b { margin-left:auto; font:500 12px/1 "Space Mono", monospace; color:var(--ink-hi); }
+  .lv-dot { width:8px; height:8px; border-radius:50%; background:var(--ios-red);
+    box-shadow:0 0 0 0 rgba(255,69,58,.6); animation:lvpulse 2s infinite; }
+  @keyframes lvpulse { 70% { box-shadow:0 0 0 7px rgba(255,69,58,0); } 100% { box-shadow:0 0 0 0 rgba(255,69,58,0); } }
+  .lv-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:10px; }
+  .lv-grid > div { background:rgba(255,255,255,.06); border-radius:12px; padding:7px 9px; }
+  body.light .lv-grid > div { background:rgba(0,0,0,.04); }
+  .lv-grid small { display:block; font-size:9px; font-weight:600; letter-spacing:.04em;
+    color:var(--c7); text-transform:uppercase; }
+  .lv-grid b { display:block; margin-top:2px; font:500 13px/1.2 "Space Mono", monospace; color:var(--ink-hi); }
+  .lv-latest { margin-top:9px; padding:9px 10px; border-radius:12px; cursor:pointer;
+    background:rgba(255,92,200,.12); border:1px solid rgba(255,92,200,.25); font-size:12px;
+    line-height:1.35; color:var(--ink-hi); }
+  .lv-latest small { display:block; font-size:9px; font-weight:700; letter-spacing:.05em;
+    color:#ff5cc8; text-transform:uppercase; margin-bottom:3px; }
+  .ios-row { display:flex; gap:6px; margin-top:9px; }
+  .ios-pill { flex:1 1 0; padding:8px 6px; cursor:pointer; border:0; color:#fff;
+    background:var(--ios-blue); }
+  .ios-pill.alt { background:rgba(255,255,255,.1); color:var(--ink-hi); }
+  body.light .ios-pill.alt { background:rgba(0,0,0,.06); }
+  .ios-pill[aria-pressed=true] { background:var(--ios-on); color:#fff; }
+  .lv-place { margin-top:7px; font-size:11px; color:var(--c7); min-height:14px; }
+  /* the player moves in here, under the live card's buttons */
+  .ios-card #player { position:static; width:auto; margin-top:9px; border-radius:14px;
+    padding:9px 11px; background:rgba(255,255,255,.05); box-shadow:none; transform:none !important;
+    opacity:1 !important; pointer-events:auto !important; font-family:var(--ios-font);
+    text-transform:none; letter-spacing:0; }
+  .ios-card #player .ttl { font-size:10px; font-weight:700; letter-spacing:.04em; }
+  .ios-card #player button { margin-top:7px; }
+  .ios-card #pl-bar { border-radius:3px; }
+  .ios-card #pl-bar i { background:var(--ios-on); border-radius:3px; }
+
+  /* Inside Adamandeva: the desk draws its own tab bar along the bottom, so everything
+     that sits on the bottom edge moves up out of its way, and the attribution with it -
+     OpenStreetMap's credit has to stay visible. */
+  body.in-desk #zoombar { bottom:104px; }
+  body.in-desk #attr { bottom:92px; }
+  body.in-desk #hint { display:none; }
+  body.in-desk #ui-toggle { bottom:104px; }
+  body.in-desk #ui-left { max-height:calc(100vh - 118px); }
 </style>
 
 <div id="map"></div>
@@ -512,7 +630,8 @@
 <!-- A song, on the right under WHERE AM I - Daniel's own file. It starts on its own
      where the browser allows sound without a hand on the page; Chrome and Safari mostly
      do not, so the first click or key anywhere starts it, and the panel says so until
-     then. Ten seconds from nothing up to half volume, which is as loud as it ever gets. -->
+     then. Ten seconds from nothing up to a quarter of the file's volume (half of what it
+     used to be, since 2026-09-27), which is as loud as it ever gets. -->
 <div id="player">
   <span class="ttl">JUST TURN IT ON</span>
   <button id="b-music" type="button" aria-pressed="false">PLAY</button>
@@ -2749,8 +2868,18 @@ async function fetchQuakes() {
 /* quake orange, other people's reporting blue, the desk's own pink - so which
    is which is readable on the globe without reading a word of it */
 const NEWS_HUE = { quake: '#ff7a1a', news: '#9dc4ff', desk: '#ff5cc8' };
-const DESK_FEED = 'news.json';
-const DESK_HOME = 'https://claude.ai/code/artifact/9a16b112-3624-4c4f-8adf-9453ca5779c3';
+/* The desk's feed lives on the desk's own site now. When DotWorld is the desk's World
+   tab, the desk hands the feed over itself (see DESK_PUSHED) and nothing is fetched. On its
+   own, DotWorld tries the desk's https address, then the same file straight from the desk's
+   GitHub repo (https, open CORS - the one that works while the desk has no certificate),
+   then a local copy for a checkout. */
+const DESK_FEEDS = [
+  'https://adamandeva.world/news.json',
+  'https://raw.githubusercontent.com/fablab503-collab/adamandeva-world/main/news.json',
+  'news.json',
+];
+const DESK_HOME = 'https://adamandeva.world/';
+let DESK_PUSHED = null;
 
 /* Ask once. `news.json` is the desk's own feed and it is not in this repo, so every
    news refresh fired a request that was always going to 404 - ten of them in one
@@ -2758,10 +2887,17 @@ const DESK_HOME = 'https://claude.ai/code/artifact/9a16b112-3624-4c4f-8adf-9453c
    there the desk appears as it always did, and if it is not, nothing asks again. */
 let deskGone = false;
 async function fetchDesk() {
-  if (deskGone) return [];
-  const res = await fetch(DESK_FEED, { cache: 'no-store' });
-  if (!res.ok) { deskGone = true; return []; }
-  const j = await res.json();
+  let j = DESK_PUSHED;
+  if (!j) {
+    if (deskGone) return [];
+    for (const u of DESK_FEEDS) {
+      try {
+        const res = await fetch(u, { cache: 'no-store' });
+        if (res.ok) { j = await res.json(); break; }
+      } catch (e) { /* mixed content, offline, CORS: try the next one */ }
+    }
+    if (!j) { deskGone = true; return []; }
+  }
   const desk = String(j.desk || 'ADAMANDEVA').toUpperCase();
   return (j.items || []).map(it => {
     const blurb = it.headline + ' ' + (it.deck || '');
@@ -2784,8 +2920,9 @@ async function fetchDesk() {
       t: Date.parse(it.published || '') || Date.now(),
       lat, lon,
       where: (where + ' · ' + from + (by ? ' · ' + by : '')).slice(0, 72),
-      text: it.headline + (it.deck ? ' — ' + it.deck : ''),
-      url: it.url || DESK_HOME, kind: 'desk',
+      text: (it.headline + (it.deck ? ' — ' + it.deck : '')).replace(/@([A-Za-z0-9])/g, '$1'),
+      url: it.url || (it.id ? DESK_HOME + '#post=' + it.id : DESK_HOME), kind: 'desk',
+      deskId: it.id || null, deskCat: it.category || '',
       mood: moodOf(blurb).kind, cats: catsOf(blurb),
     };
   }).filter(Boolean);
@@ -6015,7 +6152,7 @@ q.addEventListener('keydown', e => e.stopPropagation());
    allows sound without a hand on the page; where it does not - Chrome and Safari, most
    of the time - the first click or key anywhere starts it, and the panel says so until
    then. Stop it and it stays stopped, across reloads, until you press play again. */
-const MUSIC_MAX = 0.5;                 // half of what the file is: as loud as it ever gets
+const MUSIC_MAX = 0.25;                // a quarter of the file: half of the old ceiling, as loud as it ever gets
 const MUSIC_FADE_MS = 10000;
 const MUSIC_KEY = 'dotworld.music.v1';
 const music = document.getElementById('music');
@@ -6036,7 +6173,7 @@ function musicFadeIn() {
     const f = Math.min(1, (performance.now() - t0) / MUSIC_FADE_MS);
     music.volume = MUSIC_MAX * f;
     if (f < 1 && !music.paused) musicFade = requestAnimationFrame(step);
-    else if (f >= 1) musicSay('PLAYING · HALF VOLUME');
+    else if (f >= 1) musicSay('PLAYING · 25% VOLUME');
   };
   musicFade = requestAnimationFrame(step);
 }
@@ -7469,4 +7606,186 @@ loadSolar().then(b => { if (b) { spaceBodyList(); set('l-rate', RATES[SP.rate].l
    gives the map: read-only in practice, and the only way to verify a frame that a
    hidden browser tab will not even draw. */
 window.__space = SP;
+
+/* ── Adamandeva and the iOS 27 layer (2026-09-27) ─────────────────────────────────────
+   DotWorld is two things now: itself, at its own address, and the World tab of the
+   Adamandeva desk, which loads it in a frame only when that tab is first opened - the
+   desk stays small and this stays the heavy one.
+
+   The two talk by postMessage and nothing else:
+     desk -> here   {src:'adamandeva', type:'feed', feed}      the desk's live stories
+                    {type:'focus', id, lat, lon, headline, place}  fly to one story
+                    {type:'tour', on}                           the desk tour on or off
+                    {type:'music', on}                          the song on or off
+     here -> desk   {src:'dotworld', type:'ready'}              once, on load
+                    {type:'open', id}                           a desk story was clicked
+                    {type:'tour', on}                           the tour changed here
+   A desk story clicked here opens in the desk, not in a new tab, when there is a desk. */
+const IN_DESK = window.parent !== window;
+const deskOriginOk = o => /^https?:\/\/(www\.)?adamandeva\.world$/.test(o)
+  || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o);
+let deskParent = null;
+const toDesk = msg => { if (IN_DESK && deskParent) window.parent.postMessage(Object.assign({ src: 'dotworld' }, msg), deskParent); };
+/* a desk story's link is <desk>/#post=<id>, on adamandeva.world or on whatever address the
+   desk that framed us is running at */
+const deskIdOf = url => {
+  try {
+    const u = new URL(String(url || ''), location.href);
+    const m = /^#post=([\w.~:@+%-]+)$/.exec(u.hash);
+    if (!m) return null;
+    return (/(^|\.)adamandeva\.world$/.test(u.hostname) || u.origin === deskParent) ? decodeURIComponent(m[1]) : null;
+  } catch (e) { return null; }
+};
+if (IN_DESK) document.body.classList.add('in-desk');
+
+const _open = window.open.bind(window);
+window.open = function (url, ...rest) {
+  const id = deskIdOf(url);
+  if (id && IN_DESK && deskParent) { toDesk({ type: 'open', id }); return null; }
+  return _open(url, ...rest);
+};
+document.addEventListener('click', e => {
+  const a = e.target.closest && e.target.closest('a[href]');
+  const id = a && deskIdOf(a.href);
+  if (id && IN_DESK && deskParent) { e.preventDefault(); e.stopPropagation(); toDesk({ type: 'open', id }); }
+}, true);
+
+/* the live card, built here so the fold logic (which takes every .panel) leaves it open */
+const live = document.createElement('div');
+live.id = 'p-live';
+live.className = 'ios-card';
+live.innerHTML =
+  '<div class="lv-head"><span class="lv-dot"></span>Live <b id="lv-clock">—</b></div>' +
+  '<div class="lv-grid">' +
+  '<div><small>UTC</small><b id="lv-utc">—</b></div>' +
+  '<div><small>Your time</small><b id="lv-local">—</b></div>' +
+  '<div><small>Desk stories</small><b id="lv-desk">—</b></div>' +
+  '<div><small>Quakes · 24 h</small><b id="lv-quakes">—</b></div>' +
+  '</div>' +
+  '<div id="lv-latest" class="lv-latest" hidden></div>' +
+  '<div class="ios-row">' +
+  '<button id="lv-locate" class="ios-pill" type="button">Locate me</button>' +
+  '<button id="lv-tour" class="ios-pill alt" type="button" aria-pressed="false">Desk tour</button>' +
+  '</div>' +
+  '<div class="lv-place" id="lv-place"></div>';
+const brandrow = document.getElementById('brandrow');
+brandrow.after(live);
+live.appendChild(document.getElementById('player'));
+
+/* The column, in the order a reader reaches for things: where you are and what is
+   happening first, the world's layers in the middle, how the map is drawn last. */
+(function reorder() {
+  const col = document.getElementById('ui-left');
+  const order = ['p-me', 'p-news', 'stats', 'p-weather', 'p-nav', 'p-world', 'p-cities',
+    'p-capitals', 'p-monuments', 'legend', 'hud', 'p-space', 'ctl'];
+  for (const id of order) { const el = document.getElementById(id); if (el && el.parentNode === col) col.appendChild(el); }
+})();
+
+const lvSet = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+function lvTick() {
+  const d = new Date();
+  lvSet('lv-utc', d.toISOString().slice(11, 19));
+  lvSet('lv-local', d.toTimeString().slice(0, 8));
+  lvSet('lv-clock', d.toISOString().slice(0, 10));
+  const items = (NEWS && NEWS.items) || [];
+  const desk = items.filter(i => i.kind === 'desk');
+  lvSet('lv-desk', desk.length ? String(desk.length) : '—');
+  const day = Date.now() - 86400e3;
+  const q = items.filter(i => i.kind === 'quake' && i.t >= day).length;
+  lvSet('lv-quakes', items.length ? String(q) : '—');
+  const top = desk.slice().sort((a, b) => b.t - a.t)[0];
+  const box = document.getElementById('lv-latest');
+  if (top && box) {
+    box.hidden = false;
+    if (box.dataset.k !== top.text) {
+      box.dataset.k = top.text;
+      box.innerHTML = '';
+      const s = document.createElement('small'); s.textContent = 'Adamandeva · latest';
+      box.append(s, document.createTextNode(top.text.split(' — ')[0].replace(/@(\w)/g, '$1')));
+      box.onclick = () => focusItem(top);
+    }
+  }
+}
+setInterval(lvTick, 1000);
+lvTick();
+
+function whenMap(fn, tries = 0) {
+  if (typeof map !== 'undefined' && map && map.loaded && map.getStyle && map.getStyle()) { fn(); return; }
+  if (tries < 120) setTimeout(() => whenMap(fn, tries + 1), 250);
+}
+function focusItem(it, zoom) {
+  if (!it || !isFinite(it.lat) || !isFinite(it.lon)) return;
+  whenMap(() => {
+    try { stopOrbit(); stopSpin(); } catch (e) { /* not spinning */ }
+    map.flyTo({ center: [it.lon, it.lat], zoom: zoom || 4.2, duration: 2400, essential: true });
+    openCard(it);
+  });
+}
+
+/* the desk tour: one desk story after another, nine seconds each, until a hand moves the map */
+let tourTimer = 0, tourIdx = 0;
+const bTour = document.getElementById('lv-tour');
+const deskStories = () => ((NEWS && NEWS.items) || []).filter(i => i.kind === 'desk').sort((a, b) => b.t - a.t);
+function tourStep() {
+  const s = deskStories();
+  if (!s.length) { stopTour(); lvSet('lv-place', 'No desk stories on the globe yet.'); return; }
+  const it = s[tourIdx++ % s.length];
+  focusItem(it, 3.6);
+  lvSet('lv-place', 'Tour ' + ((tourIdx - 1) % s.length + 1) + ' of ' + s.length + ' · ' + it.where.split(' · ')[0]);
+}
+function startTour(fromDesk) {
+  clearInterval(tourTimer); tourIdx = 0;
+  bTour.setAttribute('aria-pressed', 'true'); bTour.textContent = 'Stop tour';
+  tourStep(); tourTimer = setInterval(tourStep, 9000);
+  if (!fromDesk) toDesk({ type: 'tour', on: true });
+}
+function stopTour(fromDesk) {
+  if (!tourTimer && bTour.getAttribute('aria-pressed') !== 'true') return;
+  clearInterval(tourTimer); tourTimer = 0;
+  bTour.setAttribute('aria-pressed', 'false'); bTour.textContent = 'Desk tour';
+  if (!fromDesk) toDesk({ type: 'tour', on: false });
+}
+bTour.addEventListener('click', () => (tourTimer ? stopTour() : startTour()));
+whenMap(() => { map.on('dragstart', e => { if (e.originalEvent) stopTour(); }); });
+
+/* Locate me: the same one-time, rounded ask as WHERE AM I, then the desk story nearest you */
+const R = Math.PI / 180;
+const km = (a, b, c, d) => 6371 * Math.acos(Math.min(1, Math.sin(a * R) * Math.sin(c * R)
+  + Math.cos(a * R) * Math.cos(c * R) * Math.cos((d - b) * R)));
+document.getElementById('lv-locate').addEventListener('click', () => {
+  if (!navigator.geolocation) { lvSet('lv-place', 'No location in this browser.'); return; }
+  lvSet('lv-place', 'Asking…');
+  locateOnce((lat, lon, name) => {
+    stopTour();
+    whenMap(() => map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 9), duration: 1800 }));
+    const s = deskStories().map(i => ({ i, d: km(lat, lon, i.lat, i.lon) })).sort((a, b) => a.d - b.d)[0];
+    lvSet('lv-place', (name ? name.split(',')[0] : 'You') +
+      (s ? ' · nearest desk story ' + Math.round(s.d).toLocaleString() + ' km away' : ''));
+    if (s) { const box = document.getElementById('lv-latest'); if (box) box.onclick = () => focusItem(s.i); }
+  }, err => lvSet('lv-place', err && err.code === 1 ? 'You said no - nothing was asked again.' : 'Location unavailable.'));
+});
+
+window.addEventListener('message', e => {
+  const d = e.data;
+  if (!d || d.src !== 'adamandeva' || !deskOriginOk(e.origin)) return;
+  deskParent = e.origin;
+  if (d.type === 'feed' && d.feed && Array.isArray(d.feed.items)) {
+    DESK_PUSHED = d.feed; deskGone = false;
+    const again = () => (NEWS.busy ? setTimeout(again, 700) : loadNews('desk'));
+    again();
+  } else if (d.type === 'focus') {
+    const it = deskStories().find(i => i.deskId === d.id) || {
+      lat: +d.lat, lon: +d.lon, t: Date.now(), kind: 'desk',
+      where: String(d.place || 'ADAMANDEVA').toUpperCase(), text: String(d.headline || ''),
+      url: DESK_HOME + '#post=' + d.id };
+    stopTour(true);
+    focusItem(it, d.zoom);
+  } else if (d.type === 'tour') {
+    d.on ? startTour(true) : stopTour(true);
+  } else if (d.type === 'music') {
+    const bm = document.getElementById('b-music');
+    if (bm && (d.on === !!(music && !music.paused)) === false) bm.click();
+  }
+});
+if (IN_DESK) window.parent.postMessage({ src: 'dotworld', type: 'ready' }, '*');
 </script>

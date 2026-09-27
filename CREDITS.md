@@ -15,6 +15,12 @@ is theirs.** Please go and support them — links at the bottom.
 
 ---
 
+## Adamandeva
+
+The desk's stories on the globe come from [Adamandeva](http://adamandeva.world), Daniel's
+technology desk. Each story names the newsroom whose reporting it retells, and that name
+travels with it onto the globe. The stories are the desk's; the reporting is theirs.
+
 ## Map data
 
 **© OpenStreetMap contributors**, licensed under the
