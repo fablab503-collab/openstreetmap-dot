@@ -43,6 +43,17 @@ cd /Volumes/Volume1/SecondBrain/dotworld && python3 -m http.server 8732
 Open http://localhost:8732. `?renderer=cpu` forces the Canvas2D fallback;
 `#map=zoom/lat/lon` opens a view; `window.__bench(20)` times a redraw.
 
+## Inside Adamandeva (since 2026-09-27)
+
+DotWorld is also the World tab of http://adamandeva.world (repo
+`fablab503-collab/adamandeva-world`, source in the adamandeva-desk repo's `app/`). The desk
+frames this site on first open and keeps it. Bridge by `postMessage`, origins checked:
+`ready` (here -> desk), `feed` / `focus` / `tour` / `music` (desk -> here), `open` (here ->
+desk, a desk story clicked on the globe). `body.in-desk` lifts the bottom-edge UI above the
+desk's tab bar. The `Live` card (`#p-live`, class `ios-card`, not `.panel`, so `openOnly`
+never folds it) holds the player. `MUSIC_MAX` is 0.25. Test locally with the desk on :8733
+and `?dw=http://localhost:8732/`; both servers need the Bash sandbox off to bind a port.
+
 ## Defaults
 
 - `DOT SCALE 0.65`, `GAIN 2.05`, `CUTOFF 0.03` — calibrated by eye on a 3D street view.
@@ -50,6 +61,7 @@ Open http://localhost:8732. `?renderer=cpu` forces the Canvas2D fallback;
 - No `#map=` hash → fit metropolitan France `[[-5.15, 41.33], [9.56, 51.09]]`.
 - Globe projection on; `maxPitch` 85; orbit 0.12°/frame (one turn a minute).
 - Capital labels: up to 55, biggest population first.
+- Song ceiling `MUSIC_MAX` 0.25 (was 0.5 until 2026-09-27).
 
 ## Controls
 
