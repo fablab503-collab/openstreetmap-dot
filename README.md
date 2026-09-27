@@ -244,8 +244,10 @@ positions, use [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/).
 
 DotWorld is also the **WORLD view** of [Adamandeva](https://adamandeva.world), a read-only
 technology news desk in the same dot-matrix look. The desk loads DotWorld into a full-screen
-frame only the first time a reader presses `WORLD` (or a story's place chip) and then keeps
-it, so the desk stays small and going back and forth never reloads the globe. The two talk by `postMessage` and nothing else, and each
+frame only the first time a reader presses `WORLD`, a story's place chip, or `World` on
+the desk's floating tab bar, and then keeps it, so the desk stays small and going back and
+forth never reloads the globe. Inside the desk, DotWorld's bottom edge moves up out of that
+tab bar's way, the OpenStreetMap credit with it. The two talk by `postMessage` and nothing else, and each
 checks the other's origin:
 
 | From | Message | What happens |

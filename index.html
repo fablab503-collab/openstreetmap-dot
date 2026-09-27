@@ -530,6 +530,14 @@
   .lv-row button:hover { border-color:var(--hi); color:var(--hi); }
   .lv-row button[aria-pressed=true] { border-color:var(--lit); color:var(--lit); }
   .lv-place { margin-top:5px; font-size:8px; letter-spacing:.1em; color:var(--c7); min-height:11px; }
+  /* Inside Adamandeva the desk floats an app-style tab bar over the bottom middle, so what
+     sits on the bottom edge moves up out of its way - OpenStreetMap's credit included, which
+     has to stay visible. */
+  body.in-desk #zoombar { bottom:100px; }
+  body.in-desk #attr { bottom:88px; }
+  body.in-desk #ui-toggle { bottom:100px; }
+  body.in-desk #hint { display:none; }
+  body.in-desk #ui-left { max-height:calc(100vh - 112px); }
   /* the song's player, moved in here from the top right corner */
   .lv-card #player { position:static; width:auto; margin-top:7px; padding:6px 0 0; background:none;
     border:0; border-top:1px solid var(--c2); backdrop-filter:none; transform:none !important;
