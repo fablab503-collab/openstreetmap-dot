@@ -503,123 +503,37 @@
   #hint { position:absolute; bottom:8px; right:12px; z-index:10; font-size:10px;
     color:var(--c4); letter-spacing:.08em; text-transform:uppercase; }
 
-  /* ── The iOS 27 layer (2026-09-27) ────────────────────────────────────────────────
-     DotWorld is also Adamandeva's World tab now, and the desk is laid out like an iPad
-     app, so the column is too: every panel a rounded sheet of dark glass, every button a
-     pill, the three-way pickers segmented controls, the sliders iOS tracks with a round
-     thumb, and a folded panel reads as a list row with a chevron. The glass is dark on
-     purpose - it is still an OLED budget, and a lit pane costs what a lit dot costs. */
-  :root { --panel:252px; --glass:rgba(18,18,20,.64); --glass-min:rgba(18,18,20,.5);
-    --glass-edge:rgba(255,255,255,.12); --glass-hi:rgba(255,255,255,.07);
-    --ios-r:18px; --ios-blue:#0a84ff; --ios-on:#3d7bd9; --ios-red:#ff453a;
-    --ios-font:-apple-system, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif; }
-  body.light { --glass:rgba(255,255,255,.7); --glass-min:rgba(255,255,255,.58);
-    --glass-edge:rgba(0,0,0,.08); --glass-hi:rgba(255,255,255,.8); --ios-blue:#007aff; }
-  #ui-left { gap:8px; top:14px; left:14px; }
-  #ui-left .panel, .ios-card, #player, #b-here, #zoombar, #search input, #n-card, #ui-toggle {
-    background:var(--glass); border:1px solid var(--glass-edge);
-    -webkit-backdrop-filter:blur(22px) saturate(1.5); backdrop-filter:blur(22px) saturate(1.5);
-    box-shadow:inset 0 1px 0 var(--glass-hi), 0 10px 28px rgba(0,0,0,.28); }
-  #ui-left .panel { border-radius:var(--ios-r); padding:11px 13px 12px; }
-  #ui-left .panel.min { border-radius:14px; padding:9px 13px; background:var(--glass-min); }
-  #ui-left .panel.min > .cap { font-family:var(--ios-font); font-size:13px; font-weight:600;
-    letter-spacing:0; text-transform:none; color:var(--ink-2); }
-  #ui-left .panel.min > .cap::first-letter { text-transform:uppercase; }
-  #ui-left .panel.min > .cap::after { content:'›'; float:right; margin-right:22px;
-    color:var(--c7); font-weight:400; font-size:15px; line-height:.8; }
-  #ui-left .panel.min .min-dot, #ui-left .panel.min .why-dot { top:12px; }
-  #ui-left .panel > .cap { font-family:var(--ios-font); font-size:11px; font-weight:600;
-    letter-spacing:.02em; margin-bottom:6px; }
-  .panel .min-dot { top:9px; right:9px; }
-  .panel .why-dot { top:9px; right:23px; }
-  #brandrow { padding:4px 4px 2px; }
-  #b-col { border-radius:50%; width:22px; height:22px; background:var(--glass); border:1px solid var(--glass-edge); }
-
-  /* pills */
-  .panel button:not(.min-dot):not(.why-dot), #player button, #b-here, #ui-toggle, .ios-pill {
-    border-radius:999px; font-family:var(--ios-font); font-weight:600; font-size:12px;
-    letter-spacing:.01em; text-transform:none; }
-  .panel button:not(.min-dot):not(.why-dot) { padding:8px 12px; background:rgba(255,255,255,.07);
-    border:1px solid transparent; color:var(--ink-2); }
-  body.light .panel button:not(.min-dot):not(.why-dot) { background:rgba(0,0,0,.05); }
-  .panel button[aria-pressed=true]:not(.min-dot):not(.why-dot) { background:var(--ios-blue);
-    color:#fff; border-color:transparent; }
-  #n-cats button, #pal button { border-radius:999px; }
-  .panel select { border-radius:10px; }
-  #search input { border-radius:14px; font-family:var(--ios-font); letter-spacing:.02em; }
-
-  /* segmented controls */
-  #theme-pick, #nv-mode { background:rgba(118,118,128,.24); border-radius:9px; padding:2px; gap:2px; }
-  #theme-pick button, #nv-mode button { border:0 !important; border-radius:7px !important;
-    background:transparent !important; margin:0 !important; padding:5px 2px !important;
-    font-family:var(--ios-font); font-size:11px; font-weight:600; text-transform:none;
-    color:var(--ink-2) !important; }
-  #theme-pick button[aria-pressed=true], #nv-mode button[aria-pressed=true] {
-    background:rgba(255,255,255,.22) !important; box-shadow:0 2px 6px rgba(0,0,0,.25); }
-  body.light #theme-pick button[aria-pressed=true], body.light #nv-mode button[aria-pressed=true] {
-    background:#fff !important; }
-
-  /* iOS sliders */
-  #ui-left input[type=range] { -webkit-appearance:none; appearance:none; height:22px;
-    background:transparent; accent-color:var(--ios-blue); }
-  #ui-left input[type=range]::-webkit-slider-runnable-track { height:4px; border-radius:4px;
-    background:rgba(120,120,128,.36); }
-  #ui-left input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:20px; height:20px;
-    margin-top:-8px; border-radius:50%; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,.35); }
-  #ui-left input[type=range]::-moz-range-track { height:4px; border-radius:4px; background:rgba(120,120,128,.36); }
-  #ui-left input[type=range]::-moz-range-thumb { width:20px; height:20px; border:0; border-radius:50%;
-    background:#fff; box-shadow:0 2px 6px rgba(0,0,0,.35); }
-
-  #b-here { border-radius:999px; padding:9px 16px; }
-  #zoombar { border-radius:20px; }
-  #n-card { border-radius:18px; padding:13px 15px; }
-  #ui-toggle { border-radius:999px; padding:9px 16px; }
-
-  /* The live card: what is happening now, and the three things you reach for most -
-     where you are, the desk's stories one after another, and the song. */
-  .ios-card { border-radius:var(--ios-r); padding:12px 13px; color:var(--ink-2);
-    font-family:var(--ios-font); position:relative; flex:0 0 auto; }
-  .lv-head { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:700; }
-  .lv-head b { margin-left:auto; font:500 12px/1 "Space Mono", monospace; color:var(--ink-hi); }
-  .lv-dot { width:8px; height:8px; border-radius:50%; background:var(--ios-red);
-    box-shadow:0 0 0 0 rgba(255,69,58,.6); animation:lvpulse 2s infinite; }
-  @keyframes lvpulse { 70% { box-shadow:0 0 0 7px rgba(255,69,58,0); } 100% { box-shadow:0 0 0 0 rgba(255,69,58,0); } }
-  .lv-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:10px; }
-  .lv-grid > div { background:rgba(255,255,255,.06); border-radius:12px; padding:7px 9px; }
-  body.light .lv-grid > div { background:rgba(0,0,0,.04); }
-  .lv-grid small { display:block; font-size:9px; font-weight:600; letter-spacing:.04em;
-    color:var(--c7); text-transform:uppercase; }
-  .lv-grid b { display:block; margin-top:2px; font:500 13px/1.2 "Space Mono", monospace; color:var(--ink-hi); }
-  .lv-latest { margin-top:9px; padding:9px 10px; border-radius:12px; cursor:pointer;
-    background:rgba(255,92,200,.12); border:1px solid rgba(255,92,200,.25); font-size:12px;
-    line-height:1.35; color:var(--ink-hi); }
-  .lv-latest small { display:block; font-size:9px; font-weight:700; letter-spacing:.05em;
-    color:#ff5cc8; text-transform:uppercase; margin-bottom:3px; }
-  .ios-row { display:flex; gap:6px; margin-top:9px; }
-  .ios-pill { flex:1 1 0; padding:8px 6px; cursor:pointer; border:0; color:#fff;
-    background:var(--ios-blue); }
-  .ios-pill.alt { background:rgba(255,255,255,.1); color:var(--ink-hi); }
-  body.light .ios-pill.alt { background:rgba(0,0,0,.06); }
-  .ios-pill[aria-pressed=true] { background:var(--ios-on); color:#fff; }
-  .lv-place { margin-top:7px; font-size:11px; color:var(--c7); min-height:14px; }
-  /* the player moves in here, under the live card's buttons */
-  .ios-card #player { position:static; width:auto; margin-top:9px; border-radius:14px;
-    padding:9px 11px; background:rgba(255,255,255,.05); box-shadow:none; transform:none !important;
-    opacity:1 !important; pointer-events:auto !important; font-family:var(--ios-font);
-    text-transform:none; letter-spacing:0; }
-  .ios-card #player .ttl { font-size:10px; font-weight:700; letter-spacing:.04em; }
-  .ios-card #player button { margin-top:7px; }
-  .ios-card #pl-bar { border-radius:3px; }
-  .ios-card #pl-bar i { background:var(--ios-on); border-radius:3px; }
-
-  /* Inside Adamandeva: the desk draws its own tab bar along the bottom, so everything
-     that sits on the bottom edge moves up out of its way, and the attribution with it -
-     OpenStreetMap's credit has to stay visible. */
-  body.in-desk #zoombar { bottom:104px; }
-  body.in-desk #attr { bottom:92px; }
-  body.in-desk #hint { display:none; }
-  body.in-desk #ui-toggle { bottom:104px; }
-  body.in-desk #ui-left { max-height:calc(100vh - 118px); }
+  /* ── Live, and life inside Adamandeva (2026-09-27) ───────────────────────────────
+     One card at the top of the column that never folds: what is happening now, the two
+     things a reader reaches for (where am I, show me the desk's stories), and the song.
+     Same pane, same rule, same type as every other panel - nothing new to learn. */
+  .lv-card { position:relative; flex:0 0 auto; width:100%; background:var(--pane);
+    border:1px solid var(--c2); padding:7px 9px 8px; letter-spacing:.05em;
+    text-transform:uppercase; backdrop-filter:blur(2px); }
+  .lv-head { display:flex; align-items:center; gap:6px; color:var(--ink-2); font-size:10px;
+    letter-spacing:.14em; }
+  .lv-head b { margin-left:auto; color:var(--lit); font-weight:400; letter-spacing:.06em; }
+  .lv-dot { width:6px; height:6px; border-radius:50%; background:#ff5f57;
+    animation:lvblink 2s steps(2, jump-none) infinite; }
+  @keyframes lvblink { 50% { opacity:.25; } }
+  .lv-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 10px; margin-top:6px; }
+  .lv-grid > div { border-top:1px solid var(--c2); padding:4px 0 3px; }
+  .lv-grid small { display:block; font-size:8px; letter-spacing:.14em; color:var(--c7); }
+  .lv-grid b { display:block; color:var(--lit); font-weight:400; font-size:11px; letter-spacing:.06em; }
+  .lv-latest { margin-top:7px; padding:5px 0 5px 7px; border-left:2px solid #ff5cc8; cursor:pointer;
+    color:var(--ink-hi); font-size:10px; line-height:1.4; letter-spacing:.03em; text-transform:none; }
+  .lv-latest:hover { color:var(--lit); }
+  .lv-latest small { display:block; font-size:8px; letter-spacing:.14em; color:#ff5cc8; text-transform:uppercase; }
+  .lv-row { display:flex; gap:4px; margin-top:7px; }
+  .lv-row button { flex:1 1 0; padding:7px 4px; cursor:pointer; background:var(--c0); color:var(--hi-dim);
+    border:1px solid var(--c3); font:inherit; font-size:9px; letter-spacing:.1em; text-transform:uppercase; }
+  .lv-row button:hover { border-color:var(--hi); color:var(--hi); }
+  .lv-row button[aria-pressed=true] { border-color:var(--lit); color:var(--lit); }
+  .lv-place { margin-top:5px; font-size:8px; letter-spacing:.1em; color:var(--c7); min-height:11px; }
+  /* the song's player, moved in here from the top right corner */
+  .lv-card #player { position:static; width:auto; margin-top:7px; padding:6px 0 0; background:none;
+    border:0; border-top:1px solid var(--c2); backdrop-filter:none; transform:none !important;
+    opacity:1 !important; pointer-events:auto !important; }
 </style>
 
 <div id="map"></div>
@@ -7607,7 +7521,7 @@ loadSolar().then(b => { if (b) { spaceBodyList(); set('l-rate', RATES[SP.rate].l
    hidden browser tab will not even draw. */
 window.__space = SP;
 
-/* ── Adamandeva and the iOS 27 layer (2026-09-27) ─────────────────────────────────────
+/* ── Adamandeva, and the Live card (2026-09-27) ───────────────────────────────────────
    DotWorld is two things now: itself, at its own address, and the World tab of the
    Adamandeva desk, which loads it in a frame only when that tab is first opened - the
    desk stays small and this stays the heavy one.
@@ -7650,10 +7564,11 @@ document.addEventListener('click', e => {
   if (id && IN_DESK && deskParent) { e.preventDefault(); e.stopPropagation(); toDesk({ type: 'open', id }); }
 }, true);
 
-/* the live card, built here so the fold logic (which takes every .panel) leaves it open */
+/* the live card, built here and not a .panel, so the fold logic (which takes every
+   .panel) leaves it open */
 const live = document.createElement('div');
 live.id = 'p-live';
-live.className = 'ios-card';
+live.className = 'lv-card';
 live.innerHTML =
   '<div class="lv-head"><span class="lv-dot"></span>Live <b id="lv-clock">—</b></div>' +
   '<div class="lv-grid">' +
@@ -7663,9 +7578,9 @@ live.innerHTML =
   '<div><small>Quakes · 24 h</small><b id="lv-quakes">—</b></div>' +
   '</div>' +
   '<div id="lv-latest" class="lv-latest" hidden></div>' +
-  '<div class="ios-row">' +
-  '<button id="lv-locate" class="ios-pill" type="button">Locate me</button>' +
-  '<button id="lv-tour" class="ios-pill alt" type="button" aria-pressed="false">Desk tour</button>' +
+  '<div class="lv-row">' +
+  '<button id="lv-locate" type="button">Locate me</button>' +
+  '<button id="lv-tour" type="button" aria-pressed="false">Desk tour</button>' +
   '</div>' +
   '<div class="lv-place" id="lv-place"></div>';
 const brandrow = document.getElementById('brandrow');

@@ -15,7 +15,7 @@ theirs — and [please support them](CREDITS.md#please-support-the-upstream-proj
 
 Live: <https://fablab503-collab.github.io/openstreetmap-dot/> ·
 Changes: [CHANGELOG.md](CHANGELOG.md) ·
-Also the **World tab of [Adamandeva](http://adamandeva.world)**, the technology desk it carries on the globe
+Also the **WORLD view of [Adamandeva](https://adamandeva.world)**, the technology desk it carries on the globe
 
 ---
 
@@ -242,10 +242,10 @@ positions, use [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/).
 
 ## Inside Adamandeva
 
-DotWorld is also the **World tab** of [Adamandeva](http://adamandeva.world), a read-only
-technology news desk laid out like an iPad app. The desk loads DotWorld in a frame only the
-first time its World tab is opened and then keeps it, so the desk stays small and swapping
-tabs never reloads the globe. The two talk by `postMessage` and nothing else, and each
+DotWorld is also the **WORLD view** of [Adamandeva](https://adamandeva.world), a read-only
+technology news desk in the same dot-matrix look. The desk loads DotWorld into a full-screen
+frame only the first time a reader presses `WORLD` (or a story's place chip) and then keeps
+it, so the desk stays small and going back and forth never reloads the globe. The two talk by `postMessage` and nothing else, and each
 checks the other's origin:
 
 | From | Message | What happens |
@@ -258,12 +258,7 @@ checks the other's origin:
 | DotWorld | `open` | a desk story clicked on the globe opens in the desk's story sheet, not a new tab |
 
 On its own, DotWorld reads the same stories from `https://adamandeva.world/news.json`, or
-from the desk's GitHub repo while the desk has no certificate. Inside the desk it moves
-everything on the bottom edge up out of the way of the desk's tab bar - the OpenStreetMap
-credit included, which stays visible.
-
-The column is dressed for it: rounded dark-glass panels, pill buttons, segmented pickers and
-iOS sliders. The glass stays dark on purpose - it is still an OLED budget.
+the same file straight from the desk's GitHub repo if that fails.
 
 ## Sharing a view
 

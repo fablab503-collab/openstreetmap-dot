@@ -45,9 +45,9 @@ Open http://localhost:8732. `?renderer=cpu` forces the Canvas2D fallback;
 
 ## Inside Adamandeva (since 2026-09-27)
 
-DotWorld is also the World tab of http://adamandeva.world (repo
+DotWorld is also the WORLD view of https://adamandeva.world (repo
 `fablab503-collab/adamandeva-world`, source in the adamandeva-desk repo's `app/`). The desk
-frames this site on first open and keeps it. Bridge by `postMessage`, origins checked:
+frames this site full screen on first open and keeps it. Bridge by `postMessage`, origins checked:
 `ready` (here -> desk), `feed` / `focus` / `tour` / `music` (desk -> here), `open` (here ->
 desk, a desk story clicked on the globe). `body.in-desk` lifts the bottom-edge UI above the
 desk's tab bar. The `Live` card (`#p-live`, class `ios-card`, not `.panel`, so `openOnly`

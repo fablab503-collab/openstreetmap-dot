@@ -5,6 +5,18 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-27 (later) — Back to DotWorld's own look
+
+Daniel preferred the desk's plain dot-matrix style to the iOS one, and wanted DotWorld in it
+too. The iOS layer is gone - no glass, no pills, no segmented pickers, no iOS sliders - and
+the `Live` card is drawn like every other panel: the same pane, a one-pixel rule, Space Mono
+in capitals, square buttons that light when pressed, the desk's pink for its latest story.
+Everything the card does is unchanged. The desk no longer has a bottom tab bar, so nothing
+on the bottom edge is lifted inside it any more; the desk opens DotWorld full screen from a
+`WORLD` button with its own `BACK TO THE DESK`.
+
+---
+
 ## 2026-09-27 — DotWorld becomes Adamandeva's World tab
 
 Daniel: fuse DotWorld into the Adamandeva desk like one app - "if you click the DotWorld menu
