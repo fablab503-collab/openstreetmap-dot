@@ -15,7 +15,7 @@ theirs — and [please support them](CREDITS.md#please-support-the-upstream-proj
 
 Live: <https://fablab503-collab.github.io/openstreetmap-dot/> ·
 Changes: [CHANGELOG.md](CHANGELOG.md) ·
-Also the **WORLD view of [Adamandeva](https://adamandeva.world)**, the technology desk it carries on the globe
+Also **[adamandeva.world/world](https://adamandeva.world/world/)** - the WORLD of the Adamandeva technology desk, one site with it
 
 ---
 
@@ -242,8 +242,11 @@ positions, use [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/).
 
 ## Inside Adamandeva
 
-DotWorld is also the **WORLD view** of [Adamandeva](https://adamandeva.world), a read-only
-technology news desk in the same dot-matrix look. The desk loads DotWorld into a full-screen
+DotWorld is also the **WORLD** of [Adamandeva](https://adamandeva.world), a read-only
+technology news desk in the same dot-matrix look - one site, not two: a copy of this
+repo's site files is served at `adamandeva.world/world/`, same origin as the desk, and the
+desk's Pages repo re-syncs it from here every six hours (`.github/workflows/sync-world.yml`
+there). This repo stays the source; its own address keeps working. The desk loads DotWorld into a full-screen
 frame only the first time a reader presses `WORLD`, a story's place chip, or `World` on
 the desk's floating tab bar, and then keeps it, so the desk stays small and going back and
 forth never reloads the globe. Inside the desk, DotWorld's bottom edge moves up out of that

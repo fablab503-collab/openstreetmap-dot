@@ -7558,7 +7558,12 @@ const deskIdOf = url => {
     return (/(^|\.)adamandeva\.world$/.test(u.hostname) || u.origin === deskParent) ? decodeURIComponent(m[1]) : null;
   } catch (e) { return null; }
 };
-if (IN_DESK) document.body.classList.add('in-desk');
+if (IN_DESK) {
+  document.body.classList.add('in-desk');
+  /* one site: inside the desk the globe is the desk's WORLD, and says so */
+  const br = document.getElementById('brand');
+  if (br && br.firstChild && br.firstChild.nodeType === 3) br.firstChild.textContent = 'WORLD';
+}
 
 const _open = window.open.bind(window);
 window.open = function (url, ...rest) {

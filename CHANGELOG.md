@@ -5,6 +5,21 @@ Newest first. Data sources and licences are in [CREDITS.md](CREDITS.md).
 
 ---
 
+## 2026-09-27 (last) — One site with Adamandeva
+
+Daniel: "fusion DotWorld with Adamandeva so it's going to be one". DotWorld is now also
+served from inside the desk's own site, at `adamandeva.world/world/`, so the desk and the
+globe share one address and one origin instead of one site framing another. The desk's
+Pages repo copies this repo's site files (`index.html`, `vendor/`, `fonts/`, `data/`, the
+song, `LICENSE`, `CREDITS.md`) every six hours, so the daily news by country still arrives.
+Inside the desk the wordmark reads `WORLD`.
+
+Checked on localhost with the same layout: the desk frames `/world/`, DotWorld says `ready`
+and shows 45 desk stories, the bottom edge sits above the tab bar, and a desk story opened
+from the globe lands on the desk with the story open and `News` selected.
+
+---
+
 ## 2026-09-27 (later) — Back to DotWorld's own look
 
 Daniel preferred the desk's plain dot-matrix style to the iOS one, and wanted DotWorld in it
